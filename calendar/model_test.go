@@ -204,7 +204,7 @@ func TestEnterSelectsDate(t *testing.T) {
 	m = pressKey(m, "l")
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = updated.(Model)
-	if !m.Selected {
+	if !m.IsSelected() {
 		t.Error("expected Selected to be true")
 	}
 	if m.Cursor != date(2026, time.March, 18) {
@@ -219,7 +219,7 @@ func TestQuitDoesNotSelect(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 	m = updated.(Model)
-	if m.Selected {
+	if m.IsSelected() {
 		t.Error("expected Selected to be false")
 	}
 	if cmd == nil {
@@ -231,7 +231,7 @@ func TestEscDoesNotSelect(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
 	m = updated.(Model)
-	if m.Selected {
+	if m.IsSelected() {
 		t.Error("expected Selected to be false")
 	}
 	if cmd == nil {
