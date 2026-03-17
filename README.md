@@ -35,6 +35,13 @@ Or build locally:
 go build -o wen .
 ```
 
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `-h`, `--help` | Show help |
+| `-v`, `--version` | Show version |
+
 ## Usage
 
 ### Date Parsing

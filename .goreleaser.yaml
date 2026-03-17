@@ -4,7 +4,7 @@ builds:
   - main: .
     binary: wen
     ldflags:
-      - -s -w
+      - -s -w -X main.version={{ .Tag }}
     goos:
       - linux
       - darwin
