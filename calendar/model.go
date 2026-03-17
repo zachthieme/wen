@@ -55,6 +55,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Cursor = prevMonth(m.Cursor)
 			case "L":
 				m.Cursor = nextMonth(m.Cursor)
+			case "t":
+				m.Cursor = m.Today
 			}
 		}
 	}

@@ -132,6 +132,14 @@ func TestQuitDoesNotSelect(t *testing.T) {
 	}
 }
 
+func TestJumpToToday(t *testing.T) {
+	m := New(date(2026, time.June, 15), date(2026, time.March, 17))
+	m = pressKey(m, "t")
+	if m.Cursor != date(2026, time.March, 17) {
+		t.Errorf("expected March 17, got %s", m.Cursor.Format("2006-01-02"))
+	}
+}
+
 func TestEscDoesNotSelect(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17))
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
