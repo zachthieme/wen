@@ -14,6 +14,7 @@ All references to `zdate` become `wen`:
 - Nix flake
 - CI/CD workflows
 - `.gitignore`
+- Makefile
 - Tests
 
 The `--now` flag is removed entirely.
@@ -110,7 +111,7 @@ wen/
 
 ## Testing
 
-- Existing date parsing tests carry over (updated for module rename)
-- Calendar model tests: unit test the `Update` function with synthetic key messages to verify navigation logic (day/week/month wrapping, clamping)
+- Existing date parsing tests carry over (updated for module rename). With `--now` removed, tests that need determinism should use environment-based clock injection (e.g., `WEN_NOW=2026-03-17`) or accept that the no-arg test compares against `time.Now()` at test time (current approach).
+- Calendar model tests: unit test the `Update` function with synthetic key messages to verify navigation logic (day/week/month wrapping, clamping). The model accepts a starting date, so tests are fully deterministic.
 - Calendar view tests: snapshot test the `View` output for a known date to verify grid layout
 - Integration test: build binary, run `wen cal`, send keystrokes, verify stdout on Enter
