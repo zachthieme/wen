@@ -14,6 +14,9 @@ const (
 	WeekNumberingISO = "iso"
 )
 
+// MaxPadding is the upper bound for padding values.
+const MaxPadding = 20
+
 // ThemeColors defines the color scheme for calendar UI elements.
 type ThemeColors struct {
 	Cursor     string `yaml:"cursor"`
@@ -64,6 +67,15 @@ func (c *Config) Normalize() []string {
 	if _, ok := themePresets[c.Theme]; !ok {
 		warnings = append(warnings, "invalid config value for \"theme\", using default")
 		c.Theme = "default"
+	}
+	for _, p := range []*int{&c.PaddingTop, &c.PaddingRight, &c.PaddingBottom, &c.PaddingLeft} {
+		if *p < 0 {
+			warnings = append(warnings, "negative padding value clamped to 0")
+			*p = 0
+		} else if *p > MaxPadding {
+			warnings = append(warnings, fmt.Sprintf("padding value %d exceeds maximum, clamped to %d", *p, MaxPadding))
+			*p = MaxPadding
+		}
 	}
 	return warnings
 }
