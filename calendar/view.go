@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -40,9 +41,29 @@ func buildStyles(colors ThemeColors) resolvedStyles {
 	return s
 }
 
+func newHelpModel(colors ThemeColors) help.Model {
+	h := help.New()
+	h.ShowAll = true
+
+	helpStyle := lipgloss.NewStyle().Faint(true)
+	if colors.HelpBar != "" {
+		helpStyle = helpStyle.Foreground(lipgloss.Color(colors.HelpBar))
+	}
+
+	h.Styles.ShortKey = helpStyle
+	h.Styles.ShortDesc = helpStyle
+	h.Styles.ShortSeparator = helpStyle
+	h.Styles.FullKey = helpStyle
+	h.Styles.FullDesc = helpStyle
+	h.Styles.FullSeparator = helpStyle
+
+	return h
+}
+
 var dayNames = [7]string{"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"}
 
-func Render(m Model) string {
+// View produces the calendar view string for the model state.
+func (m Model) View() string {
 	st := m.styles
 	var b strings.Builder
 	year, month, _ := m.Cursor.Date()
@@ -119,10 +140,14 @@ func Render(m Model) string {
 
 	b.WriteString("\n")
 
+	if m.StatusMsg != "" {
+		b.WriteString(st.helpBar.Render(m.StatusMsg))
+		b.WriteString("\n")
+	}
+
 	if m.ShowHelp {
 		b.WriteString("\n")
-		help := "h/l:day  j/k:week  H/L:month  J/K:year  t:today  y:yank  w:weeks  enter:select  q:quit"
-		b.WriteString(st.helpBar.Render(help))
+		b.WriteString(m.help.View(m.keys))
 		b.WriteString("\n")
 	}
 

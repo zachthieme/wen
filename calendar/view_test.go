@@ -8,7 +8,7 @@ import (
 
 func TestRenderMarch2026(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
-	output := Render(m)
+	output := m.View()
 
 	if !strings.Contains(output, "March 2026") {
 		t.Error("expected 'March 2026' in output")
@@ -20,7 +20,7 @@ func TestRenderMarch2026(t *testing.T) {
 
 func TestRenderFebruary2026(t *testing.T) {
 	m := New(date(2026, time.February, 14), date(2026, time.March, 17), DefaultConfig())
-	output := Render(m)
+	output := m.View()
 
 	if !strings.Contains(output, "February 2026") {
 		t.Error("expected 'February 2026' in output")
@@ -31,7 +31,7 @@ func TestRenderWithWeekNumbers(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.ShowWeekNumbers = true
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
-	output := Render(m)
+	output := m.View()
 
 	if !strings.Contains(output, "Wk") {
 		t.Error("expected 'Wk' header when week numbers enabled")
@@ -40,7 +40,7 @@ func TestRenderWithWeekNumbers(t *testing.T) {
 
 func TestRenderWithoutWeekNumbers(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
-	output := Render(m)
+	output := m.View()
 
 	if strings.Contains(output, "Wk") {
 		t.Error("should not have 'Wk' header when week numbers disabled")
@@ -51,7 +51,7 @@ func TestRenderMondayStart(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.WeekStartDay = 1
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
-	output := Render(m)
+	output := m.View()
 
 	if !strings.Contains(output, "Mo Tu We Th Fr Sa Su") {
 		t.Error("expected Monday-start day headers")
@@ -61,21 +61,21 @@ func TestRenderMondayStart(t *testing.T) {
 func TestRenderHelpBar(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	m.ShowHelp = true
-	output := Render(m)
+	output := m.View()
 
-	if !strings.Contains(output, "h/l:day") {
-		t.Error("expected help bar content")
+	if !strings.Contains(output, "prev day") {
+		t.Error("expected help bar to contain 'prev day'")
 	}
-	if !strings.Contains(output, "J/K:year") {
-		t.Error("expected year jump in help bar")
+	if !strings.Contains(output, "quit") {
+		t.Error("expected help bar to contain 'quit'")
 	}
 }
 
 func TestRenderNoHelpBarByDefault(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
-	output := Render(m)
+	output := m.View()
 
-	if strings.Contains(output, "h/l:day") {
+	if strings.Contains(output, "prev day") {
 		t.Error("help bar should not appear by default")
 	}
 }

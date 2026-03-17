@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -25,6 +26,7 @@ type Model struct {
 	StatusMsg       string // transient status message (e.g., yank confirmation)
 	Config          Config
 	keys            keyMap
+	help            help.Model
 	styles          resolvedStyles
 	clipboardCmd    []string // resolved clipboard command, nil if unavailable
 }
@@ -46,14 +48,16 @@ func (m Model) IsQuit() bool { return m.quit }
 
 // New creates a calendar Model with the given cursor position, today's date, and configuration.
 func New(cursor, today time.Time, cfg Config) Model {
+	colors := cfg.ResolvedColors()
 	m := Model{
 		Cursor:          stripTime(cursor),
 		Today:           stripTime(today),
 		ShowWeekNumbers: cfg.ShowWeekNumbers,
 		Config:          cfg,
 		keys:            defaultKeyMap(),
+		help:            newHelpModel(colors),
 	}
-	m.styles = buildStyles(cfg.ResolvedColors())
+	m.styles = buildStyles(colors)
 	m.clipboardCmd = resolveClipboardCmd()
 	return m
 }
@@ -120,10 +124,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
-}
-
-func (m Model) View() string {
-	return Render(m)
 }
 
 func shiftDate(t time.Time, years, months int) time.Time {
