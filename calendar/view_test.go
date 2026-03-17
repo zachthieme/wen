@@ -7,7 +7,7 @@ import (
 )
 
 func TestRenderMarch2026(t *testing.T) {
-	m := New(date(2026, time.March, 17), date(2026, time.March, 17))
+	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	output := Render(m)
 
 	if !strings.Contains(output, "March 2026") {
@@ -32,7 +32,7 @@ func TestRenderMarch2026(t *testing.T) {
 }
 
 func TestRenderFebruary2026(t *testing.T) {
-	m := New(date(2026, time.February, 14), date(2026, time.March, 17))
+	m := New(date(2026, time.February, 14), date(2026, time.March, 17), DefaultConfig())
 	output := Render(m)
 
 	if !strings.Contains(output, "February 2026") {
