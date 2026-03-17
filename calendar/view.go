@@ -66,13 +66,13 @@ var dayNames = [7]string{"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"}
 func (m Model) View() string {
 	st := m.styles
 	var b strings.Builder
-	year, month, _ := m.Cursor.Date()
-	loc := m.Cursor.Location()
-	startDay := m.Config.WeekStartDay
+	year, month, _ := m.cursor.Date()
+	loc := m.cursor.Location()
+	startDay := m.config.WeekStartDay
 
 	// Title
 	gridWidth := 20
-	if m.ShowWeekNumbers {
+	if m.showWeekNumbers {
 		gridWidth = 23
 	}
 	title := fmt.Sprintf("%s %d", month, year)
@@ -81,7 +81,7 @@ func (m Model) View() string {
 	b.WriteString("\n")
 
 	// Day headers
-	if m.ShowWeekNumbers {
+	if m.showWeekNumbers {
 		b.WriteString(st.weekNum.Render("Wk") + " ")
 	}
 	headers := make([]string, 7)
@@ -97,16 +97,16 @@ func (m Model) View() string {
 	days := daysInMonth(year, month, loc)
 
 	// Week number for first row
-	if m.ShowWeekNumbers {
-		wn := weekNumber(first, m.Config.WeekNumbering)
+	if m.showWeekNumbers {
+		wn := weekNumber(first, m.config.WeekNumbering)
 		b.WriteString(st.weekNum.Render(fmt.Sprintf("%2d", wn)) + " ")
 	}
 
 	// Leading spaces
 	b.WriteString(strings.Repeat("   ", weekday))
 
-	_, _, cursorDay := m.Cursor.Date()
-	todayYear, todayMonth, todayDay := m.Today.Date()
+	_, _, cursorDay := m.cursor.Date()
+	todayYear, todayMonth, todayDay := m.today.Date()
 
 	for day := 1; day <= days; day++ {
 		dayStr := fmt.Sprintf("%2d", day)
@@ -128,9 +128,9 @@ func (m Model) View() string {
 		col := (weekday + day) % 7
 		if col == 0 && day < days {
 			b.WriteString("\n")
-			if m.ShowWeekNumbers {
+			if m.showWeekNumbers {
 				nextDay := time.Date(year, month, day+1, 0, 0, 0, 0, loc)
-				wn := weekNumber(nextDay, m.Config.WeekNumbering)
+				wn := weekNumber(nextDay, m.config.WeekNumbering)
 				b.WriteString(st.weekNum.Render(fmt.Sprintf("%2d", wn)) + " ")
 			}
 		} else if day < days {
@@ -140,12 +140,12 @@ func (m Model) View() string {
 
 	b.WriteString("\n")
 
-	if m.StatusMsg != "" {
-		b.WriteString(st.helpBar.Render(m.StatusMsg))
+	if m.statusMsg != "" {
+		b.WriteString(st.helpBar.Render(m.statusMsg))
 		b.WriteString("\n")
 	}
 
-	if m.ShowHelp {
+	if m.showHelp {
 		b.WriteString("\n")
 		b.WriteString(m.help.View(m.keys))
 		b.WriteString("\n")

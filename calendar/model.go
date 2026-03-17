@@ -17,14 +17,14 @@ const DateLayout = "2006-01-02"
 
 // Model holds the state for the interactive calendar TUI.
 type Model struct {
-	Cursor          time.Time
-	Today           time.Time
+	cursor          time.Time
+	today           time.Time
 	selected        bool
 	quit            bool
-	ShowWeekNumbers bool
-	ShowHelp        bool
-	StatusMsg       string // transient status message (e.g., yank confirmation)
-	Config          Config
+	showWeekNumbers bool
+	showHelp        bool
+	statusMsg       string // transient status message (e.g., yank confirmation)
+	config          Config
 	keys            keyMap
 	help            help.Model
 	styles          resolvedStyles
@@ -46,14 +46,17 @@ func (m Model) IsSelected() bool { return m.selected }
 // IsQuit reports whether the user quit without selecting.
 func (m Model) IsQuit() bool { return m.quit }
 
+// Cursor returns the currently selected date.
+func (m Model) Cursor() time.Time { return m.cursor }
+
 // New creates a calendar Model with the given cursor position, today's date, and configuration.
 func New(cursor, today time.Time, cfg Config) Model {
 	colors := cfg.ResolvedColors()
 	m := Model{
-		Cursor:          stripTime(cursor),
-		Today:           stripTime(today),
-		ShowWeekNumbers: cfg.ShowWeekNumbers,
-		Config:          cfg,
+		cursor:          stripTime(cursor),
+		today:           stripTime(today),
+		showWeekNumbers: cfg.ShowWeekNumbers,
+		config:          cfg,
 		keys:            defaultKeyMap(),
 		help:            newHelpModel(colors),
 	}
@@ -76,12 +79,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case yankMsg:
 		if msg.err != nil {
-			m.StatusMsg = fmt.Sprintf("yank failed: %v", msg.err)
+			m.statusMsg = fmt.Sprintf("yank failed: %v", msg.err)
 		} else {
-			m.StatusMsg = "yanked"
+			m.statusMsg = "yanked"
 		}
 	case tea.KeyMsg:
-		m.StatusMsg = ""
+		m.statusMsg = ""
 		switch {
 		case key.Matches(msg, m.keys.Select):
 			m.selected = true
@@ -90,30 +93,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quit = true
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Left):
-			m.Cursor = m.Cursor.AddDate(0, 0, -1)
+			m.cursor = m.cursor.AddDate(0, 0, -1)
 		case key.Matches(msg, m.keys.Right):
-			m.Cursor = m.Cursor.AddDate(0, 0, 1)
+			m.cursor = m.cursor.AddDate(0, 0, 1)
 		case key.Matches(msg, m.keys.Up):
-			m.Cursor = m.Cursor.AddDate(0, 0, -7)
+			m.cursor = m.cursor.AddDate(0, 0, -7)
 		case key.Matches(msg, m.keys.Down):
-			m.Cursor = m.Cursor.AddDate(0, 0, 7)
+			m.cursor = m.cursor.AddDate(0, 0, 7)
 		case key.Matches(msg, m.keys.PrevMonth):
-			m.Cursor = shiftDate(m.Cursor, 0, -1)
+			m.cursor = shiftDate(m.cursor, 0, -1)
 		case key.Matches(msg, m.keys.NextMonth):
-			m.Cursor = shiftDate(m.Cursor, 0, 1)
+			m.cursor = shiftDate(m.cursor, 0, 1)
 		case key.Matches(msg, m.keys.PrevYear):
-			m.Cursor = shiftDate(m.Cursor, -1, 0)
+			m.cursor = shiftDate(m.cursor, -1, 0)
 		case key.Matches(msg, m.keys.NextYear):
-			m.Cursor = shiftDate(m.Cursor, 1, 0)
+			m.cursor = shiftDate(m.cursor, 1, 0)
 		case key.Matches(msg, m.keys.Today):
-			m.Cursor = m.Today
+			m.cursor = m.today
 		case key.Matches(msg, m.keys.ToggleWeeks):
-			m.ShowWeekNumbers = !m.ShowWeekNumbers
+			m.showWeekNumbers = !m.showWeekNumbers
 		case key.Matches(msg, m.keys.ToggleHelp):
-			m.ShowHelp = !m.ShowHelp
+			m.showHelp = !m.showHelp
 		case key.Matches(msg, m.keys.Yank):
 			if m.clipboardCmd != nil {
-				text := m.Cursor.Format(DateLayout)
+				text := m.cursor.Format(DateLayout)
 				cmdArgs := m.clipboardCmd
 				return m, func() tea.Msg {
 					cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)

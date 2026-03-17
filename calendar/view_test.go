@@ -60,7 +60,7 @@ func TestRenderMondayStart(t *testing.T) {
 
 func TestRenderHelpBar(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
-	m.ShowHelp = true
+	m.showHelp = true
 	output := m.View()
 
 	if !strings.Contains(output, "prev day") {

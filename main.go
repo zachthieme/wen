@@ -212,7 +212,7 @@ func runCalendar(args []string) error {
 		return fmt.Errorf("unexpected internal state")
 	}
 	if result.IsSelected() {
-		fmt.Println(result.Cursor.Format(calendar.DateLayout))
+		fmt.Println(result.Cursor().Format(calendar.DateLayout))
 		return nil
 	}
 	return errNoSelection
