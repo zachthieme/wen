@@ -198,6 +198,9 @@ func runCalendar(args []string) error {
 	paddingBottom := fs.Int("padding-bottom", 0, "bottom padding (lines)")
 	paddingLeft := fs.Int("padding-left", 0, "left padding (characters)")
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 
@@ -230,6 +233,11 @@ func runCalendar(args []string) error {
 			cfg.PaddingLeft = *paddingLeft
 		}
 	})
+
+	// Re-normalize after CLI overrides to clamp padding values.
+	for _, w := range cfg.Normalize() {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
+	}
 
 	m := calendar.New(cursor, today, cfg)
 	p := tea.NewProgram(m)
