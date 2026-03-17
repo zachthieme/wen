@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -184,10 +185,20 @@ Config: ~/.config/wen/config.yaml
 
 func runCalendar(args []string) error {
 	today := time.Now()
-	cursor := today
 
-	if len(args) > 0 {
-		input := strings.Join(args, " ")
+	fs := flag.NewFlagSet("cal", flag.ContinueOnError)
+	paddingTop := fs.Int("padding-top", 0, "top padding (lines)")
+	paddingRight := fs.Int("padding-right", 0, "right padding (characters)")
+	paddingBottom := fs.Int("padding-bottom", 0, "bottom padding (lines)")
+	paddingLeft := fs.Int("padding-left", 0, "left padding (characters)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	cursor := today
+	remaining := fs.Args()
+	if len(remaining) > 0 {
+		input := strings.Join(remaining, " ")
 		parsed, err := parseDate(input, today)
 		if err != nil {
 			return err
@@ -199,6 +210,21 @@ func runCalendar(args []string) error {
 	for _, w := range warnings {
 		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}
+
+	// Override config padding with explicitly-set CLI flags.
+	fs.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "padding-top":
+			cfg.PaddingTop = *paddingTop
+		case "padding-right":
+			cfg.PaddingRight = *paddingRight
+		case "padding-bottom":
+			cfg.PaddingBottom = *paddingBottom
+		case "padding-left":
+			cfg.PaddingLeft = *paddingLeft
+		}
+	})
+
 	m := calendar.New(cursor, today, cfg)
 	p := tea.NewProgram(m)
 

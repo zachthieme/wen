@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -149,5 +150,41 @@ func TestPositionalArgTakesPrecedenceOverStdin(t *testing.T) {
 	want := "2026-03-25"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestCalFlagParsing(t *testing.T) {
+	fs := flag.NewFlagSet("cal", flag.ContinueOnError)
+	paddingTop := fs.Int("padding-top", 0, "")
+	paddingRight := fs.Int("padding-right", 0, "")
+	paddingBottom := fs.Int("padding-bottom", 0, "")
+	paddingLeft := fs.Int("padding-left", 0, "")
+
+	err := fs.Parse([]string{"--padding-top", "3", "--padding-left", "2", "march", "2026"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *paddingTop != 3 {
+		t.Errorf("expected padding-top 3, got %d", *paddingTop)
+	}
+	if *paddingRight != 0 {
+		t.Errorf("expected padding-right 0 (default), got %d", *paddingRight)
+	}
+	if *paddingBottom != 0 {
+		t.Errorf("expected padding-bottom 0 (default), got %d", *paddingBottom)
+	}
+	if *paddingLeft != 2 {
+		t.Errorf("expected padding-left 2, got %d", *paddingLeft)
+	}
+	remaining := strings.Join(fs.Args(), " ")
+	if remaining != "march 2026" {
+		t.Errorf("expected remaining args 'march 2026', got %q", remaining)
+	}
+
+	// Verify Visit() only sees explicitly-set flags.
+	var visited []string
+	fs.Visit(func(f *flag.Flag) { visited = append(visited, f.Name) })
+	if len(visited) != 2 {
+		t.Errorf("expected 2 visited flags, got %d: %v", len(visited), visited)
 	}
 }
