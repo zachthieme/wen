@@ -53,18 +53,48 @@ func TestISOForcesMonday(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.WeekNumbering = "iso"
 	cfg.WeekStartDay = 0
-	cfg.Normalize()
+	warnings := cfg.Normalize()
 	if cfg.WeekStartDay != 1 {
 		t.Errorf("ISO should force week_start_day to 1, got %d", cfg.WeekStartDay)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings for valid ISO config, got %v", warnings)
 	}
 }
 
 func TestInvalidWeekStartDayDefaults(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.WeekStartDay = 5
-	cfg.Normalize()
+	warnings := cfg.Normalize()
 	if cfg.WeekStartDay != 0 {
 		t.Errorf("invalid week_start_day should default to 0, got %d", cfg.WeekStartDay)
+	}
+	if len(warnings) == 0 {
+		t.Error("expected a warning for invalid week_start_day, got none")
+	}
+}
+
+func TestNormalizeWarnsInvalidWeekNumbering(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.WeekNumbering = "bogus"
+	warnings := cfg.Normalize()
+	if cfg.WeekNumbering != WeekNumberingUS {
+		t.Errorf("expected week_numbering reset to %q, got %q", WeekNumberingUS, cfg.WeekNumbering)
+	}
+	if len(warnings) == 0 {
+		t.Error("expected a warning for invalid week_numbering, got none")
+	}
+}
+
+func TestNormalizeWarnsInvalidTheme(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Theme = "nonexistent-theme"
+	warnings := cfg.Normalize()
+	if cfg.Theme != "default" {
+		t.Errorf("expected theme reset to 'default', got %q", cfg.Theme)
+	}
+	if len(warnings) == 0 {
+		t.Error("expected a warning for invalid theme, got none")
 	}
 }
 
@@ -75,12 +105,15 @@ func TestLoadConfigFromYAML(t *testing.T) {
 	if err := os.WriteFile(path, content, 0644); err != nil {
 		t.Fatal(err)
 	}
-	cfg := loadConfigFromPath(path)
+	cfg, warnings := loadConfigFromPath(path)
 	if cfg.Theme != "dracula" {
 		t.Errorf("expected theme 'dracula', got %q", cfg.Theme)
 	}
 	if !cfg.ShowWeekNumbers {
 		t.Error("expected ShowWeekNumbers true")
+	}
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings for valid config, got %v", warnings)
 	}
 }
 
@@ -91,15 +124,21 @@ func TestLoadConfigInvalidYAML(t *testing.T) {
 	if err := os.WriteFile(path, content, 0644); err != nil {
 		t.Fatal(err)
 	}
-	cfg := loadConfigFromPath(path)
+	cfg, warnings := loadConfigFromPath(path)
 	if cfg.Theme != "default" {
 		t.Errorf("expected default theme on invalid YAML, got %q", cfg.Theme)
+	}
+	if len(warnings) == 0 {
+		t.Error("expected a warning for invalid YAML, got none")
 	}
 }
 
 func TestLoadConfigMissingFile(t *testing.T) {
-	cfg := loadConfigFromPath("/nonexistent/config.yaml")
+	cfg, warnings := loadConfigFromPath("/nonexistent/config.yaml")
 	if cfg.Theme != "default" {
 		t.Errorf("expected default theme on missing file, got %q", cfg.Theme)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings for missing file, got %v", warnings)
 	}
 }

@@ -13,6 +13,7 @@ const (
 	WeekNumberingISO = "iso"
 )
 
+// ThemeColors defines the color scheme for calendar UI elements.
 type ThemeColors struct {
 	Cursor     string `yaml:"cursor"`
 	Today      string `yaml:"today"`
@@ -22,6 +23,7 @@ type ThemeColors struct {
 	HelpBar    string `yaml:"help_bar"`
 }
 
+// Config holds user preferences for the calendar display.
 type Config struct {
 	ShowWeekNumbers bool        `yaml:"show_week_numbers"`
 	WeekNumbering   string      `yaml:"week_numbering"`
@@ -30,6 +32,7 @@ type Config struct {
 	Colors          ThemeColors `yaml:"colors"`
 }
 
+// DefaultConfig returns a Config with sensible defaults (US week numbering, Sunday start, default theme).
 func DefaultConfig() Config {
 	return Config{
 		ShowWeekNumbers: false,
@@ -39,22 +42,24 @@ func DefaultConfig() Config {
 	}
 }
 
-func (c *Config) Normalize() {
+func (c *Config) Normalize() []string {
+	var warnings []string
 	if c.WeekNumbering != WeekNumberingUS && c.WeekNumbering != WeekNumberingISO {
-		fmt.Fprintf(os.Stderr, "warning: invalid config value for \"week_numbering\", using default\n")
+		warnings = append(warnings, "invalid config value for \"week_numbering\", using default")
 		c.WeekNumbering = WeekNumberingUS
 	}
 	if c.WeekStartDay != 0 && c.WeekStartDay != 1 {
-		fmt.Fprintf(os.Stderr, "warning: invalid config value for \"week_start_day\", using default\n")
+		warnings = append(warnings, "invalid config value for \"week_start_day\", using default")
 		c.WeekStartDay = 0
 	}
 	if c.WeekNumbering == WeekNumberingISO {
 		c.WeekStartDay = 1
 	}
 	if _, ok := themePresets[c.Theme]; !ok {
-		fmt.Fprintf(os.Stderr, "warning: invalid config value for \"theme\", using default\n")
+		warnings = append(warnings, "invalid config value for \"theme\", using default")
 		c.Theme = "default"
 	}
+	return warnings
 }
 
 func (c Config) ResolvedColors() ThemeColors {
@@ -108,26 +113,26 @@ var themePresets = map[string]ThemeColors{
 	},
 }
 
-func LoadConfig() Config {
+// LoadConfig reads the user's config from the XDG config path, creating a default file if none exists.
+func LoadConfig() (Config, []string) {
 	path := configPath()
 	return loadConfigFromPath(path)
 }
 
-func loadConfigFromPath(path string) Config {
+func loadConfigFromPath(path string) (Config, []string) {
 	cfg := DefaultConfig()
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			writeDefaultConfig(path)
 		}
-		return cfg
+		return cfg, nil
 	}
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: invalid config file, using defaults\n")
-		return DefaultConfig()
+		return DefaultConfig(), []string{"invalid config file, using defaults"}
 	}
-	cfg.Normalize()
-	return cfg
+	warnings := cfg.Normalize()
+	return cfg, warnings
 }
 
 func configPath() string {
@@ -142,6 +147,7 @@ func configPath() string {
 func writeDefaultConfig(path string) {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not create config directory: %v\n", err)
 		return
 	}
 	content := `# Week numbers
@@ -161,5 +167,7 @@ theme: default
 #   day_header: "#94e2d5"
 #   help_bar: "#6c7086"
 `
-	_ = os.WriteFile(path, []byte(content), 0644)
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not write default config: %v\n", err)
+	}
 }

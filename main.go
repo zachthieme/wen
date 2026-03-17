@@ -19,7 +19,7 @@ import (
 
 var (
 	version        = "dev"
-	errNoSelection = errors.New("")
+	errNoSelection = errors.New("no date selected")
 )
 
 // Package-level parser — initialized once, reused on every call.
@@ -119,9 +119,10 @@ func parseRelativeWeekday(input string, ref time.Time) (time.Time, bool) {
 		diff := int(target) - int(refDay)
 		return ref.AddDate(0, 0, diff), true
 	case "next":
+		// Advance to start of next week (Sunday), then offset by target weekday.
 		daysToNextSunday := (7 - int(refDay)) % 7
 		if daysToNextSunday == 0 {
-			daysToNextSunday = 7
+			daysToNextSunday = 7 // if ref is Sunday, "next" means the following week
 		}
 		diff := daysToNextSunday + int(target)
 		return ref.AddDate(0, 0, diff), true
@@ -142,7 +143,10 @@ func parseDate(input string, ref time.Time) (time.Time, error) {
 	}
 
 	result, err := dateParser.Parse(input, ref)
-	if err != nil || result == nil {
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error: could not parse date %q: %w", input, err)
+	}
+	if result == nil {
 		return time.Time{}, fmt.Errorf("error: could not parse date %q", input)
 	}
 	return result.Time, nil
@@ -191,7 +195,10 @@ func runCalendar(args []string) error {
 		cursor = time.Date(parsed.Year(), parsed.Month(), 1, 0, 0, 0, 0, time.Local)
 	}
 
-	cfg := calendar.LoadConfig()
+	cfg, warnings := calendar.LoadConfig()
+	for _, w := range warnings {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
+	}
 	m := calendar.New(cursor, today, cfg)
 	p := tea.NewProgram(m)
 
@@ -200,7 +207,10 @@ func runCalendar(args []string) error {
 		return fmt.Errorf("error: %w", err)
 	}
 
-	result := finalModel.(calendar.Model)
+	result, ok := finalModel.(calendar.Model)
+	if !ok {
+		return fmt.Errorf("error: unexpected internal state")
+	}
 	if result.IsSelected() {
 		fmt.Println(result.Cursor.Format(calendar.DateLayout))
 		return nil
