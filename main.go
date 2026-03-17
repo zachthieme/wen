@@ -75,7 +75,8 @@ func runCalendar(args []string) {
 		cursor = time.Date(parsed.Year(), parsed.Month(), 1, 0, 0, 0, 0, time.Local)
 	}
 
-	m := calendar.New(cursor, today)
+	cfg := calendar.LoadConfig()
+	m := calendar.New(cursor, today, cfg)
 	p := tea.NewProgram(m)
 
 	finalModel, err := p.Run()
