@@ -1,4 +1,4 @@
-.PHONY: build test lint install
+.PHONY: build test lint check install
 
 build:
 	go build -o wen .
@@ -8,6 +8,8 @@ test:
 
 lint:
 	golangci-lint run
+
+check: test lint
 
 install:
 	go install .

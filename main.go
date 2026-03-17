@@ -20,20 +20,33 @@ var version = "dev"
 
 const dateLayout = "2006-01-02"
 
-func main() {
-	args := os.Args[1:]
+// Package-level parser — initialized once, reused on every call.
+var dateParser *when.Parser
 
+func init() {
+	dateParser = when.New(nil)
+	dateParser.Add(en.All...)
+	dateParser.Add(common.All...)
+}
+
+func main() {
+	if err := run(os.Args[1:]); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run(args []string) error {
 	if len(args) > 0 {
 		switch args[0] {
 		case "-h", "--help":
 			printHelp()
-			return
+			return nil
 		case "-v", "--version":
 			fmt.Println("wen " + version)
-			return
+			return nil
 		case "cal":
-			runCalendar(args[1:])
-			return
+			return runCalendar(args[1:])
 		}
 	}
 
@@ -45,8 +58,7 @@ func main() {
 		scanner := bufio.NewScanner(os.Stdin)
 		if !scanner.Scan() {
 			if err := scanner.Err(); err != nil {
-				fmt.Fprintln(os.Stderr, "error: failed to read from stdin")
-				os.Exit(1)
+				return fmt.Errorf("error: failed to read from stdin")
 			}
 			input = ""
 		} else {
@@ -56,11 +68,15 @@ func main() {
 
 	if input == "" {
 		fmt.Println(time.Now().Format(dateLayout))
-		return
+		return nil
 	}
 
-	result := parseDate(input, time.Now())
+	result, err := parseDate(input, time.Now())
+	if err != nil {
+		return err
+	}
 	fmt.Println(result.Format(dateLayout))
+	return nil
 }
 
 var weekdays = map[string]time.Weekday{
@@ -73,7 +89,9 @@ var weekdays = map[string]time.Weekday{
 	"saturday": time.Saturday, "sat": time.Saturday,
 }
 
-func parseThisNextWeekday(input string, ref time.Time) (time.Time, bool) {
+// parseRelativeWeekday handles "this/next/last <weekday>" patterns.
+// Returns the resolved date and true if matched, or zero time and false.
+func parseRelativeWeekday(input string, ref time.Time) (time.Time, bool) {
 	lower := strings.ToLower(strings.TrimSpace(input))
 	parts := strings.Fields(lower)
 	if len(parts) != 2 {
@@ -81,7 +99,7 @@ func parseThisNextWeekday(input string, ref time.Time) (time.Time, bool) {
 	}
 
 	prefix := parts[0]
-	if prefix != "this" && prefix != "next" {
+	if prefix != "this" && prefix != "next" && prefix != "last" {
 		return time.Time{}, false
 	}
 
@@ -91,38 +109,38 @@ func parseThisNextWeekday(input string, ref time.Time) (time.Time, bool) {
 	}
 
 	refDay := ref.Weekday()
-	if prefix == "this" {
-		// This week's instance of that day (could be past or future within the week)
+	switch prefix {
+	case "this":
 		diff := int(target) - int(refDay)
 		return ref.AddDate(0, 0, diff), true
+	case "next":
+		daysToNextSunday := (7 - int(refDay)) % 7
+		if daysToNextSunday == 0 {
+			daysToNextSunday = 7
+		}
+		diff := daysToNextSunday + int(target)
+		return ref.AddDate(0, 0, diff), true
+	case "last":
+		diff := int(refDay) - int(target)
+		if diff <= 0 {
+			diff += 7
+		}
+		return ref.AddDate(0, 0, -diff), true
 	}
 
-	// "next" — next week's instance of that day
-	// Step to next week's Sunday first, then add target weekday offset
-	daysToNextSunday := (7 - int(refDay)) % 7
-	if daysToNextSunday == 0 {
-		daysToNextSunday = 7
-	}
-	diff := daysToNextSunday + int(target)
-	return ref.AddDate(0, 0, diff), true
+	return time.Time{}, false
 }
 
-func parseDate(input string, ref time.Time) time.Time {
-	// Try this/next weekday first
-	if t, ok := parseThisNextWeekday(input, ref); ok {
-		return t
+func parseDate(input string, ref time.Time) (time.Time, error) {
+	if t, ok := parseRelativeWeekday(input, ref); ok {
+		return t, nil
 	}
 
-	w := when.New(nil)
-	w.Add(en.All...)
-	w.Add(common.All...)
-
-	result, err := w.Parse(input, ref)
+	result, err := dateParser.Parse(input, ref)
 	if err != nil || result == nil {
-		fmt.Fprintf(os.Stderr, "error: could not parse date %q\n", input)
-		os.Exit(1)
+		return time.Time{}, fmt.Errorf("error: could not parse date %q", input)
 	}
-	return result.Time
+	return result.Time, nil
 }
 
 func printHelp() {
@@ -155,13 +173,16 @@ Config: ~/.config/wen/config.yaml
 `)
 }
 
-func runCalendar(args []string) {
+func runCalendar(args []string) error {
 	today := time.Now()
 	cursor := today
 
 	if len(args) > 0 {
 		input := strings.Join(args, " ")
-		parsed := parseDate(input, today)
+		parsed, err := parseDate(input, today)
+		if err != nil {
+			return err
+		}
 		cursor = time.Date(parsed.Year(), parsed.Month(), 1, 0, 0, 0, 0, time.Local)
 	}
 
@@ -171,14 +192,14 @@ func runCalendar(args []string) {
 
 	finalModel, err := p.Run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error: %w", err)
 	}
 
 	result := finalModel.(calendar.Model)
-	if result.Selected {
+	if result.IsSelected() {
 		fmt.Println(result.Cursor.Format(dateLayout))
-	} else {
-		os.Exit(1)
+		return nil
 	}
+	os.Exit(1)
+	return nil
 }

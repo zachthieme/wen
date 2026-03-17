@@ -3,28 +3,45 @@ package calendar
 import (
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type Model struct {
 	Cursor          time.Time
 	Today           time.Time
-	Selected        bool
-	Quit            bool
+	selected        bool
+	quit            bool
 	ShowWeekNumbers bool
 	ShowHelp        bool
 	Config          Config
+	styles          resolvedStyles
 }
 
+type resolvedStyles struct {
+	cursor    lipgloss.Style
+	today     lipgloss.Style
+	title     lipgloss.Style
+	weekNum   lipgloss.Style
+	dayHeader lipgloss.Style
+	helpBar   lipgloss.Style
+}
+
+func (m Model) IsSelected() bool { return m.selected }
+func (m Model) IsQuit() bool     { return m.quit }
+
 func New(cursor, today time.Time, cfg Config) Model {
-	return Model{
+	m := Model{
 		Cursor:          stripTime(cursor),
 		Today:           stripTime(today),
 		ShowWeekNumbers: cfg.ShowWeekNumbers,
 		Config:          cfg,
 	}
+	m.styles = buildStyles(cfg.ResolvedColors())
+	return m
 }
 
 func stripTime(t time.Time) time.Time {
@@ -35,15 +52,20 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
+// yankMsg signals that a clipboard write completed (or failed silently).
+type yankMsg struct{}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case yankMsg:
+		// clipboard write finished, nothing to do
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			m.Selected = true
+			m.selected = true
 			return m, tea.Quit
 		case tea.KeyEscape:
-			m.Quit = true
+			m.quit = true
 			return m, tea.Quit
 		case tea.KeyLeft:
 			m.Cursor = m.Cursor.AddDate(0, 0, -1)
@@ -56,7 +78,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyRunes:
 			switch string(msg.Runes) {
 			case "q":
-				m.Quit = true
+				m.quit = true
 				return m, tea.Quit
 			case "h":
 				m.Cursor = m.Cursor.AddDate(0, 0, -1)
@@ -67,13 +89,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "j":
 				m.Cursor = m.Cursor.AddDate(0, 0, 7)
 			case "H":
-				m.Cursor = prevMonth(m.Cursor)
+				m.Cursor = shiftDate(m.Cursor, 0, -1)
 			case "L":
-				m.Cursor = nextMonth(m.Cursor)
+				m.Cursor = shiftDate(m.Cursor, 0, 1)
 			case "K":
-				m.Cursor = prevYear(m.Cursor)
+				m.Cursor = shiftDate(m.Cursor, -1, 0)
 			case "J":
-				m.Cursor = nextYear(m.Cursor)
+				m.Cursor = shiftDate(m.Cursor, 1, 0)
 			case "t":
 				m.Cursor = m.Today
 			case "w":
@@ -81,7 +103,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "?":
 				m.ShowHelp = !m.ShowHelp
 			case "y":
-				yankToClipboard(m.Cursor.Format("2006-01-02"))
+				text := m.Cursor.Format("2006-01-02")
+				return m, yankToClipboardCmd(text)
 			}
 		}
 	}
@@ -92,46 +115,30 @@ func (m Model) View() string {
 	return Render(m)
 }
 
-func nextMonth(t time.Time) time.Time {
+// shiftDate moves a date by the given years and months, clamping the day
+// to the last day of the target month. Consolidates nextMonth/prevMonth/
+// nextYear/prevYear into a single function.
+func shiftDate(t time.Time, years, months int) time.Time {
 	y, m, d := t.Date()
-	next := time.Date(y, m+1, 1, 0, 0, 0, 0, t.Location())
-	maxDay := daysInMonth(next.Year(), next.Month())
+	target := time.Date(y+years, m+time.Month(months), 1, 0, 0, 0, 0, t.Location())
+	maxDay := daysInMonth(target.Year(), target.Month(), t.Location())
 	if d > maxDay {
 		d = maxDay
 	}
-	return time.Date(next.Year(), next.Month(), d, 0, 0, 0, 0, t.Location())
+	return time.Date(target.Year(), target.Month(), d, 0, 0, 0, 0, t.Location())
 }
 
-func prevMonth(t time.Time) time.Time {
-	y, m, d := t.Date()
-	prev := time.Date(y, m-1, 1, 0, 0, 0, 0, t.Location())
-	maxDay := daysInMonth(prev.Year(), prev.Month())
-	if d > maxDay {
-		d = maxDay
+func daysInMonth(year int, month time.Month, loc *time.Location) int {
+	return time.Date(year, month+1, 0, 0, 0, 0, 0, loc).Day()
+}
+
+// yankToClipboardCmd returns a tea.Cmd that writes text to the system
+// clipboard asynchronously, so the TUI doesn't block.
+func yankToClipboardCmd(text string) tea.Cmd {
+	return func() tea.Msg {
+		yankToClipboard(text)
+		return yankMsg{}
 	}
-	return time.Date(prev.Year(), prev.Month(), d, 0, 0, 0, 0, t.Location())
-}
-
-func nextYear(t time.Time) time.Time {
-	y, m, d := t.Date()
-	maxDay := daysInMonth(y+1, m)
-	if d > maxDay {
-		d = maxDay
-	}
-	return time.Date(y+1, m, d, 0, 0, 0, 0, t.Location())
-}
-
-func prevYear(t time.Time) time.Time {
-	y, m, d := t.Date()
-	maxDay := daysInMonth(y-1, m)
-	if d > maxDay {
-		d = maxDay
-	}
-	return time.Date(y-1, m, d, 0, 0, 0, 0, t.Location())
-}
-
-func daysInMonth(year int, month time.Month) int {
-	return time.Date(year, month+1, 0, 0, 0, 0, 0, time.Local).Day()
 }
 
 func yankToClipboard(text string) {
@@ -152,14 +159,6 @@ func yankToClipboard(text string) {
 	default:
 		return
 	}
-	pipe, err := cmd.StdinPipe()
-	if err != nil {
-		return
-	}
-	if err := cmd.Start(); err != nil {
-		return
-	}
-	_, _ = pipe.Write([]byte(text))
-	pipe.Close()
-	_ = cmd.Wait()
+	cmd.Stdin = strings.NewReader(text)
+	_ = cmd.Run()
 }

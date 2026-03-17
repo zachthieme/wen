@@ -103,26 +103,30 @@ func TestThisVsNextWeekday(t *testing.T) {
 		{"next saturday", "2026-03-28"},
 		{"this thu", "2026-03-19"},
 		{"next fri", "2026-03-27"},
+		{"last thursday", "2026-03-12"},
+		{"last tuesday", "2026-03-10"},
+		{"last sunday", "2026-03-15"},
+		{"last sat", "2026-03-14"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			got, ok := parseThisNextWeekday(tt.input, ref)
+			got, ok := parseRelativeWeekday(tt.input, ref)
 			if !ok {
 				t.Fatalf("expected match for %q", tt.input)
 			}
 			if got.Format("2006-01-02") != tt.want {
-				t.Errorf("parseThisNextWeekday(%q) = %s, want %s", tt.input, got.Format("2006-01-02"), tt.want)
+				t.Errorf("parseRelativeWeekday(%q) = %s, want %s", tt.input, got.Format("2006-01-02"), tt.want)
 			}
 		})
 	}
 }
 
-func TestThisNextDoesNotMatchOtherInputs(t *testing.T) {
+func TestRelativeWeekdayDoesNotMatchOtherInputs(t *testing.T) {
 	ref := time.Date(2026, 3, 17, 12, 0, 0, 0, time.Local)
 	inputs := []string{"tomorrow", "2 weeks ago", "march 20th", "pizza", "next", "this"}
 	for _, input := range inputs {
-		if _, ok := parseThisNextWeekday(input, ref); ok {
+		if _, ok := parseRelativeWeekday(input, ref); ok {
 			t.Errorf("expected no match for %q", input)
 		}
 	}
