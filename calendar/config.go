@@ -185,6 +185,12 @@ theme: default
 #   week_number: "#6c7086"
 #   day_header: "#94e2d5"
 #   help_bar: "#6c7086"
+
+# Padding (0-20, can also be set via --padding-* CLI flags):
+# padding_top: 0
+# padding_right: 0
+# padding_bottom: 0
+# padding_left: 0
 `
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not write default config: %v\n", err)

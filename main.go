@@ -167,6 +167,12 @@ Flags:
   -h, --help       Show this help
   -v, --version    Show version
 
+Calendar flags:
+  --padding-top N      Top padding in lines (default: from config or 0)
+  --padding-right N    Right padding in characters (default: from config or 0)
+  --padding-bottom N   Bottom padding in lines (default: from config or 0)
+  --padding-left N     Left padding in characters (default: from config or 0)
+
 Calendar keybindings:
   h/l, arrows      Previous / next day
   j/k, arrows      Next / previous week
