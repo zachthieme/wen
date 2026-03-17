@@ -38,7 +38,7 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
 
-          REPO="https://github.com/zachthieme/zdate/releases/download/${TAG}"
+          REPO="https://github.com/zachthieme/wen/releases/download/${TAG}"
 
           compute_hash() {
             local url="$1"
@@ -51,12 +51,12 @@ jobs:
             echo "$hash"
           }
 
-          HASH_LINUX_AMD64=$(compute_hash "${REPO}/zdate_linux_amd64.tar.gz")
-          HASH_LINUX_ARM64=$(compute_hash "${REPO}/zdate_linux_arm64.tar.gz")
-          HASH_DARWIN_AMD64=$(compute_hash "${REPO}/zdate_darwin_amd64.tar.gz")
-          HASH_DARWIN_ARM64=$(compute_hash "${REPO}/zdate_darwin_arm64.tar.gz")
+          HASH_LINUX_AMD64=$(compute_hash "${REPO}/wen_linux_amd64.tar.gz")
+          HASH_LINUX_ARM64=$(compute_hash "${REPO}/wen_linux_arm64.tar.gz")
+          HASH_DARWIN_AMD64=$(compute_hash "${REPO}/wen_darwin_amd64.tar.gz")
+          HASH_DARWIN_ARM64=$(compute_hash "${REPO}/wen_darwin_arm64.tar.gz")
 
-          sed -i "s|zdateVersion = \".*\"|zdateVersion = \"${VERSION}\"|" flake.nix
+          sed -i "s|wenVersion = \".*\"|wenVersion = \"${VERSION}\"|" flake.nix
           sed -i "s|x86_64-linux = \"sha256-.*\"|x86_64-linux = \"${HASH_LINUX_AMD64}\"|" flake.nix
           sed -i "s|aarch64-linux = \"sha256-.*\"|aarch64-linux = \"${HASH_LINUX_ARM64}\"|" flake.nix
           sed -i "s|x86_64-darwin = \"sha256-.*\"|x86_64-darwin = \"${HASH_DARWIN_AMD64}\"|" flake.nix

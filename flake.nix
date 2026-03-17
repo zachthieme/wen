@@ -1,5 +1,5 @@
 {
-  description = "zdate - a natural language date CLI tool";
+  description = "wen - a natural language date CLI tool";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -11,7 +11,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        zdateVersion = "0.1.0";
+        wenVersion = "0.1.0";
 
         hashes = {
           x86_64-linux = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
@@ -27,12 +27,12 @@
           aarch64-darwin = "darwin_arm64";
         };
 
-        zdate-bin = pkgs.stdenv.mkDerivation {
-          pname = "zdate";
-          version = zdateVersion;
+        wen-bin = pkgs.stdenv.mkDerivation {
+          pname = "wen";
+          version = wenVersion;
 
           src = pkgs.fetchurl {
-            url = "https://github.com/zachthieme/zdate/releases/download/v${zdateVersion}/zdate_${archMap.${system}}.tar.gz";
+            url = "https://github.com/zachthieme/wen/releases/download/v${wenVersion}/wen_${archMap.${system}}.tar.gz";
             sha256 = hashes.${system};
           };
 
@@ -40,20 +40,20 @@
 
           installPhase = ''
             mkdir -p $out/bin
-            cp zdate $out/bin/zdate
-            chmod +x $out/bin/zdate
+            cp wen $out/bin/wen
+            chmod +x $out/bin/wen
           '';
 
           meta = with pkgs.lib; {
             description = "A natural language date CLI tool";
-            homepage = "https://github.com/zachthieme/zdate";
-            mainProgram = "zdate";
+            homepage = "https://github.com/zachthieme/wen";
+            mainProgram = "wen";
           };
         };
 
-        zdate-src = pkgs.buildGoModule {
-          pname = "zdate";
-          version = zdateVersion;
+        wen-src = pkgs.buildGoModule {
+          pname = "wen";
+          version = wenVersion;
 
           src = ./.;
 
@@ -63,15 +63,15 @@
 
           meta = with pkgs.lib; {
             description = "A natural language date CLI tool";
-            homepage = "https://github.com/zachthieme/zdate";
-            mainProgram = "zdate";
+            homepage = "https://github.com/zachthieme/wen";
+            mainProgram = "wen";
           };
         };
       in
       {
         packages = {
-          inherit zdate-bin zdate-src;
-          default = zdate-bin;
+          inherit wen-bin wen-src;
+          default = wen-bin;
         };
       }
     );

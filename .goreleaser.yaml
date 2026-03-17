@@ -2,7 +2,7 @@ version: 2
 
 builds:
   - main: .
-    binary: zdate
+    binary: wen
     ldflags:
       - -s -w
     goos:
@@ -14,12 +14,12 @@ builds:
 
 archives:
   - format: tar.gz
-    name_template: "zdate_{{ .Os }}_{{ .Arch }}"
+    name_template: "wen_{{ .Os }}_{{ .Arch }}"
     files:
       - none*
 
 checksum:
-  name_template: "zdate_checksums.txt"
+  name_template: "wen_checksums.txt"
   algorithm: sha256
 
 changelog:
@@ -34,4 +34,4 @@ changelog:
 release:
   github:
     owner: zachthieme
-    name: zdate
+    name: wen

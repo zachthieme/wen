@@ -1,7 +1,7 @@
 .PHONY: build test lint install
 
 build:
-	go build -o zdate .
+	go build -o wen .
 
 test:
 	go test -race -count=1 ./...
