@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -14,21 +13,10 @@ import (
 	"golang.org/x/term"
 )
 
+const dateLayout = "2006-01-02"
+
 func main() {
-	nowFlag := flag.String("now", "", "override reference date (yyyy-mm-dd)")
-	flag.Parse()
-
-	ref := time.Now()
-	if *nowFlag != "" {
-		parsed, err := time.Parse("2006-01-02", *nowFlag)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: invalid --now date %q, expected yyyy-mm-dd\n", *nowFlag)
-			os.Exit(1)
-		}
-		ref = parsed
-	}
-
-	args := flag.Args()
+	args := os.Args[1:]
 
 	var input string
 	switch {
@@ -41,13 +29,14 @@ func main() {
 				fmt.Fprintln(os.Stderr, "error: failed to read from stdin")
 				os.Exit(1)
 			}
-			// EOF with no data: behave as if no input was provided
-			fmt.Println(ref.Format("2006-01-02"))
-			return
+			input = ""
+		} else {
+			input = strings.TrimSpace(scanner.Text())
 		}
-		input = strings.TrimSpace(scanner.Text())
-	default:
-		fmt.Println(ref.Format("2006-01-02"))
+	}
+
+	if input == "" {
+		fmt.Println(time.Now().Format(dateLayout))
 		return
 	}
 
@@ -55,11 +44,11 @@ func main() {
 	w.Add(en.All...)
 	w.Add(common.All...)
 
-	result, err := w.Parse(input, ref)
+	result, err := w.Parse(input, time.Now())
 	if err != nil || result == nil {
 		fmt.Fprintf(os.Stderr, "error: could not parse date %q\n", input)
 		os.Exit(1)
 	}
 
-	fmt.Println(result.Time.Format("2006-01-02"))
+	fmt.Println(result.Time.Format(dateLayout))
 }
