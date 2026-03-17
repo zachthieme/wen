@@ -1,5 +1,28 @@
 # Changelog
 
+### v0.3.0 — March 17, 2026: Calendar Enhancements
+
+**Week numbers:**
+- `w` toggles week number column on/off
+- US and ISO 8601 numbering systems (configurable)
+- `week_start_day` controls grid layout (Sunday or Monday)
+
+**Color themes:**
+- Four built-in themes: default, catppuccin-mocha, dracula, nord
+- Custom color overrides via config
+
+**New keybindings:**
+- Arrow keys mirror vim keys for day/week navigation
+- `J`/`K` for year jump (with leap day clamping)
+- `t` to jump to today
+- `y` to yank cursor date to clipboard (pbcopy, wl-copy, xclip, xsel)
+- `?` to toggle help bar
+
+**Config file:**
+- `~/.config/wen/config.yaml` (auto-created on first run)
+- Respects `$XDG_CONFIG_HOME`
+- Invalid config falls back to defaults with a warning
+
 ### v0.2.0 — March 17, 2026: Interactive Calendar & Rename
 
 **Renamed from `zdate` to `wen`.**

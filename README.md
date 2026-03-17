@@ -65,19 +65,49 @@ wen cal
 wen cal december 2026
 ```
 
-Navigate with vim keys, press Enter to select a date (printed to stdout), or `q`/`Esc` to cancel.
+Navigate with vim keys (or arrow keys), press Enter to select a date (printed to stdout), or `q`/`Esc` to cancel.
 
 #### Keybindings
 
 | Key | Action |
 |-----|--------|
-| `h` / `l` | Previous / next day |
-| `j` / `k` | Next / previous week |
+| `h` / `l` / `←` / `→` | Previous / next day |
+| `j` / `k` / `↓` / `↑` | Next / previous week |
 | `H` / `L` | Previous / next month |
+| `J` / `K` | Next / previous year |
+| `t` | Jump to today |
+| `w` | Toggle week numbers |
+| `y` | Yank cursor date to clipboard |
+| `?` | Toggle help bar |
 | `Enter` | Print selected date and exit |
 | `q` / `Esc` | Exit without output |
 
-The calendar highlights today and your cursor position. Day and month navigation wraps across boundaries (e.g., pressing `l` on March 31 moves to April 1). Month jumps clamp the day (e.g., Jan 31 + `L` = Feb 28).
+The calendar highlights today and your cursor position. Navigation wraps across boundaries (e.g., `l` on March 31 moves to April 1). Month and year jumps clamp the day (e.g., Jan 31 + `L` = Feb 28, Feb 29 + `J` = Feb 28).
+
+## Configuration
+
+Config lives at `~/.config/wen/config.yaml` (created automatically on first `wen cal`). Config only affects the calendar — date parsing stays zero-config.
+
+```yaml
+# Week numbers
+show_week_numbers: false
+week_numbering: us    # "us" or "iso"
+week_start_day: 0     # 0=Sunday, 1=Monday
+
+# Theme (built-in: "default", "catppuccin-mocha", "dracula", "nord")
+theme: default
+
+# Override individual colors (hex values, override theme):
+# colors:
+#   cursor: "#f5c2e7"
+#   today: "#a6e3a1"
+#   title: "#89b4fa"
+#   week_number: "#6c7086"
+#   day_header: "#94e2d5"
+#   help_bar: "#6c7086"
+```
+
+ISO week numbering forces Monday as the week start day.
 
 ## Examples
 
@@ -98,6 +128,7 @@ wen next friday | xargs -I{} echo "Meeting on {}"
 ```
 main.go              CLI entry: subcommand routing, date parsing
 calendar/
+  config.go          Config loading: YAML, themes, XDG path
   model.go           Bubbletea model: cursor state, navigation, key handling
-  view.go            Lipgloss rendering: month grid, highlights
+  view.go            Lipgloss rendering: month grid, highlights, themes
 ```
