@@ -24,6 +24,7 @@ type Model struct {
 	ShowHelp        bool
 	StatusMsg       string // transient status message (e.g., yank confirmation)
 	Config          Config
+	keys            keyMap
 	styles          resolvedStyles
 	clipboardCmd    []string // resolved clipboard command, nil if unavailable
 }
@@ -50,6 +51,7 @@ func New(cursor, today time.Time, cfg Config) Model {
 		Today:           stripTime(today),
 		ShowWeekNumbers: cfg.ShowWeekNumbers,
 		Config:          cfg,
+		keys:            defaultKeyMap(),
 	}
 	m.styles = buildStyles(cfg.ResolvedColors())
 	m.clipboardCmd = resolveClipboardCmd()
@@ -75,58 +77,44 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.StatusMsg = "yanked"
 		}
 	case tea.KeyMsg:
-		m.StatusMsg = "" // clear transient status on any keypress
-		switch msg.Type {
-		case tea.KeyEnter:
+		m.StatusMsg = ""
+		switch {
+		case key.Matches(msg, m.keys.Select):
 			m.selected = true
 			return m, tea.Quit
-		case tea.KeyEscape:
+		case key.Matches(msg, m.keys.Quit):
 			m.quit = true
 			return m, tea.Quit
-		case tea.KeyLeft:
+		case key.Matches(msg, m.keys.Left):
 			m.Cursor = m.Cursor.AddDate(0, 0, -1)
-		case tea.KeyRight:
+		case key.Matches(msg, m.keys.Right):
 			m.Cursor = m.Cursor.AddDate(0, 0, 1)
-		case tea.KeyUp:
+		case key.Matches(msg, m.keys.Up):
 			m.Cursor = m.Cursor.AddDate(0, 0, -7)
-		case tea.KeyDown:
+		case key.Matches(msg, m.keys.Down):
 			m.Cursor = m.Cursor.AddDate(0, 0, 7)
-		case tea.KeyRunes:
-			switch string(msg.Runes) {
-			case "q":
-				m.quit = true
-				return m, tea.Quit
-			case "h":
-				m.Cursor = m.Cursor.AddDate(0, 0, -1)
-			case "l":
-				m.Cursor = m.Cursor.AddDate(0, 0, 1)
-			case "k":
-				m.Cursor = m.Cursor.AddDate(0, 0, -7)
-			case "j":
-				m.Cursor = m.Cursor.AddDate(0, 0, 7)
-			case "H":
-				m.Cursor = shiftDate(m.Cursor, 0, -1)
-			case "L":
-				m.Cursor = shiftDate(m.Cursor, 0, 1)
-			case "K":
-				m.Cursor = shiftDate(m.Cursor, -1, 0)
-			case "J":
-				m.Cursor = shiftDate(m.Cursor, 1, 0)
-			case "t":
-				m.Cursor = m.Today
-			case "w":
-				m.ShowWeekNumbers = !m.ShowWeekNumbers
-			case "?":
-				m.ShowHelp = !m.ShowHelp
-			case "y":
-				if m.clipboardCmd != nil {
-					text := m.Cursor.Format(DateLayout)
-					cmdArgs := m.clipboardCmd
-					return m, func() tea.Msg {
-						cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-						cmd.Stdin = strings.NewReader(text)
-						return yankMsg{err: cmd.Run()}
-					}
+		case key.Matches(msg, m.keys.PrevMonth):
+			m.Cursor = shiftDate(m.Cursor, 0, -1)
+		case key.Matches(msg, m.keys.NextMonth):
+			m.Cursor = shiftDate(m.Cursor, 0, 1)
+		case key.Matches(msg, m.keys.PrevYear):
+			m.Cursor = shiftDate(m.Cursor, -1, 0)
+		case key.Matches(msg, m.keys.NextYear):
+			m.Cursor = shiftDate(m.Cursor, 1, 0)
+		case key.Matches(msg, m.keys.Today):
+			m.Cursor = m.Today
+		case key.Matches(msg, m.keys.ToggleWeeks):
+			m.ShowWeekNumbers = !m.ShowWeekNumbers
+		case key.Matches(msg, m.keys.ToggleHelp):
+			m.ShowHelp = !m.ShowHelp
+		case key.Matches(msg, m.keys.Yank):
+			if m.clipboardCmd != nil {
+				text := m.Cursor.Format(DateLayout)
+				cmdArgs := m.clipboardCmd
+				return m, func() tea.Msg {
+					cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+					cmd.Stdin = strings.NewReader(text)
+					return yankMsg{err: cmd.Run()}
 				}
 			}
 		}
