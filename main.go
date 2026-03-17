@@ -63,7 +63,56 @@ func main() {
 	fmt.Println(result.Format(dateLayout))
 }
 
+var weekdays = map[string]time.Weekday{
+	"sunday": time.Sunday, "sun": time.Sunday,
+	"monday": time.Monday, "mon": time.Monday,
+	"tuesday": time.Tuesday, "tue": time.Tuesday,
+	"wednesday": time.Wednesday, "wed": time.Wednesday,
+	"thursday": time.Thursday, "thu": time.Thursday,
+	"friday": time.Friday, "fri": time.Friday,
+	"saturday": time.Saturday, "sat": time.Saturday,
+}
+
+func parseThisNextWeekday(input string, ref time.Time) (time.Time, bool) {
+	lower := strings.ToLower(strings.TrimSpace(input))
+	parts := strings.Fields(lower)
+	if len(parts) != 2 {
+		return time.Time{}, false
+	}
+
+	prefix := parts[0]
+	if prefix != "this" && prefix != "next" {
+		return time.Time{}, false
+	}
+
+	target, ok := weekdays[parts[1]]
+	if !ok {
+		return time.Time{}, false
+	}
+
+	refDay := ref.Weekday()
+	if prefix == "this" {
+		// This week's instance of that day (could be past or future within the week)
+		diff := int(target) - int(refDay)
+		return ref.AddDate(0, 0, diff), true
+	}
+
+	// "next" — next week's instance of that day
+	// Step to next week's Sunday first, then add target weekday offset
+	daysToNextSunday := (7 - int(refDay)) % 7
+	if daysToNextSunday == 0 {
+		daysToNextSunday = 7
+	}
+	diff := daysToNextSunday + int(target)
+	return ref.AddDate(0, 0, diff), true
+}
+
 func parseDate(input string, ref time.Time) time.Time {
+	// Try this/next weekday first
+	if t, ok := parseThisNextWeekday(input, ref); ok {
+		return t
+	}
+
 	w := when.New(nil)
 	w.Add(en.All...)
 	w.Add(common.All...)

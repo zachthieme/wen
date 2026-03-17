@@ -81,6 +81,53 @@ func TestParseFailure(t *testing.T) {
 	}
 }
 
+func TestThisVsNextWeekday(t *testing.T) {
+	// Reference: Tuesday March 17, 2026
+	ref := time.Date(2026, 3, 17, 12, 0, 0, 0, time.Local)
+
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"this thursday", "2026-03-19"},
+		{"next thursday", "2026-03-26"},
+		{"this tuesday", "2026-03-17"},
+		{"next tuesday", "2026-03-24"},
+		{"this monday", "2026-03-16"},
+		{"next monday", "2026-03-23"},
+		{"this friday", "2026-03-20"},
+		{"next friday", "2026-03-27"},
+		{"this sunday", "2026-03-15"},
+		{"next sunday", "2026-03-22"},
+		{"this saturday", "2026-03-21"},
+		{"next saturday", "2026-03-28"},
+		{"this thu", "2026-03-19"},
+		{"next fri", "2026-03-27"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, ok := parseThisNextWeekday(tt.input, ref)
+			if !ok {
+				t.Fatalf("expected match for %q", tt.input)
+			}
+			if got.Format("2006-01-02") != tt.want {
+				t.Errorf("parseThisNextWeekday(%q) = %s, want %s", tt.input, got.Format("2006-01-02"), tt.want)
+			}
+		})
+	}
+}
+
+func TestThisNextDoesNotMatchOtherInputs(t *testing.T) {
+	ref := time.Date(2026, 3, 17, 12, 0, 0, 0, time.Local)
+	inputs := []string{"tomorrow", "2 weeks ago", "march 20th", "pizza", "next", "this"}
+	for _, input := range inputs {
+		if _, ok := parseThisNextWeekday(input, ref); ok {
+			t.Errorf("expected no match for %q", input)
+		}
+	}
+}
+
 func TestPositionalArgTakesPrecedenceOverStdin(t *testing.T) {
 	cmd := exec.Command(testBinary, "march 25 2026")
 	cmd.Stdin = strings.NewReader("next friday\n")
