@@ -63,7 +63,7 @@ func run(args []string) error {
 		scanner := bufio.NewScanner(os.Stdin)
 		if !scanner.Scan() {
 			if err := scanner.Err(); err != nil {
-				return fmt.Errorf("error: failed to read from stdin")
+				return fmt.Errorf("failed to read from stdin")
 			}
 			input = ""
 		} else {
@@ -144,10 +144,10 @@ func parseDate(input string, ref time.Time) (time.Time, error) {
 
 	result, err := dateParser.Parse(input, ref)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("error: could not parse date %q: %w", input, err)
+		return time.Time{}, fmt.Errorf("could not parse date %q: %w", input, err)
 	}
 	if result == nil {
-		return time.Time{}, fmt.Errorf("error: could not parse date %q", input)
+		return time.Time{}, fmt.Errorf("could not parse date %q", input)
 	}
 	return result.Time, nil
 }
@@ -204,12 +204,12 @@ func runCalendar(args []string) error {
 
 	finalModel, err := p.Run()
 	if err != nil {
-		return fmt.Errorf("error: %w", err)
+		return fmt.Errorf("calendar: %w", err)
 	}
 
 	result, ok := finalModel.(calendar.Model)
 	if !ok {
-		return fmt.Errorf("error: unexpected internal state")
+		return fmt.Errorf("unexpected internal state")
 	}
 	if result.IsSelected() {
 		fmt.Println(result.Cursor.Format(calendar.DateLayout))

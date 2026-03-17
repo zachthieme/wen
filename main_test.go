@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/zachthieme/wen/calendar"
 )
 
 var testBinary string
@@ -31,7 +33,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNoArgs_PrintsToday(t *testing.T) {
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().Format(calendar.DateLayout)
 	cmd := exec.Command(testBinary)
 	cmd.Stdin = strings.NewReader("")
 	out, err := cmd.Output()
@@ -51,7 +53,7 @@ func TestPositionalArg(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 	got := strings.TrimSpace(string(out))
-	if _, err := time.Parse("2006-01-02", got); err != nil {
+	if _, err := time.Parse(calendar.DateLayout, got); err != nil {
 		t.Errorf("output %q is not a valid yyyy-mm-dd date", got)
 	}
 }
@@ -64,7 +66,7 @@ func TestStdinMode(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 	got := strings.TrimSpace(string(out))
-	if _, err := time.Parse("2006-01-02", got); err != nil {
+	if _, err := time.Parse(calendar.DateLayout, got); err != nil {
 		t.Errorf("output %q is not a valid yyyy-mm-dd date", got)
 	}
 }
@@ -76,7 +78,7 @@ func TestParseFailure(t *testing.T) {
 		t.Fatal("expected non-zero exit code")
 	}
 	got := string(out)
-	if !strings.Contains(got, `error: could not parse date "pizza"`) {
+	if !strings.Contains(got, `could not parse date "pizza"`) {
 		t.Errorf("unexpected error message: %s", got)
 	}
 }
@@ -115,8 +117,8 @@ func TestThisVsNextWeekday(t *testing.T) {
 			if !ok {
 				t.Fatalf("expected match for %q", tt.input)
 			}
-			if got.Format("2006-01-02") != tt.want {
-				t.Errorf("parseRelativeWeekday(%q) = %s, want %s", tt.input, got.Format("2006-01-02"), tt.want)
+			if got.Format(calendar.DateLayout) != tt.want {
+				t.Errorf("parseRelativeWeekday(%q) = %s, want %s", tt.input, got.Format(calendar.DateLayout), tt.want)
 			}
 		})
 	}
