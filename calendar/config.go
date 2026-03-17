@@ -31,6 +31,10 @@ type Config struct {
 	WeekStartDay    int         `yaml:"week_start_day"`
 	Theme           string      `yaml:"theme"`
 	Colors          ThemeColors `yaml:"colors"`
+	PaddingTop      int         `yaml:"padding_top"`
+	PaddingRight    int         `yaml:"padding_right"`
+	PaddingBottom   int         `yaml:"padding_bottom"`
+	PaddingLeft     int         `yaml:"padding_left"`
 }
 
 // DefaultConfig returns a Config with sensible defaults (US week numbering, Sunday start, default theme).

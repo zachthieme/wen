@@ -133,6 +133,30 @@ func TestLoadConfigInvalidYAML(t *testing.T) {
 	}
 }
 
+func TestLoadConfigWithPadding(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	content := []byte("padding_top: 1\npadding_right: 2\npadding_bottom: 3\npadding_left: 4\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, warnings := loadConfigFromPath(path)
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings, got %v", warnings)
+	}
+	if cfg.PaddingTop != 1 || cfg.PaddingRight != 2 || cfg.PaddingBottom != 3 || cfg.PaddingLeft != 4 {
+		t.Errorf("padding mismatch: got top=%d right=%d bottom=%d left=%d",
+			cfg.PaddingTop, cfg.PaddingRight, cfg.PaddingBottom, cfg.PaddingLeft)
+	}
+}
+
+func TestDefaultConfigPaddingZero(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.PaddingTop != 0 || cfg.PaddingRight != 0 || cfg.PaddingBottom != 0 || cfg.PaddingLeft != 0 {
+		t.Error("expected all padding values to be 0 by default")
+	}
+}
+
 func TestLoadConfigMissingFile(t *testing.T) {
 	cfg, warnings := loadConfigFromPath("/nonexistent/config.yaml")
 	if cfg.Theme != "default" {
