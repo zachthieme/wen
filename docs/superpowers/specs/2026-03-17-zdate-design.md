@@ -25,6 +25,8 @@ echo "next friday" | zdate     # read from stdin
 
 TTY detection distinguishes mode 1 from mode 3: if stdin is a terminal, print today; if stdin is a pipe, read from it.
 
+If both a positional argument and piped stdin are provided, the positional argument takes precedence and stdin is ignored.
+
 ### Output
 
 - **Success** — Print `yyyy-mm-dd` to stdout (newline-terminated), exit 0.
