@@ -138,6 +138,6 @@ wen next friday | xargs -I{} echo "Meeting on {}"
 main.go              CLI entry: subcommand routing, date parsing
 calendar/
   config.go          Config loading: YAML, themes, XDG path
-  model.go           Bubbletea model: cursor state, navigation, key handling
-  view.go            Lipgloss rendering: month grid, highlights, themes
+  model.go           Bubbletea model: cursor state, key bindings (bubbles/key), navigation
+  view.go            Lipgloss rendering: month grid, highlights, themes, help (bubbles/help)
 ```

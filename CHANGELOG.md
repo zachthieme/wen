@@ -1,5 +1,23 @@
 # Changelog
 
+### v1.1.0 — March 17, 2026
+
+Internal quality improvements. No user-facing behavior changes.
+
+**Bubble Tea modernization:**
+- Key bindings defined with `bubbles/key` — single source of truth for keys and help text
+- Help bar rendered with `bubbles/help` instead of hardcoded string
+- `Update()` uses `key.Matches()` instead of nested switch statements
+- Model fields encapsulated behind accessors
+
+**Go idiom fixes:**
+- Config validation returns warnings instead of writing directly to stderr
+- Error messages follow Go conventions (no `"error: "` prefix)
+- Added `.golangci.yml` with stricter linters (gocritic, revive, misspell)
+- Fixed `TestMain` defer-after-exit pattern
+
+---
+
 ### v1.0.0 — March 17, 2026
 
 First stable release. Natural language date parsing + interactive calendar picker.
