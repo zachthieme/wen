@@ -151,7 +151,17 @@ func (m Model) View() string {
 		b.WriteString("\n")
 	}
 
-	return b.String()
+	output := b.String()
+	if m.config.PaddingTop > 0 || m.config.PaddingRight > 0 || m.config.PaddingBottom > 0 || m.config.PaddingLeft > 0 {
+		padStyle := lipgloss.NewStyle().Padding(
+			m.config.PaddingTop,
+			m.config.PaddingRight,
+			m.config.PaddingBottom,
+			m.config.PaddingLeft,
+		)
+		output = padStyle.Render(output)
+	}
+	return output
 }
 
 func weekNumber(t time.Time, numbering string) int {
