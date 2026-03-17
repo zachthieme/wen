@@ -28,13 +28,13 @@ func buildStyles(colors ThemeColors) resolvedStyles {
 		s.title = s.title.Foreground(lipgloss.Color(colors.Title))
 	}
 	if colors.WeekNumber != "" {
-		s.weekNum = lipgloss.NewStyle().Foreground(lipgloss.Color(colors.WeekNumber))
+		s.weekNum = s.weekNum.Foreground(lipgloss.Color(colors.WeekNumber))
 	}
 	if colors.DayHeader != "" {
-		s.dayHeader = lipgloss.NewStyle().Foreground(lipgloss.Color(colors.DayHeader))
+		s.dayHeader = s.dayHeader.Foreground(lipgloss.Color(colors.DayHeader))
 	}
 	if colors.HelpBar != "" {
-		s.helpBar = lipgloss.NewStyle().Foreground(lipgloss.Color(colors.HelpBar))
+		s.helpBar = s.helpBar.Foreground(lipgloss.Color(colors.HelpBar))
 	}
 
 	return s
