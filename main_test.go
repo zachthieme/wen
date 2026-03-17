@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "failed to create temp dir: %s\n", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	testBinary = filepath.Join(dir, "wen")
 	cmd := exec.Command("go", "build", "-o", testBinary, ".")
