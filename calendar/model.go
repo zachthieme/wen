@@ -1,17 +1,20 @@
 package calendar
 
 import (
+	"fmt"
 	"os/exec"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 const DateLayout = "2006-01-02"
 
+// Model holds the state for the interactive calendar TUI.
 type Model struct {
 	Cursor          time.Time
 	Today           time.Time
@@ -19,6 +22,7 @@ type Model struct {
 	quit            bool
 	ShowWeekNumbers bool
 	ShowHelp        bool
+	StatusMsg       string // transient status message (e.g., yank confirmation)
 	Config          Config
 	styles          resolvedStyles
 	clipboardCmd    []string // resolved clipboard command, nil if unavailable
@@ -33,9 +37,13 @@ type resolvedStyles struct {
 	helpBar   lipgloss.Style
 }
 
+// IsSelected reports whether the user confirmed a date selection.
 func (m Model) IsSelected() bool { return m.selected }
-func (m Model) IsQuit() bool     { return m.quit }
 
+// IsQuit reports whether the user quit without selecting.
+func (m Model) IsQuit() bool { return m.quit }
+
+// New creates a calendar Model with the given cursor position, today's date, and configuration.
 func New(cursor, today time.Time, cfg Config) Model {
 	m := Model{
 		Cursor:          stripTime(cursor),
@@ -56,12 +64,18 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-type yankMsg struct{}
+type yankMsg struct{ err error }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case yankMsg:
+		if msg.err != nil {
+			m.StatusMsg = fmt.Sprintf("yank failed: %v", msg.err)
+		} else {
+			m.StatusMsg = "yanked"
+		}
 	case tea.KeyMsg:
+		m.StatusMsg = "" // clear transient status on any keypress
 		switch msg.Type {
 		case tea.KeyEnter:
 			m.selected = true
@@ -111,8 +125,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, func() tea.Msg {
 						cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 						cmd.Stdin = strings.NewReader(text)
-						_ = cmd.Run()
-						return yankMsg{}
+						return yankMsg{err: cmd.Run()}
 					}
 				}
 			}
@@ -156,4 +169,95 @@ func resolveClipboardCmd() []string {
 		}
 	}
 	return nil
+}
+
+type keyMap struct {
+	Left        key.Binding
+	Right       key.Binding
+	Up          key.Binding
+	Down        key.Binding
+	PrevMonth   key.Binding
+	NextMonth   key.Binding
+	PrevYear    key.Binding
+	NextYear    key.Binding
+	Today       key.Binding
+	ToggleWeeks key.Binding
+	ToggleHelp  key.Binding
+	Yank        key.Binding
+	Select      key.Binding
+	Quit        key.Binding
+}
+
+func defaultKeyMap() keyMap {
+	return keyMap{
+		Left: key.NewBinding(
+			key.WithKeys("h", "left"),
+			key.WithHelp("h/←", "prev day"),
+		),
+		Right: key.NewBinding(
+			key.WithKeys("l", "right"),
+			key.WithHelp("l/→", "next day"),
+		),
+		Up: key.NewBinding(
+			key.WithKeys("k", "up"),
+			key.WithHelp("k/↑", "prev week"),
+		),
+		Down: key.NewBinding(
+			key.WithKeys("j", "down"),
+			key.WithHelp("j/↓", "next week"),
+		),
+		PrevMonth: key.NewBinding(
+			key.WithKeys("H"),
+			key.WithHelp("H", "prev month"),
+		),
+		NextMonth: key.NewBinding(
+			key.WithKeys("L"),
+			key.WithHelp("L", "next month"),
+		),
+		PrevYear: key.NewBinding(
+			key.WithKeys("K"),
+			key.WithHelp("K", "prev year"),
+		),
+		NextYear: key.NewBinding(
+			key.WithKeys("J"),
+			key.WithHelp("J", "next year"),
+		),
+		Today: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "today"),
+		),
+		ToggleWeeks: key.NewBinding(
+			key.WithKeys("w"),
+			key.WithHelp("w", "weeks"),
+		),
+		ToggleHelp: key.NewBinding(
+			key.WithKeys("?"),
+			key.WithHelp("?", "help"),
+		),
+		Yank: key.NewBinding(
+			key.WithKeys("y"),
+			key.WithHelp("y", "yank"),
+		),
+		Select: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "select"),
+		),
+		Quit: key.NewBinding(
+			key.WithKeys("q", "esc"),
+			key.WithHelp("q/esc", "quit"),
+		),
+	}
+}
+
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Left, k.Right, k.Select, k.Quit, k.ToggleHelp}
+}
+
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Left, k.Right, k.Up, k.Down},
+		{k.PrevMonth, k.NextMonth, k.PrevYear, k.NextYear},
+		{k.Today, k.Yank, k.ToggleWeeks},
+		{k.Select, k.Quit},
+	}
 }
