@@ -1,4 +1,4 @@
-module wen
+module github.com/zachthieme/wen
 
 go 1.25.5
 

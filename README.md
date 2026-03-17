@@ -52,6 +52,8 @@ wen
 
 # Natural language dates
 wen next friday
+wen this thursday
+wen last tuesday
 wen tomorrow
 wen "march 25 2026"
 wen "2 weeks ago"

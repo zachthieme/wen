@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"wen/calendar"
+	"github.com/zachthieme/wen/calendar"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/olebedev/when"
