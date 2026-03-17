@@ -8,6 +8,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	WeekNumberingUS  = "us"
+	WeekNumberingISO = "iso"
+)
+
 type ThemeColors struct {
 	Cursor     string `yaml:"cursor"`
 	Today      string `yaml:"today"`
@@ -28,26 +33,25 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		ShowWeekNumbers: false,
-		WeekNumbering:   "us",
+		WeekNumbering:   WeekNumberingUS,
 		WeekStartDay:    0,
 		Theme:           "default",
 	}
 }
 
 func (c *Config) Normalize() {
-	if c.WeekNumbering != "us" && c.WeekNumbering != "iso" {
+	if c.WeekNumbering != WeekNumberingUS && c.WeekNumbering != WeekNumberingISO {
 		fmt.Fprintf(os.Stderr, "warning: invalid config value for \"week_numbering\", using default\n")
-		c.WeekNumbering = "us"
+		c.WeekNumbering = WeekNumberingUS
 	}
 	if c.WeekStartDay != 0 && c.WeekStartDay != 1 {
 		fmt.Fprintf(os.Stderr, "warning: invalid config value for \"week_start_day\", using default\n")
 		c.WeekStartDay = 0
 	}
-	if c.WeekNumbering == "iso" {
+	if c.WeekNumbering == WeekNumberingISO {
 		c.WeekStartDay = 1
 	}
-	validThemes := map[string]bool{"default": true, "catppuccin-mocha": true, "dracula": true, "nord": true}
-	if !validThemes[c.Theme] {
+	if _, ok := themePresets[c.Theme]; !ok {
 		fmt.Fprintf(os.Stderr, "warning: invalid config value for \"theme\", using default\n")
 		c.Theme = "default"
 	}
@@ -106,9 +110,6 @@ var themePresets = map[string]ThemeColors{
 
 func LoadConfig() Config {
 	path := configPath()
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		writeDefaultConfig(path)
-	}
 	return loadConfigFromPath(path)
 }
 
@@ -116,6 +117,9 @@ func loadConfigFromPath(path string) Config {
 	cfg := DefaultConfig()
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			writeDefaultConfig(path)
+		}
 		return cfg
 	}
 	if err := yaml.Unmarshal(data, &cfg); err != nil {

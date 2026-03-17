@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -16,9 +17,10 @@ import (
 	"golang.org/x/term"
 )
 
-var version = "dev"
-
-const dateLayout = "2006-01-02"
+var (
+	version        = "dev"
+	errNoSelection = errors.New("")
+)
 
 // Package-level parser — initialized once, reused on every call.
 var dateParser *when.Parser
@@ -31,6 +33,9 @@ func init() {
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
+		if errors.Is(err, errNoSelection) {
+			os.Exit(1)
+		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -67,7 +72,7 @@ func run(args []string) error {
 	}
 
 	if input == "" {
-		fmt.Println(time.Now().Format(dateLayout))
+		fmt.Println(time.Now().Format(calendar.DateLayout))
 		return nil
 	}
 
@@ -75,7 +80,7 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(result.Format(dateLayout))
+	fmt.Println(result.Format(calendar.DateLayout))
 	return nil
 }
 
@@ -197,9 +202,8 @@ func runCalendar(args []string) error {
 
 	result := finalModel.(calendar.Model)
 	if result.IsSelected() {
-		fmt.Println(result.Cursor.Format(dateLayout))
+		fmt.Println(result.Cursor.Format(calendar.DateLayout))
 		return nil
 	}
-	os.Exit(1)
-	return nil
+	return errNoSelection
 }

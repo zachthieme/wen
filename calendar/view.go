@@ -84,12 +84,14 @@ func Render(m Model) string {
 	// Leading spaces
 	b.WriteString(strings.Repeat("   ", weekday))
 
+	_, _, cursorDay := m.Cursor.Date()
+	todayYear, todayMonth, todayDay := m.Today.Date()
+
 	for day := 1; day <= days; day++ {
-		current := time.Date(year, month, day, 0, 0, 0, 0, loc)
 		dayStr := fmt.Sprintf("%2d", day)
 
-		isCursor := current.Equal(m.Cursor)
-		isToday := current.Equal(m.Today)
+		isCursor := day == cursorDay
+		isToday := year == todayYear && month == todayMonth && day == todayDay
 
 		switch {
 		case isCursor && isToday:
@@ -128,7 +130,7 @@ func Render(m Model) string {
 }
 
 func weekNumber(t time.Time, numbering string) int {
-	if numbering == "iso" {
+	if numbering == WeekNumberingISO {
 		_, wn := t.ISOWeek()
 		return wn
 	}

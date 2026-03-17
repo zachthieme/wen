@@ -10,6 +10,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const DateLayout = "2006-01-02"
+
 type Model struct {
 	Cursor          time.Time
 	Today           time.Time
@@ -19,6 +21,7 @@ type Model struct {
 	ShowHelp        bool
 	Config          Config
 	styles          resolvedStyles
+	clipboardCmd    []string // resolved clipboard command, nil if unavailable
 }
 
 type resolvedStyles struct {
@@ -41,6 +44,7 @@ func New(cursor, today time.Time, cfg Config) Model {
 		Config:          cfg,
 	}
 	m.styles = buildStyles(cfg.ResolvedColors())
+	m.clipboardCmd = resolveClipboardCmd()
 	return m
 }
 
@@ -52,13 +56,11 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-// yankMsg signals that a clipboard write completed (or failed silently).
 type yankMsg struct{}
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case yankMsg:
-		// clipboard write finished, nothing to do
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
@@ -103,8 +105,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "?":
 				m.ShowHelp = !m.ShowHelp
 			case "y":
-				text := m.Cursor.Format("2006-01-02")
-				return m, yankToClipboardCmd(text)
+				if m.clipboardCmd != nil {
+					text := m.Cursor.Format(DateLayout)
+					cmdArgs := m.clipboardCmd
+					return m, func() tea.Msg {
+						cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+						cmd.Stdin = strings.NewReader(text)
+						_ = cmd.Run()
+						return yankMsg{}
+					}
+				}
 			}
 		}
 	}
@@ -115,9 +125,6 @@ func (m Model) View() string {
 	return Render(m)
 }
 
-// shiftDate moves a date by the given years and months, clamping the day
-// to the last day of the target month. Consolidates nextMonth/prevMonth/
-// nextYear/prevYear into a single function.
 func shiftDate(t time.Time, years, months int) time.Time {
 	y, m, d := t.Date()
 	target := time.Date(y+years, m+time.Month(months), 1, 0, 0, 0, 0, t.Location())
@@ -132,33 +139,21 @@ func daysInMonth(year int, month time.Month, loc *time.Location) int {
 	return time.Date(year, month+1, 0, 0, 0, 0, 0, loc).Day()
 }
 
-// yankToClipboardCmd returns a tea.Cmd that writes text to the system
-// clipboard asynchronously, so the TUI doesn't block.
-func yankToClipboardCmd(text string) tea.Cmd {
-	return func() tea.Msg {
-		yankToClipboard(text)
-		return yankMsg{}
-	}
-}
-
-func yankToClipboard(text string) {
-	var cmd *exec.Cmd
+// resolveClipboardCmd finds the clipboard command once at startup.
+func resolveClipboardCmd() []string {
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("pbcopy")
+		return []string{"pbcopy"}
 	case "linux":
 		if path, err := exec.LookPath("wl-copy"); err == nil {
-			cmd = exec.Command(path)
-		} else if path, err := exec.LookPath("xclip"); err == nil {
-			cmd = exec.Command(path, "-selection", "clipboard")
-		} else if path, err := exec.LookPath("xsel"); err == nil {
-			cmd = exec.Command(path, "--clipboard", "--input")
-		} else {
-			return
+			return []string{path}
 		}
-	default:
-		return
+		if path, err := exec.LookPath("xclip"); err == nil {
+			return []string{path, "-selection", "clipboard"}
+		}
+		if path, err := exec.LookPath("xsel"); err == nil {
+			return []string{path, "--clipboard", "--input"}
+		}
 	}
-	cmd.Stdin = strings.NewReader(text)
-	_ = cmd.Run()
+	return nil
 }
