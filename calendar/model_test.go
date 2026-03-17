@@ -207,8 +207,8 @@ func TestEnterSelectsDate(t *testing.T) {
 	if !m.IsSelected() {
 		t.Error("expected Selected to be true")
 	}
-	if m.cursor != date(2026, time.March, 18) {
-		t.Errorf("expected March 18, got %s", m.cursor.Format(DateLayout))
+	if m.Cursor() != date(2026, time.March, 18) {
+		t.Errorf("expected March 18, got %s", m.Cursor().Format(DateLayout))
 	}
 	if cmd == nil {
 		t.Error("expected quit command")
@@ -221,6 +221,9 @@ func TestQuitDoesNotSelect(t *testing.T) {
 	m = updated.(Model)
 	if m.IsSelected() {
 		t.Error("expected Selected to be false")
+	}
+	if !m.IsQuit() {
+		t.Error("expected IsQuit to be true")
 	}
 	if cmd == nil {
 		t.Error("expected quit command")
