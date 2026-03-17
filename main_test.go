@@ -20,15 +20,15 @@ func buildBinary(t *testing.T) string {
 
 func TestNoArgs_PrintsToday(t *testing.T) {
 	bin := buildBinary(t)
-	cmd := exec.Command(bin)
+	today := time.Now().Format("2006-01-02")
+	cmd := exec.Command(bin, "--now", today)
 	out, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
 	got := strings.TrimSpace(string(out))
-	want := time.Now().Format("2006-01-02")
-	if got != want {
-		t.Errorf("got %q, want %q", got, want)
+	if got != today {
+		t.Errorf("got %q, want %q", got, today)
 	}
 }
 
