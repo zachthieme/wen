@@ -15,10 +15,14 @@ import (
 var testBinary string
 
 func TestMain(m *testing.M) {
+	os.Exit(runTests(m))
+}
+
+func runTests(m *testing.M) int {
 	dir, err := os.MkdirTemp("", "wen-test-*")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create temp dir: %s\n", err)
-		os.Exit(1)
+		return 1
 	}
 	defer func() { _ = os.RemoveAll(dir) }()
 
@@ -26,10 +30,10 @@ func TestMain(m *testing.M) {
 	cmd := exec.Command("go", "build", "-o", testBinary, ".")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		fmt.Fprintf(os.Stderr, "build failed: %s\n%s", err, out)
-		os.Exit(1)
+		return 1
 	}
 
-	os.Exit(m.Run())
+	return m.Run()
 }
 
 func TestNoArgs_PrintsToday(t *testing.T) {

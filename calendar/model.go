@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// DateLayout is the standard date format used for output (yyyy-mm-dd).
 const DateLayout = "2006-01-02"
 
 // Model holds the state for the interactive calendar TUI.
@@ -69,12 +70,14 @@ func stripTime(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
+// Init satisfies the tea.Model interface.
 func (m Model) Init() tea.Cmd {
 	return nil
 }
 
 type yankMsg struct{ err error }
 
+// Update handles input messages and updates model state.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case yankMsg:

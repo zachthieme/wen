@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Week numbering schemes.
 const (
 	WeekNumberingUS  = "us"
 	WeekNumberingISO = "iso"
@@ -42,6 +43,7 @@ func DefaultConfig() Config {
 	}
 }
 
+// Normalize validates config values, resetting invalid ones to defaults, and returns any warnings.
 func (c *Config) Normalize() []string {
 	var warnings []string
 	if c.WeekNumbering != WeekNumberingUS && c.WeekNumbering != WeekNumberingISO {
@@ -62,6 +64,7 @@ func (c *Config) Normalize() []string {
 	return warnings
 }
 
+// ResolvedColors merges theme preset colors with any user-specified overrides.
 func (c Config) ResolvedColors() ThemeColors {
 	base := themePresets[c.Theme]
 	if c.Colors.Cursor != "" {
