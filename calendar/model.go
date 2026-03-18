@@ -1,3 +1,4 @@
+// Package calendar provides an interactive terminal calendar UI built on Bubble Tea.
 package calendar
 
 import (
@@ -24,7 +25,7 @@ type Model struct {
 	quit            bool
 	showWeekNumbers bool
 	showHelp        bool
-	statusMsg       string // transient status message (e.g., yank confirmation)
+	statusMsg       string // transient status message (e.g., yank result or error)
 	config          Config
 	keys            keyMap
 	help            help.Model
@@ -33,12 +34,13 @@ type Model struct {
 }
 
 type resolvedStyles struct {
-	cursor    lipgloss.Style
-	today     lipgloss.Style
-	title     lipgloss.Style
-	weekNum   lipgloss.Style
-	dayHeader lipgloss.Style
-	helpBar   lipgloss.Style
+	cursor      lipgloss.Style
+	cursorToday lipgloss.Style
+	today       lipgloss.Style
+	title       lipgloss.Style
+	weekNum     lipgloss.Style
+	dayHeader   lipgloss.Style
+	helpBar     lipgloss.Style
 }
 
 // IsSelected reports whether the user confirmed a date selection.
@@ -118,7 +120,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.ToggleHelp):
 			m.showHelp = !m.showHelp
 		case key.Matches(msg, m.keys.Yank):
-			if m.clipboardCmd != nil {
+			if m.clipboardCmd == nil {
+				m.statusMsg = "no clipboard tool available"
+			} else {
 				text := m.cursor.Format(DateLayout)
 				cmdArgs := m.clipboardCmd
 				return m, func() tea.Msg {

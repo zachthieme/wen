@@ -9,46 +9,38 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func buildStyles(colors ThemeColors) resolvedStyles {
-	s := resolvedStyles{
-		cursor:    lipgloss.NewStyle().Reverse(true),
-		today:     lipgloss.NewStyle().Bold(true).Underline(true),
-		title:     lipgloss.NewStyle().Bold(true),
-		weekNum:   lipgloss.NewStyle().Faint(true),
-		dayHeader: lipgloss.NewStyle().Faint(true),
-		helpBar:   lipgloss.NewStyle().Faint(true),
+func applyColor(s lipgloss.Style, color string) lipgloss.Style {
+	if color != "" {
+		return s.Foreground(lipgloss.Color(color))
 	}
-
-	if colors.Cursor != "" {
-		s.cursor = s.cursor.Foreground(lipgloss.Color(colors.Cursor))
-	}
-	if colors.Today != "" {
-		s.today = s.today.Foreground(lipgloss.Color(colors.Today))
-	}
-	if colors.Title != "" {
-		s.title = s.title.Foreground(lipgloss.Color(colors.Title))
-	}
-	if colors.WeekNumber != "" {
-		s.weekNum = s.weekNum.Foreground(lipgloss.Color(colors.WeekNumber))
-	}
-	if colors.DayHeader != "" {
-		s.dayHeader = s.dayHeader.Foreground(lipgloss.Color(colors.DayHeader))
-	}
-	if colors.HelpBar != "" {
-		s.helpBar = s.helpBar.Foreground(lipgloss.Color(colors.HelpBar))
-	}
-
 	return s
+}
+
+func buildStyles(colors ThemeColors) resolvedStyles {
+	cursorStyle := applyColor(lipgloss.NewStyle().Reverse(true), colors.Cursor)
+	todayStyle := applyColor(lipgloss.NewStyle().Bold(true).Underline(true), colors.Today)
+	// Pre-compose cursor+today so View() avoids nested Render calls and
+	// the double-reset ANSI sequences they produce.
+	cursorTodayStyle := lipgloss.NewStyle().Reverse(true).Bold(true).Underline(true)
+	if colors.Cursor != "" {
+		cursorTodayStyle = cursorTodayStyle.Foreground(lipgloss.Color(colors.Cursor))
+	}
+	return resolvedStyles{
+		cursor:      cursorStyle,
+		cursorToday: cursorTodayStyle,
+		today:       todayStyle,
+		title:       applyColor(lipgloss.NewStyle().Bold(true), colors.Title),
+		weekNum:     applyColor(lipgloss.NewStyle().Faint(true), colors.WeekNumber),
+		dayHeader:   applyColor(lipgloss.NewStyle().Faint(true), colors.DayHeader),
+		helpBar:     applyColor(lipgloss.NewStyle().Faint(true), colors.HelpBar),
+	}
 }
 
 func newHelpModel(colors ThemeColors) help.Model {
 	h := help.New()
 	h.ShowAll = true
 
-	helpStyle := lipgloss.NewStyle().Faint(true)
-	if colors.HelpBar != "" {
-		helpStyle = helpStyle.Foreground(lipgloss.Color(colors.HelpBar))
-	}
+	helpStyle := applyColor(lipgloss.NewStyle().Faint(true), colors.HelpBar)
 
 	h.Styles.ShortKey = helpStyle
 	h.Styles.ShortDesc = helpStyle
@@ -116,7 +108,7 @@ func (m Model) View() string {
 
 		switch {
 		case isCursor && isToday:
-			dayStr = st.cursor.Render(st.today.Render(dayStr))
+			dayStr = st.cursorToday.Render(dayStr)
 		case isCursor:
 			dayStr = st.cursor.Render(dayStr)
 		case isToday:

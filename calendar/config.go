@@ -51,6 +51,7 @@ func DefaultConfig() Config {
 }
 
 // Normalize validates config values, resetting invalid ones to defaults, and returns any warnings.
+// ISO week numbering silently forces WeekStartDay to Monday as a constraint (not a validation error).
 func (c *Config) Normalize() []string {
 	var warnings []string
 	if c.WeekNumbering != WeekNumberingUS && c.WeekNumbering != WeekNumberingISO {
@@ -80,28 +81,24 @@ func (c *Config) Normalize() []string {
 	return warnings
 }
 
+func mergeColor(base, override string) string {
+	if override != "" {
+		return override
+	}
+	return base
+}
+
 // ResolvedColors merges theme preset colors with any user-specified overrides.
 func (c Config) ResolvedColors() ThemeColors {
 	base := themePresets[c.Theme]
-	if c.Colors.Cursor != "" {
-		base.Cursor = c.Colors.Cursor
+	return ThemeColors{
+		Cursor:     mergeColor(base.Cursor, c.Colors.Cursor),
+		Today:      mergeColor(base.Today, c.Colors.Today),
+		Title:      mergeColor(base.Title, c.Colors.Title),
+		WeekNumber: mergeColor(base.WeekNumber, c.Colors.WeekNumber),
+		DayHeader:  mergeColor(base.DayHeader, c.Colors.DayHeader),
+		HelpBar:    mergeColor(base.HelpBar, c.Colors.HelpBar),
 	}
-	if c.Colors.Today != "" {
-		base.Today = c.Colors.Today
-	}
-	if c.Colors.Title != "" {
-		base.Title = c.Colors.Title
-	}
-	if c.Colors.WeekNumber != "" {
-		base.WeekNumber = c.Colors.WeekNumber
-	}
-	if c.Colors.DayHeader != "" {
-		base.DayHeader = c.Colors.DayHeader
-	}
-	if c.Colors.HelpBar != "" {
-		base.HelpBar = c.Colors.HelpBar
-	}
-	return base
 }
 
 var themePresets = map[string]ThemeColors{
@@ -142,8 +139,11 @@ func loadConfigFromPath(path string) (Config, []string) {
 	cfg := DefaultConfig()
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			writeDefaultConfig(path)
+		if !os.IsNotExist(err) {
+			return cfg, []string{fmt.Sprintf("could not read config: %v", err)}
+		}
+		if wErr := writeDefaultConfig(path); wErr != nil {
+			return cfg, []string{wErr.Error()}
 		}
 		return cfg, nil
 	}
@@ -163,11 +163,10 @@ func configPath() string {
 	return filepath.Join(dir, "wen", "config.yaml")
 }
 
-func writeDefaultConfig(path string) {
+func writeDefaultConfig(path string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not create config directory: %v\n", err)
-		return
+		return fmt.Errorf("could not create config directory: %w", err)
 	}
 	content := `# Week numbers
 show_week_numbers: false
@@ -193,6 +192,7 @@ theme: default
 # padding_left: 0
 `
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not write default config: %v\n", err)
+		return fmt.Errorf("could not write default config: %w", err)
 	}
+	return nil
 }

@@ -1,3 +1,5 @@
+// Command wen is a natural language date tool that parses human-readable date
+// expressions and provides an interactive terminal calendar.
 package main
 
 import (
@@ -12,9 +14,6 @@ import (
 	"github.com/zachthieme/wen/calendar"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/olebedev/when"
-	"github.com/olebedev/when/rules/common"
-	"github.com/olebedev/when/rules/en"
 	"golang.org/x/term"
 )
 
@@ -23,22 +22,13 @@ var (
 	errNoSelection = errors.New("no date selected")
 )
 
-// Package-level parser — initialized once, reused on every call.
-var dateParser *when.Parser
-
-func init() {
-	dateParser = when.New(nil)
-	dateParser.Add(en.All...)
-	dateParser.Add(common.All...)
-}
-
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		if errors.Is(err, errNoSelection) {
 			os.Exit(1)
 		}
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		os.Exit(2)
 	}
 }
 
@@ -64,7 +54,7 @@ func run(args []string) error {
 		scanner := bufio.NewScanner(os.Stdin)
 		if !scanner.Scan() {
 			if err := scanner.Err(); err != nil {
-				return fmt.Errorf("failed to read from stdin")
+				return fmt.Errorf("failed to read from stdin: %w", err)
 			}
 			input = ""
 		} else {
@@ -83,74 +73,6 @@ func run(args []string) error {
 	}
 	fmt.Println(result.Format(calendar.DateLayout))
 	return nil
-}
-
-var weekdays = map[string]time.Weekday{
-	"sunday": time.Sunday, "sun": time.Sunday,
-	"monday": time.Monday, "mon": time.Monday,
-	"tuesday": time.Tuesday, "tue": time.Tuesday,
-	"wednesday": time.Wednesday, "wed": time.Wednesday,
-	"thursday": time.Thursday, "thu": time.Thursday,
-	"friday": time.Friday, "fri": time.Friday,
-	"saturday": time.Saturday, "sat": time.Saturday,
-}
-
-// parseRelativeWeekday handles "this/next/last <weekday>" patterns.
-// Returns the resolved date and true if matched, or zero time and false.
-func parseRelativeWeekday(input string, ref time.Time) (time.Time, bool) {
-	lower := strings.ToLower(strings.TrimSpace(input))
-	parts := strings.Fields(lower)
-	if len(parts) != 2 {
-		return time.Time{}, false
-	}
-
-	prefix := parts[0]
-	if prefix != "this" && prefix != "next" && prefix != "last" {
-		return time.Time{}, false
-	}
-
-	target, ok := weekdays[parts[1]]
-	if !ok {
-		return time.Time{}, false
-	}
-
-	refDay := ref.Weekday()
-	switch prefix {
-	case "this":
-		diff := int(target) - int(refDay)
-		return ref.AddDate(0, 0, diff), true
-	case "next":
-		// Advance to start of next week (Sunday), then offset by target weekday.
-		daysToNextSunday := (7 - int(refDay)) % 7
-		if daysToNextSunday == 0 {
-			daysToNextSunday = 7 // if ref is Sunday, "next" means the following week
-		}
-		diff := daysToNextSunday + int(target)
-		return ref.AddDate(0, 0, diff), true
-	case "last":
-		diff := int(refDay) - int(target)
-		if diff <= 0 {
-			diff += 7
-		}
-		return ref.AddDate(0, 0, -diff), true
-	}
-
-	return time.Time{}, false
-}
-
-func parseDate(input string, ref time.Time) (time.Time, error) {
-	if t, ok := parseRelativeWeekday(input, ref); ok {
-		return t, nil
-	}
-
-	result, err := dateParser.Parse(input, ref)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("could not parse date %q: %w", input, err)
-	}
-	if result == nil {
-		return time.Time{}, fmt.Errorf("could not parse date %q", input)
-	}
-	return result.Time, nil
 }
 
 func printHelp() {
@@ -174,8 +96,8 @@ Calendar flags:
   --padding-left N     Left padding in characters (default: from config or 0)
 
 Calendar keybindings:
-  h/l, arrows      Previous / next day
-  j/k, arrows      Next / previous week
+  h/l, ←/→         Previous / next day
+  j/k, ↑/↓         Next / previous week
   H/L              Previous / next month
   J/K              Next / previous year
   t                Jump to today
@@ -184,6 +106,11 @@ Calendar keybindings:
   ?                Toggle help bar
   Enter            Select date and exit
   q, Esc           Quit without selecting
+
+Exit codes:
+  0    Success (date printed or selection made)
+  1    No selection (user quit calendar with q/Esc)
+  2    Error (parse failure, invalid input, etc.)
 
 Config: ~/.config/wen/config.yaml
 `)

@@ -208,11 +208,23 @@ func TestNormalizeValidPaddingNoWarnings(t *testing.T) {
 }
 
 func TestLoadConfigMissingFile(t *testing.T) {
-	cfg, warnings := loadConfigFromPath("/nonexistent/config.yaml")
+	dir := t.TempDir()
+	path := dir + "/subdir/config.yaml"
+	cfg, warnings := loadConfigFromPath(path)
 	if cfg.Theme != "default" {
 		t.Errorf("expected default theme on missing file, got %q", cfg.Theme)
 	}
 	if len(warnings) != 0 {
-		t.Errorf("expected no warnings for missing file, got %v", warnings)
+		t.Errorf("expected no warnings for missing file in writable dir, got %v", warnings)
+	}
+}
+
+func TestLoadConfigUnwritableDir(t *testing.T) {
+	cfg, warnings := loadConfigFromPath("/nonexistent/config.yaml")
+	if cfg.Theme != "default" {
+		t.Errorf("expected default theme, got %q", cfg.Theme)
+	}
+	if len(warnings) != 1 {
+		t.Errorf("expected 1 warning for unwritable path, got %d: %v", len(warnings), warnings)
 	}
 }
