@@ -59,6 +59,8 @@
 
           vendorHash = null;
 
+          subPackages = [ "cmd/wen" ];
+
           ldflags = [ "-s" "-w" ];
 
           meta = with pkgs.lib; {

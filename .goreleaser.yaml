@@ -1,7 +1,7 @@
 version: 2
 
 builds:
-  - main: .
+  - main: ./cmd/wen
     binary: wen
     ldflags:
       - -s -w -X main.version={{ .Tag }}

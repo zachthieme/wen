@@ -98,7 +98,7 @@ Calendar keybindings:
   t                Jump to today
   w                Toggle week numbers
   ?                Toggle help bar
-  q, Esc           Quit
+  q, Esc, ctrl+c   Quit
 
 Exit codes:
   0    Success (date printed)

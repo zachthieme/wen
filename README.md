@@ -26,7 +26,7 @@ nix build github:zachthieme/wen#wen-src
 ### Go
 
 ```bash
-go install github.com/zachthieme/wen@latest
+go install github.com/zachthieme/wen/cmd/wen@latest
 ```
 
 Or build locally:
@@ -74,7 +74,7 @@ wen cal
 wen cal december 2026
 ```
 
-Navigate with vim keys (or arrow keys). Press `q` or `Esc` to exit.
+Navigate with vim keys (or arrow keys). Press `q`, `Esc`, or `ctrl+c` to exit.
 
 #### Keybindings
 
@@ -87,7 +87,7 @@ Navigate with vim keys (or arrow keys). Press `q` or `Esc` to exit.
 | `t` | Jump to today |
 | `w` | Toggle week numbers |
 | `?` | Toggle help bar |
-| `q` / `Esc` | Quit |
+| `q` / `Esc` / `ctrl+c` | Quit |
 
 The calendar highlights today and your cursor position. Navigation wraps across boundaries (e.g., `l` on March 31 moves to April 1). Month and year jumps clamp the day (e.g., Jan 31 + `L` = Feb 28, Feb 29 + `J` = Feb 28).
 
