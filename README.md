@@ -32,7 +32,7 @@ go install github.com/zachthieme/wen@latest
 Or build locally:
 
 ```bash
-go build -o wen .
+go build -o wen ./cmd/wen
 ```
 
 ### Flags
@@ -138,6 +138,25 @@ theme: default
 
 ISO week numbering forces Monday as the week start day.
 
+## Library Usage
+
+`wen` is also a Go library. Import it to parse natural language dates in your own programs:
+
+```go
+import "github.com/zachthieme/wen"
+
+// Parse relative to now
+t, err := wen.Parse("next friday")
+
+// Parse relative to a specific reference time
+t, err := wen.ParseRelative("march 25 at 3pm", refTime)
+
+// Control how period references resolve
+t, err := wen.ParseRelative("next week", refTime, wen.WithPeriodSame())
+```
+
+See the [package documentation](https://pkg.go.dev/github.com/zachthieme/wen) for full API details and examples.
+
 ## Examples
 
 ```bash
@@ -151,10 +170,15 @@ wen next friday | xargs -I{} echo "Meeting on {}"
 ## Project Structure
 
 ```
-main.go              CLI entry: subcommand routing, flag parsing
-dateparse.go         Date parsing: natural language, relative weekdays
+cmd/wen/
+  main.go            CLI entry: subcommand routing, flag parsing, calendar runner
+wen.go               Library API: Parse, ParseRelative, options
+lexer.go             Tokenizer: keywords, numbers, ordinals, meridiems
+parser.go            Recursive descent parser: dates, times, boundaries
+token.go             Token type definitions
+errors.go            ParseError with position and input context
 calendar/
   config.go          Config loading: YAML, themes, XDG path
-  model.go           Bubbletea model: cursor state, key bindings (bubbles/key), navigation
-  view.go            Lipgloss rendering: month grid, highlights, themes, help (bubbles/help)
+  model.go           Bubble Tea model: cursor state, key bindings, navigation
+  view.go            Lipgloss rendering: month grid, highlights, themes, help
 ```
