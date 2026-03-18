@@ -1,5 +1,24 @@
 # Changelog
 
+### v1.2.0 — March 18, 2026
+
+**New features:**
+- Calendar padding via `--padding-top`, `--padding-right`, `--padding-bottom`, `--padding-left` CLI flags
+- Padding also configurable in `config.yaml` (clamped 0–20)
+- Distinct exit codes: 0 (success), 1 (no selection), 2 (error)
+- Yank (`y`) shows "no clipboard tool available" when no clipboard tool is found
+
+**Code quality:**
+- Extracted date parsing into `dateparse.go`
+- Replaced `init()` with explicit initialization
+- Pre-composed Lip Gloss styles (eliminated nested `Render` calls)
+- Added `mergeColor`/`applyColor` helpers to reduce duplication
+- Config errors surfaced as warnings instead of silent stderr writes
+- Consolidated navigation tests into table-driven format
+- Added package-level godoc comments
+
+---
+
 ### v1.1.0 — March 17, 2026
 
 Internal quality improvements. No user-facing behavior changes.

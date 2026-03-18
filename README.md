@@ -93,6 +93,23 @@ Navigate with vim keys (or arrow keys), press Enter to select a date (printed to
 
 The calendar highlights today and your cursor position. Navigation wraps across boundaries (e.g., `l` on March 31 moves to April 1). Month and year jumps clamp the day (e.g., Jan 31 + `L` = Feb 28, Feb 29 + `J` = Feb 28).
 
+#### Calendar Flags
+
+| Flag | Description |
+|------|-------------|
+| `--padding-top N` | Top padding in lines |
+| `--padding-right N` | Right padding in characters |
+| `--padding-bottom N` | Bottom padding in lines |
+| `--padding-left N` | Left padding in characters |
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success (date printed or selection made) |
+| `1` | No selection (user quit calendar with `q`/`Esc`) |
+| `2` | Error (parse failure, invalid input, etc.) |
+
 ## Configuration
 
 Config lives at `~/.config/wen/config.yaml` (created automatically on first `wen cal`). Config only affects the calendar — date parsing stays zero-config.
@@ -114,6 +131,12 @@ theme: default
 #   week_number: "#6c7086"
 #   day_header: "#94e2d5"
 #   help_bar: "#6c7086"
+
+# Padding (0-20, can also be set via --padding-* CLI flags):
+# padding_top: 0
+# padding_right: 0
+# padding_bottom: 0
+# padding_left: 0
 ```
 
 ISO week numbering forces Monday as the week start day.
@@ -135,7 +158,8 @@ wen next friday | xargs -I{} echo "Meeting on {}"
 ## Project Structure
 
 ```
-main.go              CLI entry: subcommand routing, date parsing
+main.go              CLI entry: subcommand routing, flag parsing
+dateparse.go         Date parsing: natural language, relative weekdays
 calendar/
   config.go          Config loading: YAML, themes, XDG path
   model.go           Bubbletea model: cursor state, key bindings (bubbles/key), navigation
