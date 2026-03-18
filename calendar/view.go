@@ -62,25 +62,22 @@ func (m Model) View() string {
 	loc := m.cursor.Location()
 	startDay := m.config.WeekStartDay
 
-	// Title
-	gridWidth := 20
-	if m.showWeekNumbers {
-		gridWidth = 23
-	}
+	// Title — always center over the 20-char day grid so toggling
+	// week numbers doesn't shift the title.
 	title := fmt.Sprintf("%s %d", month, year)
-	padding := max((gridWidth-len(title))/2, 0)
+	padding := max((20-len(title))/2, 0)
 	b.WriteString(st.title.Render(strings.Repeat(" ", padding) + title))
 	b.WriteString("\n")
 
 	// Day headers
-	if m.showWeekNumbers {
-		b.WriteString(st.weekNum.Render("Wk") + " ")
-	}
 	headers := make([]string, 7)
 	for i := range 7 {
 		headers[i] = dayNames[(startDay+i)%7]
 	}
 	b.WriteString(st.dayHeader.Render(strings.Join(headers, " ")))
+	if m.showWeekNumbers {
+		b.WriteString(" " + st.weekNum.Render("Wk"))
+	}
 	b.WriteString("\n")
 
 	// First day of month
@@ -88,10 +85,10 @@ func (m Model) View() string {
 	weekday := (int(first.Weekday()) - startDay + 7) % 7
 	days := daysInMonth(year, month, loc)
 
-	// Week number for first row
+	// Week number for first row (appended at end of row)
+	firstWeekNum := 0
 	if m.showWeekNumbers {
-		wn := weekNumber(first, m.config.WeekNumbering)
-		b.WriteString(st.weekNum.Render(fmt.Sprintf("%2d", wn)) + " ")
+		firstWeekNum = weekNumber(first, m.config.WeekNumbering)
 	}
 
 	// Leading spaces
@@ -119,17 +116,27 @@ func (m Model) View() string {
 
 		col := (weekday + day) % 7
 		if col == 0 && day < days {
-			b.WriteString("\n")
+			// End of row — append week number, then newline
 			if m.showWeekNumbers {
+				b.WriteString(" " + st.weekNum.Render(fmt.Sprintf("%2d", firstWeekNum)))
 				nextDay := time.Date(year, month, day+1, 0, 0, 0, 0, loc)
-				wn := weekNumber(nextDay, m.config.WeekNumbering)
-				b.WriteString(st.weekNum.Render(fmt.Sprintf("%2d", wn)) + " ")
+				firstWeekNum = weekNumber(nextDay, m.config.WeekNumbering)
 			}
+			b.WriteString("\n")
 		} else if day < days {
 			b.WriteString(" ")
 		}
 	}
 
+	// Append week number to last row
+	if m.showWeekNumbers {
+		// Pad remaining columns on the last row
+		lastCol := (weekday + days) % 7
+		if lastCol != 0 {
+			b.WriteString(strings.Repeat("   ", 7-lastCol))
+		}
+		b.WriteString(" " + st.weekNum.Render(fmt.Sprintf("%2d", firstWeekNum)))
+	}
 	b.WriteString("\n")
 
 	if m.statusMsg != "" {

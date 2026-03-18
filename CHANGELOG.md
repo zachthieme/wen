@@ -1,5 +1,12 @@
 # Changelog
 
+### v1.2.1 — March 18, 2026
+
+- Week number column moved to the right side of the calendar grid
+- Title centering no longer shifts when toggling week numbers on/off
+
+---
+
 ### v1.2.0 — March 18, 2026
 
 **New features:**
