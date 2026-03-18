@@ -17,16 +17,10 @@ import (
 	"golang.org/x/term"
 )
 
-var (
-	version        = "dev"
-	errNoSelection = errors.New("no date selected")
-)
+var version = "dev"
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		if errors.Is(err, errNoSelection) {
-			os.Exit(1)
-		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
@@ -102,14 +96,11 @@ Calendar keybindings:
   J/K              Next / previous year
   t                Jump to today
   w                Toggle week numbers
-  y                Yank date to clipboard
   ?                Toggle help bar
-  Enter            Select date and exit
-  q, Esc           Quit without selecting
+  q, Esc           Quit
 
 Exit codes:
-  0    Success (date printed or selection made)
-  1    No selection (user quit calendar with q/Esc)
+  0    Success (date printed)
   2    Error (parse failure, invalid input, etc.)
 
 Config: ~/.config/wen/config.yaml
@@ -174,13 +165,8 @@ func runCalendar(args []string) error {
 		return fmt.Errorf("calendar: %w", err)
 	}
 
-	result, ok := finalModel.(calendar.Model)
-	if !ok {
+	if _, ok := finalModel.(calendar.Model); !ok {
 		return fmt.Errorf("unexpected internal state")
 	}
-	if result.IsSelected() {
-		fmt.Println(result.Cursor().Format(calendar.DateLayout))
-		return nil
-	}
-	return errNoSelection
+	return nil
 }

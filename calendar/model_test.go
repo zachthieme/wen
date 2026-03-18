@@ -105,29 +105,10 @@ func TestToggleHelp(t *testing.T) {
 	}
 }
 
-func TestEnterSelectsDate(t *testing.T) {
-	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
-	m = pressKey(m, "l")
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(Model)
-	if !m.IsSelected() {
-		t.Error("expected Selected to be true")
-	}
-	if m.Cursor() != date(2026, time.March, 18) {
-		t.Errorf("expected March 18, got %s", m.Cursor().Format(DateLayout))
-	}
-	if cmd == nil {
-		t.Error("expected quit command")
-	}
-}
-
-func TestQuitDoesNotSelect(t *testing.T) {
+func TestQuitExits(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	updated, cmd := m.Update(runeMsg("q"))
 	m = updated.(Model)
-	if m.IsSelected() {
-		t.Error("expected Selected to be false")
-	}
 	if !m.IsQuit() {
 		t.Error("expected IsQuit to be true")
 	}
@@ -136,30 +117,14 @@ func TestQuitDoesNotSelect(t *testing.T) {
 	}
 }
 
-func TestEscDoesNotSelect(t *testing.T) {
+func TestEscQuits(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	updated, cmd := m.Update(specialMsg(tea.KeyEscape))
 	m = updated.(Model)
-	if m.IsSelected() {
-		t.Error("expected Selected to be false")
+	if !m.IsQuit() {
+		t.Error("expected IsQuit to be true")
 	}
 	if cmd == nil {
 		t.Error("expected quit command")
-	}
-}
-
-func TestYankWithNoClipboard(t *testing.T) {
-	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
-	m.clipboardCmd = nil
-	updated, cmd := m.Update(runeMsg("y"))
-	m = updated.(Model)
-	if cmd != nil {
-		t.Error("expected no cmd for yank with no clipboard")
-	}
-	if m.cursor != date(2026, time.March, 17) {
-		t.Error("yank should not change cursor")
-	}
-	if m.statusMsg != "no clipboard tool available" {
-		t.Errorf("expected 'no clipboard tool available' status, got %q", m.statusMsg)
 	}
 }

@@ -139,11 +139,6 @@ func (m Model) View() string {
 	}
 	b.WriteString("\n")
 
-	if m.statusMsg != "" {
-		b.WriteString(st.helpBar.Render(m.statusMsg))
-		b.WriteString("\n")
-	}
-
 	if m.showHelp {
 		b.WriteString("\n")
 		b.WriteString(m.help.View(m.keys))

@@ -6,7 +6,7 @@
 
 ---
 
-You don't want to do date math in your head. You want to type `wen next friday` and get `2026-03-20`. You want to scroll through a calendar and hit Enter on the date you need. wen does both.
+You don't want to do date math in your head. You want to type `wen next friday` and get `2026-03-20`. You want to browse a calendar in your terminal. wen does both.
 
 ## Installation
 
@@ -74,7 +74,7 @@ wen cal
 wen cal december 2026
 ```
 
-Navigate with vim keys (or arrow keys), press Enter to select a date (printed to stdout), or `q`/`Esc` to cancel.
+Navigate with vim keys (or arrow keys). Press `q` or `Esc` to exit.
 
 #### Keybindings
 
@@ -86,10 +86,8 @@ Navigate with vim keys (or arrow keys), press Enter to select a date (printed to
 | `J` / `K` | Next / previous year |
 | `t` | Jump to today |
 | `w` | Toggle week numbers |
-| `y` | Yank cursor date to clipboard |
 | `?` | Toggle help bar |
-| `Enter` | Print selected date and exit |
-| `q` / `Esc` | Exit without output |
+| `q` / `Esc` | Quit |
 
 The calendar highlights today and your cursor position. Navigation wraps across boundaries (e.g., `l` on March 31 moves to April 1). Month and year jumps clamp the day (e.g., Jan 31 + `L` = Feb 28, Feb 29 + `J` = Feb 28).
 
@@ -106,8 +104,7 @@ The calendar highlights today and your cursor position. Navigation wraps across 
 
 | Code | Meaning |
 |------|---------|
-| `0` | Success (date printed or selection made) |
-| `1` | No selection (user quit calendar with `q`/`Esc`) |
+| `0` | Success (date printed) |
 | `2` | Error (parse failure, invalid input, etc.) |
 
 ## Configuration
@@ -144,10 +141,6 @@ ISO week numbering forces Monday as the week start day.
 ## Examples
 
 ```bash
-# Use in scripts
-deadline=$(wen cal)
-echo "Deadline set to $deadline"
-
 # Quick date lookup
 wen "last tuesday"
 

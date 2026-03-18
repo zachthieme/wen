@@ -2,10 +2,6 @@
 package calendar
 
 import (
-	"fmt"
-	"os/exec"
-	"runtime"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -21,16 +17,13 @@ const DateLayout = "2006-01-02"
 type Model struct {
 	cursor          time.Time
 	today           time.Time
-	selected        bool
 	quit            bool
 	showWeekNumbers bool
 	showHelp        bool
-	statusMsg       string // transient status message (e.g., yank result or error)
 	config          Config
 	keys            keyMap
 	help            help.Model
 	styles          resolvedStyles
-	clipboardCmd    []string // resolved clipboard command, nil if unavailable
 }
 
 type resolvedStyles struct {
@@ -42,9 +35,6 @@ type resolvedStyles struct {
 	dayHeader   lipgloss.Style
 	helpBar     lipgloss.Style
 }
-
-// IsSelected reports whether the user confirmed a date selection.
-func (m Model) IsSelected() bool { return m.selected }
 
 // IsQuit reports whether the user quit without selecting.
 func (m Model) IsQuit() bool { return m.quit }
@@ -64,7 +54,6 @@ func New(cursor, today time.Time, cfg Config) Model {
 		help:            newHelpModel(colors),
 	}
 	m.styles = buildStyles(colors)
-	m.clipboardCmd = resolveClipboardCmd()
 	return m
 }
 
@@ -77,23 +66,11 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-type yankMsg struct{ err error }
-
 // Update handles input messages and updates model state.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case yankMsg:
-		if msg.err != nil {
-			m.statusMsg = fmt.Sprintf("yank failed: %v", msg.err)
-		} else {
-			m.statusMsg = "yanked"
-		}
 	case tea.KeyMsg:
-		m.statusMsg = ""
 		switch {
-		case key.Matches(msg, m.keys.Select):
-			m.selected = true
-			return m, tea.Quit
 		case key.Matches(msg, m.keys.Quit):
 			m.quit = true
 			return m, tea.Quit
@@ -119,18 +96,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showWeekNumbers = !m.showWeekNumbers
 		case key.Matches(msg, m.keys.ToggleHelp):
 			m.showHelp = !m.showHelp
-		case key.Matches(msg, m.keys.Yank):
-			if m.clipboardCmd == nil {
-				m.statusMsg = "no clipboard tool available"
-			} else {
-				text := m.cursor.Format(DateLayout)
-				cmdArgs := m.clipboardCmd
-				return m, func() tea.Msg {
-					cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-					cmd.Stdin = strings.NewReader(text)
-					return yankMsg{err: cmd.Run()}
-				}
-			}
 		}
 	}
 	return m, nil
@@ -150,25 +115,6 @@ func daysInMonth(year int, month time.Month, loc *time.Location) int {
 	return time.Date(year, month+1, 0, 0, 0, 0, 0, loc).Day()
 }
 
-// resolveClipboardCmd finds the clipboard command once at startup.
-func resolveClipboardCmd() []string {
-	switch runtime.GOOS {
-	case "darwin":
-		return []string{"pbcopy"}
-	case "linux":
-		if path, err := exec.LookPath("wl-copy"); err == nil {
-			return []string{path}
-		}
-		if path, err := exec.LookPath("xclip"); err == nil {
-			return []string{path, "-selection", "clipboard"}
-		}
-		if path, err := exec.LookPath("xsel"); err == nil {
-			return []string{path, "--clipboard", "--input"}
-		}
-	}
-	return nil
-}
-
 type keyMap struct {
 	Left        key.Binding
 	Right       key.Binding
@@ -181,8 +127,6 @@ type keyMap struct {
 	Today       key.Binding
 	ToggleWeeks key.Binding
 	ToggleHelp  key.Binding
-	Yank        key.Binding
-	Select      key.Binding
 	Quit        key.Binding
 }
 
@@ -232,14 +176,6 @@ func defaultKeyMap() keyMap {
 			key.WithKeys("?"),
 			key.WithHelp("?", "help"),
 		),
-		Yank: key.NewBinding(
-			key.WithKeys("y"),
-			key.WithHelp("y", "yank"),
-		),
-		Select: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp("enter", "select"),
-		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "esc"),
 			key.WithHelp("q/esc", "quit"),
@@ -248,14 +184,14 @@ func defaultKeyMap() keyMap {
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Left, k.Right, k.Select, k.Quit, k.ToggleHelp}
+	return []key.Binding{k.Left, k.Right, k.Quit, k.ToggleHelp}
 }
 
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Left, k.Right, k.Up, k.Down},
 		{k.PrevMonth, k.NextMonth, k.PrevYear, k.NextYear},
-		{k.Today, k.Yank, k.ToggleWeeks},
-		{k.Select, k.Quit},
+		{k.Today, k.ToggleWeeks},
+		{k.Quit},
 	}
 }

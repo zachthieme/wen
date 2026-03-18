@@ -1,5 +1,14 @@
 # Changelog
 
+### v1.3.0 — March 18, 2026
+
+- Removed Enter/select feature (calendar no longer outputs a date on exit)
+- Removed yank-to-clipboard feature (`y` key)
+- Removed exit code 1 (no selection vs quit distinction)
+- Cleaned up help text, keybindings, and README
+
+---
+
 ### v1.2.1 — March 18, 2026
 
 - Week number column moved to the right side of the calendar grid
@@ -60,10 +69,9 @@ First stable release. Natural language date parsing + interactive calendar picke
 - Vim-style navigation: `h`/`l` (day), `j`/`k` (week), `H`/`L` (month), `J`/`K` (year)
 - Arrow keys mirror vim keys
 - `t` to jump to today
-- `Enter` prints selected date to stdout, `q`/`Esc` cancels
 - `w` toggles week numbers (US and ISO 8601)
-- `y` yanks cursor date to clipboard (pbcopy, wl-copy, xclip, xsel)
 - `?` toggles help bar
+- `q`/`Esc` quits
 - Day/week navigation wraps across boundaries, month/year jumps clamp day
 
 **Themes and config:**
