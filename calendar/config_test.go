@@ -183,14 +183,14 @@ func TestNormalizeClampsExcessivePadding(t *testing.T) {
 	cfg.PaddingRight = 50
 	cfg.PaddingBottom = 100
 	warnings := cfg.Normalize()
-	if cfg.PaddingRight != 20 {
-		t.Errorf("expected PaddingRight clamped to 20, got %d", cfg.PaddingRight)
+	if cfg.PaddingRight != MaxPadding {
+		t.Errorf("expected PaddingRight clamped to %d, got %d", MaxPadding, cfg.PaddingRight)
 	}
-	if cfg.PaddingBottom != 20 {
-		t.Errorf("expected PaddingBottom clamped to 20, got %d", cfg.PaddingBottom)
+	if cfg.PaddingBottom != MaxPadding {
+		t.Errorf("expected PaddingBottom clamped to %d, got %d", MaxPadding, cfg.PaddingBottom)
 	}
-	if len(warnings) == 0 {
-		t.Error("expected warnings for excessive padding values")
+	if len(warnings) != 2 {
+		t.Errorf("expected 2 warnings for 2 excessive padding values, got %d", len(warnings))
 	}
 }
 
