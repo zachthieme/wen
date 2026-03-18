@@ -146,14 +146,8 @@ func (m Model) View() string {
 	}
 
 	output := b.String()
-	if m.config.PaddingTop > 0 || m.config.PaddingRight > 0 || m.config.PaddingBottom > 0 || m.config.PaddingLeft > 0 {
-		padStyle := lipgloss.NewStyle().Padding(
-			m.config.PaddingTop,
-			m.config.PaddingRight,
-			m.config.PaddingBottom,
-			m.config.PaddingLeft,
-		)
-		output = padStyle.Render(output)
+	if m.styles.hasPadding {
+		output = m.styles.padding.Render(output)
 	}
 	return output
 }

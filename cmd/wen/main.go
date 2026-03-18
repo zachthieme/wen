@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zachthieme/wen"
 	"github.com/zachthieme/wen/calendar"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -57,7 +58,7 @@ func run(args []string) error {
 	}
 
 	if input == "" {
-		fmt.Println(time.Now().Format(calendar.DateLayout))
+		fmt.Println(time.Now().Format(wen.DateLayout))
 		return nil
 	}
 
@@ -65,7 +66,7 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(result.Format(calendar.DateLayout))
+	fmt.Println(result.Format(wen.DateLayout))
 	return nil
 }
 
@@ -158,7 +159,7 @@ func runCalendar(args []string) error {
 	}
 
 	m := calendar.New(cursor, today, cfg)
-	p := tea.NewProgram(m)
+	p := tea.NewProgram(m, tea.WithAltScreen())
 
 	finalModel, err := p.Run()
 	if err != nil {
@@ -169,4 +170,12 @@ func runCalendar(args []string) error {
 		return fmt.Errorf("unexpected internal state")
 	}
 	return nil
+}
+
+func parseDate(input string, ref time.Time) (time.Time, error) {
+	t, err := wen.ParseRelative(input, ref)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("could not parse date %q: %w", input, err)
+	}
+	return t, nil
 }

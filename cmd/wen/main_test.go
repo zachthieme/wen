@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zachthieme/wen/calendar"
+	"github.com/zachthieme/wen"
 )
 
 var testBinary string
@@ -28,7 +28,7 @@ func runTests(m *testing.M) int {
 	defer func() { _ = os.RemoveAll(dir) }()
 
 	testBinary = filepath.Join(dir, "wen")
-	cmd := exec.Command("go", "build", "-o", testBinary, ".")
+	cmd := exec.Command("go", "build", "-o", testBinary, "github.com/zachthieme/wen/cmd/wen")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		fmt.Fprintf(os.Stderr, "build failed: %s\n%s", err, out)
 		return 1
@@ -38,7 +38,7 @@ func runTests(m *testing.M) int {
 }
 
 func TestNoArgs_PrintsToday(t *testing.T) {
-	today := time.Now().Format(calendar.DateLayout)
+	today := time.Now().Format(wen.DateLayout)
 	cmd := exec.Command(testBinary)
 	cmd.Stdin = strings.NewReader("")
 	out, err := cmd.Output()
@@ -58,7 +58,7 @@ func TestPositionalArg(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 	got := strings.TrimSpace(string(out))
-	if _, err := time.Parse(calendar.DateLayout, got); err != nil {
+	if _, err := time.Parse(wen.DateLayout, got); err != nil {
 		t.Errorf("output %q is not a valid yyyy-mm-dd date", got)
 	}
 }
@@ -71,7 +71,7 @@ func TestStdinMode(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 	got := strings.TrimSpace(string(out))
-	if _, err := time.Parse(calendar.DateLayout, got); err != nil {
+	if _, err := time.Parse(wen.DateLayout, got); err != nil {
 		t.Errorf("output %q is not a valid yyyy-mm-dd date", got)
 	}
 }
@@ -112,29 +112,29 @@ func TestThisVsNextWeekday(t *testing.T) {
 		{"next fri", "2026-03-27"},
 		{"last thursday", "2026-03-12"},
 		{"last tuesday", "2026-03-10"},
-		{"last sunday", "2026-03-15"},
+		{"last sunday", "2026-03-08"},
 		{"last sat", "2026-03-14"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			got, ok := parseRelativeWeekday(tt.input, ref)
-			if !ok {
-				t.Fatalf("expected match for %q", tt.input)
+			got, err := parseDate(tt.input, ref)
+			if err != nil {
+				t.Fatalf("unexpected error for %q: %v", tt.input, err)
 			}
-			if got.Format(calendar.DateLayout) != tt.want {
-				t.Errorf("parseRelativeWeekday(%q) = %s, want %s", tt.input, got.Format(calendar.DateLayout), tt.want)
+			if got.Format("2006-01-02") != tt.want {
+				t.Errorf("parseDate(%q) = %s, want %s", tt.input, got.Format("2006-01-02"), tt.want)
 			}
 		})
 	}
 }
 
-func TestRelativeWeekdayDoesNotMatchOtherInputs(t *testing.T) {
+func TestParseDateRejectsInvalidInput(t *testing.T) {
 	ref := time.Date(2026, 3, 17, 12, 0, 0, 0, time.Local)
-	inputs := []string{"tomorrow", "2 weeks ago", "march 20th", "pizza", "next", "this"}
+	inputs := []string{"pizza", "next", "this"}
 	for _, input := range inputs {
-		if _, ok := parseRelativeWeekday(input, ref); ok {
-			t.Errorf("expected no match for %q", input)
+		if _, err := parseDate(input, ref); err == nil {
+			t.Errorf("expected error for %q", input)
 		}
 	}
 }

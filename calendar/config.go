@@ -131,7 +131,10 @@ var themePresets = map[string]ThemeColors{
 
 // LoadConfig reads the user's config from the XDG config path, creating a default file if none exists.
 func LoadConfig() (Config, []string) {
-	path := configPath()
+	path, err := configPath()
+	if err != nil {
+		return DefaultConfig(), []string{err.Error()}
+	}
 	return loadConfigFromPath(path)
 }
 
@@ -154,13 +157,16 @@ func loadConfigFromPath(path string) (Config, []string) {
 	return cfg, warnings
 }
 
-func configPath() string {
+func configPath() (string, error) {
 	dir := os.Getenv("XDG_CONFIG_HOME")
 	if dir == "" {
-		home, _ := os.UserHomeDir()
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("could not determine home directory: %w", err)
+		}
 		dir = filepath.Join(home, ".config")
 	}
-	return filepath.Join(dir, "wen", "config.yaml")
+	return filepath.Join(dir, "wen", "config.yaml"), nil
 }
 
 func writeDefaultConfig(path string) error {

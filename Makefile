@@ -1,7 +1,7 @@
 .PHONY: build test lint check install
 
 build:
-	go build -o wen .
+	go build -o wen ./cmd/wen
 
 test:
 	go test -race -count=1 ./...
@@ -12,4 +12,4 @@ lint:
 check: test lint
 
 install:
-	go install .
+	go install ./cmd/wen

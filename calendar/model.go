@@ -11,6 +11,8 @@ import (
 )
 
 // DateLayout is the standard date format used for output (yyyy-mm-dd).
+//
+// Deprecated: Use wen.DateLayout instead.
 const DateLayout = "2006-01-02"
 
 // Model holds the state for the interactive calendar TUI.
@@ -34,6 +36,8 @@ type resolvedStyles struct {
 	weekNum     lipgloss.Style
 	dayHeader   lipgloss.Style
 	helpBar     lipgloss.Style
+	padding     lipgloss.Style
+	hasPadding  bool
 }
 
 // IsQuit reports whether the user quit without selecting.
@@ -54,6 +58,12 @@ func New(cursor, today time.Time, cfg Config) Model {
 		help:            newHelpModel(colors),
 	}
 	m.styles = buildStyles(colors)
+	if cfg.PaddingTop > 0 || cfg.PaddingRight > 0 || cfg.PaddingBottom > 0 || cfg.PaddingLeft > 0 {
+		m.styles.hasPadding = true
+		m.styles.padding = lipgloss.NewStyle().Padding(
+			cfg.PaddingTop, cfg.PaddingRight, cfg.PaddingBottom, cfg.PaddingLeft,
+		)
+	}
 	return m
 }
 
@@ -69,6 +79,8 @@ func (m Model) Init() tea.Cmd {
 // Update handles input messages and updates model state.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.help.Width = msg.Width
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keys.Quit):
@@ -177,7 +189,7 @@ func defaultKeyMap() keyMap {
 			key.WithHelp("?", "help"),
 		),
 		Quit: key.NewBinding(
-			key.WithKeys("q", "esc"),
+			key.WithKeys("q", "esc", "ctrl+c"),
 			key.WithHelp("q/esc", "quit"),
 		),
 	}
