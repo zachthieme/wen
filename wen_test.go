@@ -643,6 +643,31 @@ func FuzzParse(f *testing.F) {
 	})
 }
 
+func TestValidation(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"invalid day: february 30", "february 30"},
+		{"invalid day: april 31", "april 31"},
+		{"invalid day: february 29 non-leap year", "february 29"},
+		{"invalid hour 24h: at 25:00", "at 25:00"},
+		{"invalid minute: at 3:99", "at 3:99"},
+		{"invalid meridiem hour too high: at 13pm", "at 13pm"},
+		{"invalid meridiem hour zero: at 0pm", "at 0pm"},
+		{"invalid meridiem hour colon: at 13:00pm", "at 13:00pm"},
+		{"invalid meridiem hour zero colon: at 0:30am", "at 0:30am"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ParseRelative(tt.input, ref)
+			if err == nil {
+				t.Errorf("expected error for %q, got nil", tt.input)
+			}
+		})
+	}
+}
+
 func TestWithPeriodStartExplicit(t *testing.T) {
 	// Verify explicit WithPeriodStart matches default behavior
 	r := time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC)

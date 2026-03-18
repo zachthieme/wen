@@ -1,5 +1,32 @@
 # Changelog
 
+### v1.4.0 — March 18, 2026
+
+**New features:**
+- Custom recursive descent date parser replaces olebedev/when dependency
+- `wen` package is now a reusable Go library (`wen.Parse()`, `wen.ParseRelative()`)
+- Period mode options: `WithPeriodStart()` / `WithPeriodSame()`
+- Input validation rejects invalid dates (e.g., "february 30") and times (e.g., "at 25:00")
+
+**Code quality:**
+- Replaced panic("unreachable") calls with proper error returns
+- Extracted magic number 31 to `maxDayOfMonth` constant
+- Refactored calendar `View()` into `renderTitle()`, `renderDayHeaders()`, `renderGrid()`
+- Extracted `dayGridWidth` constant for calendar rendering
+- Makefile: added `clean` and `help` targets
+
+**Testing:**
+- Added fuzz testing (`FuzzParse`) in CI
+- Added input validation tests (invalid days, hours, minutes, meridiem)
+- Expanded CLI integration tests (help, version, multi-word args, error cases)
+- CLI tests run in parallel with `t.Parallel()`
+
+**Infrastructure:**
+- CI test matrix: tests now run on both Linux and macOS
+- Restructured CLI into `cmd/wen/` layout
+
+---
+
 ### v1.3.0 — March 18, 2026
 
 - Removed Enter/select feature (calendar no longer outputs a date on exit)

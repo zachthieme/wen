@@ -54,47 +54,67 @@ func newHelpModel(colors ThemeColors) help.Model {
 
 var dayNames = [7]string{"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"}
 
+// dayGridWidth is the character width of the 7-column day grid.
+const dayGridWidth = 20
+
 // View produces the calendar view string for the model state.
 func (m Model) View() string {
-	st := m.styles
 	var b strings.Builder
-	year, month, _ := m.cursor.Date()
+	year, month, cursorDay := m.cursor.Date()
 	loc := m.cursor.Location()
-	startDay := m.config.WeekStartDay
 
-	// Title — always center over the 20-char day grid so toggling
-	// week numbers doesn't shift the title.
+	m.renderTitle(&b, month, year)
+	m.renderDayHeaders(&b)
+	m.renderGrid(&b, year, month, cursorDay, loc)
+
+	if m.showHelp {
+		b.WriteString("\n")
+		b.WriteString(m.help.View(m.keys))
+		b.WriteString("\n")
+	}
+
+	output := b.String()
+	if m.styles.hasPadding {
+		output = m.styles.padding.Render(output)
+	}
+	return output
+}
+
+func (m Model) renderTitle(b *strings.Builder, month time.Month, year int) {
 	title := fmt.Sprintf("%s %d", month, year)
-	padding := max((20-len(title))/2, 0)
-	b.WriteString(st.title.Render(strings.Repeat(" ", padding) + title))
+	padding := max((dayGridWidth-len(title))/2, 0)
+	b.WriteString(m.styles.title.Render(strings.Repeat(" ", padding) + title))
 	b.WriteString("\n")
+}
 
-	// Day headers
+func (m Model) renderDayHeaders(b *strings.Builder) {
+	startDay := m.config.WeekStartDay
 	headers := make([]string, 7)
 	for i := range 7 {
 		headers[i] = dayNames[(startDay+i)%7]
 	}
-	b.WriteString(st.dayHeader.Render(strings.Join(headers, " ")))
+	b.WriteString(m.styles.dayHeader.Render(strings.Join(headers, " ")))
 	if m.showWeekNumbers {
-		b.WriteString(" " + st.weekNum.Render("Wk"))
+		b.WriteString(" " + m.styles.weekNum.Render("Wk"))
 	}
 	b.WriteString("\n")
+}
 
-	// First day of month
+func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursorDay int, loc *time.Location) {
+	st := m.styles
+	startDay := m.config.WeekStartDay
 	first := time.Date(year, month, 1, 0, 0, 0, 0, loc)
 	weekday := (int(first.Weekday()) - startDay + 7) % 7
 	days := daysInMonth(year, month, loc)
 
-	// Week number for first row (appended at end of row)
-	firstWeekNum := 0
+	wn := 0
 	if m.showWeekNumbers {
-		firstWeekNum = weekNumber(first, m.config.WeekNumbering)
+		wn = weekNumber(first, m.config.WeekNumbering)
 	}
 
-	// Leading spaces
+	// Leading spaces for first partial week
 	b.WriteString(strings.Repeat("   ", weekday))
 
-	_, _, cursorDay := m.cursor.Date()
 	todayYear, todayMonth, todayDay := m.today.Date()
 
 	for day := 1; day <= days; day++ {
@@ -118,9 +138,9 @@ func (m Model) View() string {
 		if col == 0 && day < days {
 			// End of row — append week number, then newline
 			if m.showWeekNumbers {
-				b.WriteString(" " + st.weekNum.Render(fmt.Sprintf("%2d", firstWeekNum)))
+				b.WriteString(" " + st.weekNum.Render(fmt.Sprintf("%2d", wn)))
 				nextDay := time.Date(year, month, day+1, 0, 0, 0, 0, loc)
-				firstWeekNum = weekNumber(nextDay, m.config.WeekNumbering)
+				wn = weekNumber(nextDay, m.config.WeekNumbering)
 			}
 			b.WriteString("\n")
 		} else if day < days {
@@ -130,26 +150,13 @@ func (m Model) View() string {
 
 	// Append week number to last row
 	if m.showWeekNumbers {
-		// Pad remaining columns on the last row
 		lastCol := (weekday + days) % 7
 		if lastCol != 0 {
 			b.WriteString(strings.Repeat("   ", 7-lastCol))
 		}
-		b.WriteString(" " + st.weekNum.Render(fmt.Sprintf("%2d", firstWeekNum)))
+		b.WriteString(" " + st.weekNum.Render(fmt.Sprintf("%2d", wn)))
 	}
 	b.WriteString("\n")
-
-	if m.showHelp {
-		b.WriteString("\n")
-		b.WriteString(m.help.View(m.keys))
-		b.WriteString("\n")
-	}
-
-	output := b.String()
-	if m.styles.hasPadding {
-		output = m.styles.padding.Render(output)
-	}
-	return output
 }
 
 func weekNumber(t time.Time, numbering string) int {

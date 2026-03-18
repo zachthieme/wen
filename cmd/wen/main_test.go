@@ -153,6 +153,66 @@ func TestPositionalArgTakesPrecedenceOverStdin(t *testing.T) {
 	}
 }
 
+func TestHelpFlag(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "--help")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := string(out)
+	if !strings.Contains(got, "wen - a natural language date tool") {
+		t.Errorf("help output missing header: %s", got)
+	}
+	if !strings.Contains(got, "wen cal") {
+		t.Errorf("help output missing cal subcommand: %s", got)
+	}
+}
+
+func TestVersionFlag(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "--version")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := strings.TrimSpace(string(out))
+	if !strings.HasPrefix(got, "wen ") {
+		t.Errorf("version output should start with 'wen ', got %q", got)
+	}
+}
+
+func TestMultiWordArgs(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "march", "25", "2026")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := strings.TrimSpace(string(out))
+	want := "2026-03-25"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestMultipleParseErrors(t *testing.T) {
+	t.Parallel()
+	inputs := []string{"xyzzy", "42 blobs ago", "next flurb"}
+	for _, input := range inputs {
+		t.Run(input, func(t *testing.T) {
+			cmd := exec.Command(testBinary, input)
+			out, err := cmd.CombinedOutput()
+			if err == nil {
+				t.Fatalf("expected non-zero exit for %q", input)
+			}
+			if !strings.Contains(string(out), "could not parse date") {
+				t.Errorf("unexpected error message for %q: %s", input, out)
+			}
+		})
+	}
+}
+
 func TestCalFlagParsing(t *testing.T) {
 	fs := flag.NewFlagSet("cal", flag.ContinueOnError)
 	paddingTop := fs.Int("padding-top", 0, "")

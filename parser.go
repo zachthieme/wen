@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+// maxDayOfMonth is the maximum valid day number; values above this are treated as years.
+const maxDayOfMonth = 31
+
 type parser struct {
 	tokens  []token
 	pos     int
@@ -52,6 +55,10 @@ func (p *parser) finalError() *ParseError {
 
 func truncateDay(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+}
+
+func daysIn(year int, month time.Month, loc *time.Location) int {
+	return time.Date(year, month+1, 0, 0, 0, 0, 0, loc).Day()
 }
 
 func (p *parser) parse() (time.Time, error) {
@@ -149,7 +156,7 @@ func (p *parser) parseModifierExpr() (time.Time, bool) {
 					// Optional year
 					p.skipNoise()
 					year := 0
-					if p.peek().Kind == tokenNumber && p.peek().IntVal > 31 {
+					if p.peek().Kind == tokenNumber && p.peek().IntVal > maxDayOfMonth {
 						year = p.advance().IntVal
 					}
 					return p.resolveLastWeekdayInMonth(tok.Weekday, monthTok.Month, year)
@@ -161,7 +168,7 @@ func (p *parser) parseModifierExpr() (time.Time, bool) {
 	}
 	if tok.Kind == tokenUnit && (tok.Value == "week" || tok.Value == "month") {
 		p.advance() // consume unit
-		return p.resolvePeriodRef(modifier.Value, tok.Value), true
+		return p.resolvePeriodRef(modifier.Value, tok.Value)
 	}
 
 	p.recordError(p.makeError("weekday", "week", "month"))
@@ -218,7 +225,7 @@ func (p *parser) parseInExpr() (time.Time, bool) {
 		return p.resolveCountedWeekday(num.IntVal, next.Weekday)
 	case tokenUnit:
 		p.advance()
-		return p.resolveRelativeOffset(num.IntVal, next.Value, 1), true
+		return p.resolveRelativeOffset(num.IntVal, next.Value, 1)
 	}
 
 	p.recordError(p.makeError("weekday", "unit"))
@@ -243,14 +250,14 @@ func (p *parser) parseNumberLeadExpr() (time.Time, bool) {
 	tok := p.peek()
 	if tok.Kind == tokenPreposition && tok.Value == "ago" {
 		p.advance()
-		return p.resolveRelativeOffset(num.IntVal, unit.Value, -1), true
+		return p.resolveRelativeOffset(num.IntVal, unit.Value, -1)
 	}
 	if tok.Kind == tokenPreposition && tok.Value == "from" {
 		p.advance()
 		p.skipNoise()
 		if p.peek().Kind == tokenPreposition && p.peek().Value == "now" {
 			p.advance()
-			return p.resolveRelativeOffset(num.IntVal, unit.Value, 1), true
+			return p.resolveRelativeOffset(num.IntVal, unit.Value, 1)
 		}
 		err := p.makeError("now")
 		p.restore(saved)
@@ -264,23 +271,24 @@ func (p *parser) parseNumberLeadExpr() (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func (p *parser) resolveRelativeOffset(n int, unit string, direction int) time.Time {
+func (p *parser) resolveRelativeOffset(n int, unit string, direction int) (time.Time, bool) {
 	amount := n * direction
 	switch unit {
 	case "day":
-		return truncateDay(p.ref).AddDate(0, 0, amount)
+		return truncateDay(p.ref).AddDate(0, 0, amount), true
 	case "week":
-		return truncateDay(p.ref).AddDate(0, 0, amount*7)
+		return truncateDay(p.ref).AddDate(0, 0, amount*7), true
 	case "month":
-		return truncateDay(p.ref).AddDate(0, amount, 0)
+		return truncateDay(p.ref).AddDate(0, amount, 0), true
 	case "year":
-		return truncateDay(p.ref).AddDate(amount, 0, 0)
+		return truncateDay(p.ref).AddDate(amount, 0, 0), true
 	case "hour":
-		return p.ref.Add(time.Duration(amount) * time.Hour)
+		return p.ref.Add(time.Duration(amount) * time.Hour), true
 	case "minute":
-		return p.ref.Add(time.Duration(amount) * time.Minute)
+		return p.ref.Add(time.Duration(amount) * time.Minute), true
 	}
-	panic("unreachable: unknown unit " + unit)
+	p.recordError(p.makeError("day", "week", "month", "year", "hour", "minute"))
+	return time.Time{}, false
 }
 
 func (p *parser) resolveCountedWeekday(count int, target time.Weekday) (time.Time, bool) {
@@ -330,7 +338,7 @@ func (p *parser) parseOrdinalWeekdayInMonth() (time.Time, bool) {
 	// Optional year
 	p.skipNoise()
 	year := 0
-	if p.peek().Kind == tokenNumber && p.peek().IntVal > 31 {
+	if p.peek().Kind == tokenNumber && p.peek().IntVal > maxDayOfMonth {
 		year = p.advance().IntVal
 	}
 
@@ -408,7 +416,7 @@ func (p *parser) parseAbsoluteDate() (time.Time, bool) {
 
 	switch p.peek().Kind {
 	case tokenNumber:
-		if p.peek().IntVal > 31 {
+		if p.peek().IntVal > maxDayOfMonth {
 			// "march 2027" — year only, default to 1st of the month
 			year = p.advance().IntVal
 			hasYear = true
@@ -428,7 +436,7 @@ func (p *parser) parseAbsoluteDate() (time.Time, bool) {
 	// Optional year after day: "march 15 2027"
 	if !hasYear {
 		p.skipNoise()
-		if p.peek().Kind == tokenNumber && p.peek().IntVal > 31 {
+		if p.peek().Kind == tokenNumber && p.peek().IntVal > maxDayOfMonth {
 			year = p.advance().IntVal
 			hasYear = true
 		}
@@ -439,10 +447,21 @@ func (p *parser) parseAbsoluteDate() (time.Time, bool) {
 		year++
 	}
 
+	maxDay := daysIn(year, monthTok.Month, p.ref.Location())
+	if day < 1 || day > maxDay {
+		p.recordError(&ParseError{
+			Position: saved,
+			Expected: []string{fmt.Sprintf("day between 1 and %d", maxDay)},
+			Found:    fmt.Sprintf("%d", day),
+		})
+		p.restore(saved)
+		return time.Time{}, false
+	}
+
 	return time.Date(year, monthTok.Month, day, 0, 0, 0, 0, p.ref.Location()), true
 }
 
-func (p *parser) resolvePeriodRef(modifier, unit string) time.Time {
+func (p *parser) resolvePeriodRef(modifier, unit string) (time.Time, bool) {
 	ref := truncateDay(p.ref)
 
 	switch unit {
@@ -452,17 +471,17 @@ func (p *parser) resolvePeriodRef(modifier, unit string) time.Time {
 
 		switch modifier {
 		case "this":
-			return sunday
+			return sunday, true
 		case "next":
 			if p.opts.periodMode == PeriodSame {
-				return ref.AddDate(0, 0, 7)
+				return ref.AddDate(0, 0, 7), true
 			}
-			return sunday.AddDate(0, 0, 7)
+			return sunday.AddDate(0, 0, 7), true
 		case "last":
 			if p.opts.periodMode == PeriodSame {
-				return ref.AddDate(0, 0, -7)
+				return ref.AddDate(0, 0, -7), true
 			}
-			return sunday.AddDate(0, 0, -7)
+			return sunday.AddDate(0, 0, -7), true
 		}
 
 	case "month":
@@ -470,20 +489,21 @@ func (p *parser) resolvePeriodRef(modifier, unit string) time.Time {
 
 		switch modifier {
 		case "this":
-			return firstOfMonth
+			return firstOfMonth, true
 		case "next":
 			if p.opts.periodMode == PeriodSame {
-				return ref.AddDate(0, 1, 0)
+				return ref.AddDate(0, 1, 0), true
 			}
-			return firstOfMonth.AddDate(0, 1, 0)
+			return firstOfMonth.AddDate(0, 1, 0), true
 		case "last":
 			if p.opts.periodMode == PeriodSame {
-				return ref.AddDate(0, -1, 0)
+				return ref.AddDate(0, -1, 0), true
 			}
-			return firstOfMonth.AddDate(0, -1, 0)
+			return firstOfMonth.AddDate(0, -1, 0), true
 		}
 	}
-	panic("unreachable: unknown unit " + unit)
+	p.recordError(p.makeError("week", "month"))
+	return time.Time{}, false
 }
 
 func (p *parser) parseBoundaryExpr() (time.Time, bool) {
@@ -515,10 +535,10 @@ func (p *parser) parseBoundaryExpr() (time.Time, bool) {
 	}
 	unit := p.advance().Value
 
-	return p.resolveBoundary(boundary.Value, modifier, unit), true
+	return p.resolveBoundary(boundary.Value, modifier, unit)
 }
 
-func (p *parser) resolveBoundary(boundary, modifier, unit string) time.Time {
+func (p *parser) resolveBoundary(boundary, modifier, unit string) (time.Time, bool) {
 	ref := truncateDay(p.ref)
 	loc := ref.Location()
 
@@ -533,10 +553,10 @@ func (p *parser) resolveBoundary(boundary, modifier, unit string) time.Time {
 			sunday = sunday.AddDate(0, 0, -7)
 		}
 		if boundary == "beginning" {
-			return sunday
+			return sunday, true
 		}
 		// end = Saturday 23:59:59
-		return sunday.AddDate(0, 0, 6).Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+		return sunday.AddDate(0, 0, 6).Add(23*time.Hour + 59*time.Minute + 59*time.Second), true
 
 	case "month":
 		var targetMonth time.Month
@@ -558,13 +578,14 @@ func (p *parser) resolveBoundary(boundary, modifier, unit string) time.Time {
 			}
 		}
 		if boundary == "beginning" {
-			return time.Date(targetYear, targetMonth, 1, 0, 0, 0, 0, loc)
+			return time.Date(targetYear, targetMonth, 1, 0, 0, 0, 0, loc), true
 		}
 		// end = last day 23:59:59
 		firstOfNext := time.Date(targetYear, targetMonth+1, 1, 0, 0, 0, 0, loc)
-		return firstOfNext.Add(-time.Second)
+		return firstOfNext.Add(-time.Second), true
 	}
-	panic("unreachable: unknown unit " + unit)
+	p.recordError(p.makeError("week", "month"))
+	return time.Time{}, false
 }
 
 func (p *parser) parseTimeExpr(base time.Time) (time.Time, bool) {
@@ -596,8 +617,19 @@ func (p *parser) parseTimeExpr(base time.Time) (time.Time, bool) {
 			if p.peek().Kind == tokenNumber {
 				min := p.advance()
 				h, m := num.IntVal, min.IntVal
+				if m > 59 {
+					p.restore(saved)
+					return time.Time{}, false
+				}
 				if p.peek().Kind == tokenMeridiem {
+					if h < 1 || h > 12 {
+						p.restore(saved)
+						return time.Time{}, false
+					}
 					h = applyMeridiem(h, p.advance().Value)
+				} else if h > 23 {
+					p.restore(saved)
+					return time.Time{}, false
 				}
 				return setTime(base, h, m), true
 			}
@@ -608,6 +640,10 @@ func (p *parser) parseTimeExpr(base time.Time) (time.Time, bool) {
 
 		// number meridiem
 		if p.peek().Kind == tokenMeridiem {
+			if num.IntVal < 1 || num.IntVal > 12 {
+				p.restore(saved)
+				return time.Time{}, false
+			}
 			h := applyMeridiem(num.IntVal, p.advance().Value)
 			return setTime(base, h, 0), true
 		}
