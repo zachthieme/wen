@@ -171,6 +171,10 @@ week_start_day: 0     # 0=Sunday, 1=Monday
 # Example: fiscal_year_start: 10  # October (common US federal/corporate)
 # fiscal_year_start: 1
 
+# Show fiscal quarter in calendar title (e.g., "March 2026 · Q2 FY26")
+# Requires fiscal_year_start > 1 to take effect.
+# show_fiscal_quarter: false
+
 # Theme (built-in: "default", "catppuccin-mocha", "dracula", "nord")
 theme: default
 

@@ -188,9 +188,32 @@ func visibleLen(s string) int {
 
 func (m Model) renderTitle(b *strings.Builder, month time.Month, year int) {
 	title := fmt.Sprintf("%s %d", month, year)
+	if m.config.ShowFiscalQuarter && m.config.FiscalYearStart > 1 {
+		q, fy := fiscalQuarter(int(month), year, m.config.FiscalYearStart)
+		title += fmt.Sprintf(" · Q%d FY%02d", q, fy%100)
+	}
 	padding := max((dayGridWidth-len(title))/2, 0)
 	b.WriteString(m.styles.title.Render(strings.Repeat(" ", padding) + title))
 	b.WriteString("\n")
+}
+
+// fiscalQuarter returns the fiscal quarter (1-4) and fiscal year for a given
+// calendar month/year with the fiscal year starting in startMonth.
+// The fiscal year number is the calendar year the FY ends in
+// (e.g., FY starting Oct 2025 = FY2026).
+func fiscalQuarter(month, year, startMonth int) (quarter, fiscalYear int) {
+	fm := (month - startMonth + 12) % 12
+	quarter = fm/3 + 1
+	if month >= startMonth {
+		// We're in the first part of the FY that started this calendar year.
+		// It ends next calendar year.
+		fiscalYear = year + 1
+	} else {
+		// We're in the latter part of the FY that started last calendar year.
+		// It ends this calendar year.
+		fiscalYear = year
+	}
+	return quarter, fiscalYear
 }
 
 func (m Model) renderDayHeaders(b *strings.Builder) {

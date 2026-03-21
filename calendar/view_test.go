@@ -141,3 +141,58 @@ func TestRenderWithTopPadding(t *testing.T) {
 		t.Errorf("expected at least 2 more lines with top padding, got %d vs %d", padLines, noPadLines)
 	}
 }
+
+func TestFiscalQuarter(t *testing.T) {
+	tests := []struct {
+		name       string
+		month      int
+		year       int
+		fyStart    int
+		wantQ      int
+		wantFY     int
+	}{
+		// FY starts October: Oct 2025 – Sep 2026 = FY26
+		{"Oct 2025 FY-Oct", 10, 2025, 10, 1, 2026},
+		{"Dec 2025 FY-Oct", 12, 2025, 10, 1, 2026},
+		{"Jan 2026 FY-Oct", 1, 2026, 10, 2, 2026},
+		{"Mar 2026 FY-Oct", 3, 2026, 10, 2, 2026},
+		{"Apr 2026 FY-Oct", 4, 2026, 10, 3, 2026},
+		{"Jul 2026 FY-Oct", 7, 2026, 10, 4, 2026},
+		{"Sep 2026 FY-Oct", 9, 2026, 10, 4, 2026},
+		// FY starts April (UK/Japan): Apr 2026 – Mar 2027 = FY27
+		{"Apr 2026 FY-Apr", 4, 2026, 4, 1, 2027},
+		{"Mar 2026 FY-Apr", 3, 2026, 4, 4, 2026},
+		{"Jan 2026 FY-Apr", 1, 2026, 4, 4, 2026},
+		// Calendar year (FY starts Jan): standard quarters
+		{"Mar 2026 FY-Jan", 3, 2026, 1, 1, 2027},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q, fy := fiscalQuarter(tt.month, tt.year, tt.fyStart)
+			if q != tt.wantQ || fy != tt.wantFY {
+				t.Errorf("fiscalQuarter(%d, %d, %d) = Q%d FY%d, want Q%d FY%d",
+					tt.month, tt.year, tt.fyStart, q, fy, tt.wantQ, tt.wantFY)
+			}
+		})
+	}
+}
+
+func TestRenderFiscalQuarterTitle(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.FiscalYearStart = 10
+	cfg.ShowFiscalQuarter = true
+	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
+	output := m.View()
+	if !strings.Contains(output, "Q2 FY26") {
+		t.Errorf("expected title to contain 'Q2 FY26', got:\n%s", output)
+	}
+}
+
+func TestRenderNoFiscalQuarterByDefault(t *testing.T) {
+	cfg := DefaultConfig()
+	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
+	output := m.View()
+	if strings.Contains(output, "FY") {
+		t.Error("expected no fiscal quarter in default config")
+	}
+}

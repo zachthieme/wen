@@ -30,10 +30,11 @@ type ThemeColors struct {
 
 // Config holds user preferences for the calendar display.
 type Config struct {
-	ShowWeekNumbers bool        `yaml:"show_week_numbers"`
-	WeekNumbering   string      `yaml:"week_numbering"`
-	WeekStartDay    int         `yaml:"week_start_day"`
-	FiscalYearStart int         `yaml:"fiscal_year_start"`
+	ShowWeekNumbers    bool        `yaml:"show_week_numbers"`
+	WeekNumbering      string      `yaml:"week_numbering"`
+	WeekStartDay       int         `yaml:"week_start_day"`
+	FiscalYearStart    int         `yaml:"fiscal_year_start"`
+	ShowFiscalQuarter  bool        `yaml:"show_fiscal_quarter"`
 	Theme           string      `yaml:"theme"`
 	Colors          ThemeColors `yaml:"colors"`
 	HighlightSource string      `yaml:"highlight_source"`
@@ -197,6 +198,10 @@ week_start_day: 0     # 0=Sunday, 1=Monday
 # Affects "end of quarter", "beginning of quarter", etc.
 # Example: fiscal_year_start: 10  # October (common US federal/corporate)
 # fiscal_year_start: 1
+
+# Show fiscal quarter in calendar title (e.g., "March 2026 · Q2 FY26")
+# Requires fiscal_year_start > 1 to take effect.
+# show_fiscal_quarter: false
 
 # Theme (built-in: "default", "catppuccin-mocha", "dracula", "nord")
 theme: default
