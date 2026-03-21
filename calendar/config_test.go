@@ -258,7 +258,9 @@ func TestLoadConfigMissingFile(t *testing.T) {
 }
 
 func TestLoadConfigUnwritableDir(t *testing.T) {
-	cfg, warnings := loadConfigFromPath("/nonexistent/config.yaml")
+	// Use /proc as a directory we definitely cannot create subdirs in,
+	// and a path that will not already have a config file.
+	cfg, warnings := loadConfigFromPath("/proc/nonexistent-wen-test/config.yaml")
 	if cfg.Theme != "default" {
 		t.Errorf("expected default theme, got %q", cfg.Theme)
 	}
