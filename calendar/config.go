@@ -33,6 +33,7 @@ type Config struct {
 	ShowWeekNumbers bool        `yaml:"show_week_numbers"`
 	WeekNumbering   string      `yaml:"week_numbering"`
 	WeekStartDay    int         `yaml:"week_start_day"`
+	FiscalYearStart int         `yaml:"fiscal_year_start"`
 	Theme           string      `yaml:"theme"`
 	Colors          ThemeColors `yaml:"colors"`
 	HighlightSource string      `yaml:"highlight_source"`
@@ -48,6 +49,7 @@ func DefaultConfig() Config {
 		ShowWeekNumbers: false,
 		WeekNumbering:   WeekNumberingUS,
 		WeekStartDay:    0,
+		FiscalYearStart: 1,
 		Theme:           "default",
 	}
 }
@@ -66,6 +68,12 @@ func (c *Config) Normalize() []string {
 	}
 	if c.WeekNumbering == WeekNumberingISO {
 		c.WeekStartDay = 1
+	}
+	if c.FiscalYearStart < 1 || c.FiscalYearStart > 12 {
+		if c.FiscalYearStart != 0 { // 0 = unset, treat as default
+			warnings = append(warnings, "invalid config value for \"fiscal_year_start\", using default (1=January)")
+		}
+		c.FiscalYearStart = 1
 	}
 	if _, ok := themePresets[c.Theme]; !ok {
 		warnings = append(warnings, "invalid config value for \"theme\", using default")
@@ -184,6 +192,11 @@ func writeDefaultConfig(path string) error {
 show_week_numbers: false
 week_numbering: us    # "us" or "iso"
 week_start_day: 0     # 0=Sunday, 1=Monday
+
+# Fiscal year start month (1-12, default: 1=January)
+# Affects "end of quarter", "beginning of quarter", etc.
+# Example: fiscal_year_start: 10  # October (common US federal/corporate)
+# fiscal_year_start: 1
 
 # Theme (built-in: "default", "catppuccin-mocha", "dracula", "nord")
 theme: default

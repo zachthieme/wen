@@ -83,6 +83,13 @@ func run(args []string) error {
 
 	now := time.Now()
 
+	// Load config for fiscal year start (affects quarter calculations).
+	cfg, _ := calendar.LoadConfig()
+	var parseOpts []wen.Option
+	if cfg.FiscalYearStart > 1 {
+		parseOpts = append(parseOpts, wen.WithFiscalYearStart(cfg.FiscalYearStart))
+	}
+
 	if input == "" {
 		if relative {
 			fmt.Println("today")
@@ -93,11 +100,11 @@ func run(args []string) error {
 	}
 
 	if relative {
-		return runRelative(input, now)
+		return runRelative(input, now, parseOpts...)
 	}
 
 	// Try multi-date parse first (e.g., "every friday in april")
-	results, err := wen.ParseMulti(input, now)
+	results, err := wen.ParseMulti(input, now, parseOpts...)
 	if err != nil {
 		return fmt.Errorf("could not parse date %q: %w", input, err)
 	}
@@ -315,10 +322,10 @@ func countWorkdays(start, end time.Time) int {
 	return count
 }
 
-func runRelative(input string, ref time.Time) error {
-	t, err := parseDate(input, ref)
+func runRelative(input string, ref time.Time, opts ...wen.Option) error {
+	t, err := wen.ParseRelative(input, ref, opts...)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not parse date %q: %w", input, err)
 	}
 	today := time.Date(ref.Year(), ref.Month(), ref.Day(), 0, 0, 0, 0, ref.Location())
 	target := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())

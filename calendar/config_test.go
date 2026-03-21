@@ -207,6 +207,44 @@ func TestNormalizeValidPaddingNoWarnings(t *testing.T) {
 	}
 }
 
+func TestNormalizeFiscalYearStart(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.FiscalYearStart = 10
+	warnings := cfg.Normalize()
+	if cfg.FiscalYearStart != 10 {
+		t.Errorf("expected FiscalYearStart 10, got %d", cfg.FiscalYearStart)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings for valid fiscal_year_start, got %v", warnings)
+	}
+
+	// Invalid value
+	cfg.FiscalYearStart = 13
+	warnings = cfg.Normalize()
+	if cfg.FiscalYearStart != 1 {
+		t.Errorf("expected FiscalYearStart reset to 1, got %d", cfg.FiscalYearStart)
+	}
+	if len(warnings) != 1 {
+		t.Errorf("expected 1 warning for invalid fiscal_year_start, got %d", len(warnings))
+	}
+}
+
+func TestLoadConfigFiscalYearStart(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	content := []byte("fiscal_year_start: 10\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, warnings := loadConfigFromPath(path)
+	if cfg.FiscalYearStart != 10 {
+		t.Errorf("expected FiscalYearStart 10, got %d", cfg.FiscalYearStart)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings, got %v", warnings)
+	}
+}
+
 func TestLoadConfigMissingFile(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/subdir/config.yaml"

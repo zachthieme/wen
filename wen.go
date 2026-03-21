@@ -22,7 +22,8 @@ const (
 type Option func(*options)
 
 type options struct {
-	periodMode PeriodMode
+	periodMode      PeriodMode
+	fiscalYearStart int // 1-12, month the fiscal year begins (default 1 = January)
 }
 
 // WithPeriodStart makes period references resolve to the start of the period (default).
@@ -30,6 +31,18 @@ func WithPeriodStart() Option { return func(o *options) { o.periodMode = PeriodS
 
 // WithPeriodSame makes period references resolve to the same relative day in the next period.
 func WithPeriodSame() Option { return func(o *options) { o.periodMode = PeriodSame } }
+
+// WithFiscalYearStart sets the month (1-12) that begins the fiscal year.
+// This affects quarter calculations: e.g., WithFiscalYearStart(10) makes
+// Q1=Oct-Dec, Q2=Jan-Mar, Q3=Apr-Jun, Q4=Jul-Sep.
+// Default is 1 (January), which gives standard calendar quarters.
+func WithFiscalYearStart(month int) Option {
+	return func(o *options) {
+		if month >= 1 && month <= 12 {
+			o.fiscalYearStart = month
+		}
+	}
+}
 
 // Parse parses a natural language date/time expression relative to time.Now().
 func Parse(input string, opts ...Option) (time.Time, error) {

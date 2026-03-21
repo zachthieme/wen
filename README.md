@@ -166,6 +166,11 @@ show_week_numbers: false
 week_numbering: us    # "us" or "iso"
 week_start_day: 0     # 0=Sunday, 1=Monday
 
+# Fiscal year start month (1-12, default: 1=January)
+# Affects "end of quarter", "beginning of quarter", etc.
+# Example: fiscal_year_start: 10  # October (common US federal/corporate)
+# fiscal_year_start: 1
+
 # Theme (built-in: "default", "catppuccin-mocha", "dracula", "nord")
 theme: default
 

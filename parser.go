@@ -619,23 +619,38 @@ func (p *parser) resolveBoundary(boundary, modifier, unit string) (time.Time, bo
 		return firstOfNext.Add(-time.Second), true
 
 	case "quarter":
-		q := (int(ref.Month()) - 1) / 3
+		fyStart := p.opts.fiscalYearStart
+		if fyStart < 1 || fyStart > 12 {
+			fyStart = 1
+		}
+		// Determine which fiscal year the ref falls in.
+		// The fiscal year "starts" in calendar year fyYear.
+		fyYear := ref.Year()
+		if int(ref.Month()) < fyStart {
+			fyYear--
+		}
+		// Fiscal quarter index (0-3) within this fiscal year.
+		fiscalMonth := (int(ref.Month()) - fyStart + 12) % 12
+		q := fiscalMonth / 3
 		switch modifier {
 		case "next":
 			q++
 		case "last":
 			q--
 		}
-		year := ref.Year()
-		for q < 0 {
-			q += 4
+		// Convert back to calendar month/year.
+		// Each fiscal quarter starts at fyStart + q*3 months from the FY start year.
+		totalMonths := (fyStart - 1) + q*3 // 0-indexed calendar month
+		year := fyYear
+		for totalMonths < 0 {
+			totalMonths += 12
 			year--
 		}
-		for q > 3 {
-			q -= 4
+		for totalMonths >= 12 {
+			totalMonths -= 12
 			year++
 		}
-		startMonth := time.Month(q*3 + 1)
+		startMonth := time.Month(totalMonths + 1)
 		if boundary == "beginning" {
 			return time.Date(year, startMonth, 1, 0, 0, 0, 0, loc), true
 		}

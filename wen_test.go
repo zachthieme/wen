@@ -697,6 +697,63 @@ func TestBoundaryQuarterYear(t *testing.T) {
 	}
 }
 
+func TestFiscalYearQuarters(t *testing.T) {
+	// ref = March 18, 2026
+	// With fiscal year starting in October:
+	// FY Q1 = Oct-Dec, Q2 = Jan-Mar, Q3 = Apr-Jun, Q4 = Jul-Sep
+	// March is in FY Q2 (Jan-Mar)
+	fyOct := WithFiscalYearStart(10)
+	tests := []struct {
+		name string
+		input string
+		opts  []Option
+		want  time.Time
+	}{
+		// Calendar quarters (default, fiscal_year_start=1)
+		{"cal end of quarter", "end of quarter", nil,
+			time.Date(2026, 3, 31, 23, 59, 59, 0, time.UTC)},
+		{"cal beginning of quarter", "beginning of quarter", nil,
+			date(2026, 1, 1)},
+
+		// Fiscal year starting October: March is in Q2 (Jan-Mar)
+		{"fy oct: end of quarter", "end of quarter", []Option{fyOct},
+			time.Date(2026, 3, 31, 23, 59, 59, 0, time.UTC)},
+		{"fy oct: beginning of quarter", "beginning of quarter", []Option{fyOct},
+			date(2026, 1, 1)},
+
+		// Next quarter with fiscal Oct: Q2 is Jan-Mar, next is Q3 = Apr-Jun
+		{"fy oct: end of next quarter", "end of next quarter", []Option{fyOct},
+			time.Date(2026, 6, 30, 23, 59, 59, 0, time.UTC)},
+		{"fy oct: beginning of next quarter", "beginning of next quarter", []Option{fyOct},
+			date(2026, 4, 1)},
+
+		// Last quarter with fiscal Oct: Q2 is Jan-Mar, last is Q1 = Oct-Dec
+		{"fy oct: beginning of last quarter", "beginning of last quarter", []Option{fyOct},
+			date(2025, 10, 1)},
+		{"fy oct: end of last quarter", "end of last quarter", []Option{fyOct},
+			time.Date(2025, 12, 31, 23, 59, 59, 0, time.UTC)},
+
+		// Fiscal year starting April (common in UK/Japan): March is Q4 (Jan-Mar)
+		{"fy apr: beginning of quarter", "beginning of quarter", []Option{WithFiscalYearStart(4)},
+			date(2026, 1, 1)},
+		{"fy apr: end of quarter", "end of quarter", []Option{WithFiscalYearStart(4)},
+			time.Date(2026, 3, 31, 23, 59, 59, 0, time.UTC)},
+		{"fy apr: beginning of next quarter", "beginning of next quarter", []Option{WithFiscalYearStart(4)},
+			date(2026, 4, 1)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseRelative(tt.input, ref, tt.opts...)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !got.Equal(tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestOrdinalWeekdayNextMonth(t *testing.T) {
 	// ref = March 18, 2026
 	// Next month = April 2026, starts on Wednesday
