@@ -55,3 +55,35 @@ func ParseRelative(input string, ref time.Time, opts ...Option) (time.Time, erro
 	}
 	return result, nil
 }
+
+// ParseMulti parses expressions that may produce multiple dates (e.g., "every friday in april").
+// Returns a slice of dates. Falls back to single-date parsing if not a multi-date expression.
+func ParseMulti(input string, ref time.Time, opts ...Option) ([]time.Time, error) {
+	o := options{periodMode: PeriodStart}
+	for _, opt := range opts {
+		opt(&o)
+	}
+	l := newLexer(input)
+	tokens := l.tokenize()
+	p := newParser(tokens, ref, o)
+
+	// Try multi-date parse first
+	if results, ok := p.parseMultiDate(); ok {
+		p.skipNoise()
+		if p.peek().Kind == tokenEOF {
+			return results, nil
+		}
+	}
+
+	// Fall back to single-date parse
+	p.pos = 0
+	result, err := p.parse()
+	if err != nil {
+		var pe *ParseError
+		if errors.As(err, &pe) {
+			pe.Input = input
+		}
+		return nil, err
+	}
+	return []time.Time{result}, nil
+}

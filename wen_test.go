@@ -457,7 +457,6 @@ func TestErrors(t *testing.T) {
 		{"", 0, ""},
 		{"next", 4, ""},  // unexpected EOF
 		{"fifth monday in february", 0, ""},              // Feb 2026 has only 4 Mondays
-		{"third wednesday next month", 16, "next"},       // "next month" not supported as month ref
 		{"pizza", 0, "pizza"},                             // gibberish
 	}
 	for _, tt := range tests {
@@ -665,6 +664,120 @@ func TestValidation(t *testing.T) {
 				t.Errorf("expected error for %q, got nil", tt.input)
 			}
 		})
+	}
+}
+
+func TestBoundaryQuarterYear(t *testing.T) {
+	tests := []struct {
+		input string
+		want  time.Time
+	}{
+		// ref = March 18, 2026 (Q1)
+		{"end of quarter", time.Date(2026, 3, 31, 23, 59, 59, 0, time.UTC)},
+		{"beginning of quarter", date(2026, 1, 1)},
+		{"end of next quarter", time.Date(2026, 6, 30, 23, 59, 59, 0, time.UTC)},
+		{"beginning of next quarter", date(2026, 4, 1)},
+		{"end of last quarter", time.Date(2025, 12, 31, 23, 59, 59, 0, time.UTC)},
+		{"beginning of last quarter", date(2025, 10, 1)},
+		{"end of year", time.Date(2026, 12, 31, 23, 59, 59, 0, time.UTC)},
+		{"beginning of year", date(2026, 1, 1)},
+		{"end of next year", time.Date(2027, 12, 31, 23, 59, 59, 0, time.UTC)},
+		{"beginning of last year", date(2025, 1, 1)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := ParseRelative(tt.input, ref)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !got.Equal(tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestOrdinalWeekdayNextMonth(t *testing.T) {
+	// ref = March 18, 2026
+	// Next month = April 2026, starts on Wednesday
+	// Mondays in April: 6, 13, 20, 27
+	tests := []struct {
+		input string
+		want  time.Time
+	}{
+		{"first monday of next month", date(2026, 4, 6)},
+		{"second friday of next month", date(2026, 4, 10)},
+		{"first monday of last month", date(2026, 2, 2)},
+		{"third wednesday of this month", date(2026, 3, 18)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := ParseRelative(tt.input, ref)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !got.Equal(tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEveryWeekdayInMonth(t *testing.T) {
+	// ref = March 18, 2026
+	// Fridays in April 2026: 3, 10, 17, 24
+	got, err := ParseMulti("every friday in april", ref)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []time.Time{
+		date(2026, 4, 3),
+		date(2026, 4, 10),
+		date(2026, 4, 17),
+		date(2026, 4, 24),
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d dates, want %d", len(got), len(want))
+	}
+	for i, w := range want {
+		if !got[i].Equal(w) {
+			t.Errorf("date[%d] = %v, want %v", i, got[i], w)
+		}
+	}
+}
+
+func TestEveryWeekdayInMonthWithYear(t *testing.T) {
+	got, err := ParseMulti("every monday in march 2027", ref)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// March 2027 starts on Monday
+	// Mondays: 1, 8, 15, 22, 29
+	want := []time.Time{
+		date(2027, 3, 1),
+		date(2027, 3, 8),
+		date(2027, 3, 15),
+		date(2027, 3, 22),
+		date(2027, 3, 29),
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d dates, want %d", len(got), len(want))
+	}
+	for i, w := range want {
+		if !got[i].Equal(w) {
+			t.Errorf("date[%d] = %v, want %v", i, got[i], w)
+		}
+	}
+}
+
+func TestParseMultiFallsBack(t *testing.T) {
+	// Single-date expressions should still work via ParseMulti
+	got, err := ParseMulti("next friday", ref)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 date, got %d", len(got))
 	}
 }
 

@@ -25,6 +25,7 @@ type ThemeColors struct {
 	WeekNumber string `yaml:"week_number"`
 	DayHeader  string `yaml:"day_header"`
 	HelpBar    string `yaml:"help_bar"`
+	Highlight  string `yaml:"highlight"`
 }
 
 // Config holds user preferences for the calendar display.
@@ -34,6 +35,7 @@ type Config struct {
 	WeekStartDay    int         `yaml:"week_start_day"`
 	Theme           string      `yaml:"theme"`
 	Colors          ThemeColors `yaml:"colors"`
+	HighlightSource string      `yaml:"highlight_source"`
 	PaddingTop      int         `yaml:"padding_top"`
 	PaddingRight    int         `yaml:"padding_right"`
 	PaddingBottom   int         `yaml:"padding_bottom"`
@@ -98,6 +100,7 @@ func (c Config) ResolvedColors() ThemeColors {
 		WeekNumber: mergeColor(base.WeekNumber, c.Colors.WeekNumber),
 		DayHeader:  mergeColor(base.DayHeader, c.Colors.DayHeader),
 		HelpBar:    mergeColor(base.HelpBar, c.Colors.HelpBar),
+		Highlight:  mergeColor(base.Highlight, c.Colors.Highlight),
 	}
 }
 
@@ -110,6 +113,7 @@ var themePresets = map[string]ThemeColors{
 		WeekNumber: "#6c7086",
 		DayHeader:  "#94e2d5",
 		HelpBar:    "#6c7086",
+		Highlight:  "#f9e2af",
 	},
 	"dracula": {
 		Cursor:     "#ff79c6",
@@ -118,6 +122,7 @@ var themePresets = map[string]ThemeColors{
 		WeekNumber: "#6272a4",
 		DayHeader:  "#8be9fd",
 		HelpBar:    "#6272a4",
+		Highlight:  "#f1fa8c",
 	},
 	"nord": {
 		Cursor:     "#88c0d0",
@@ -126,6 +131,7 @@ var themePresets = map[string]ThemeColors{
 		WeekNumber: "#4c566a",
 		DayHeader:  "#8fbcbb",
 		HelpBar:    "#4c566a",
+		Highlight:  "#ebcb8b",
 	},
 }
 
@@ -190,6 +196,10 @@ theme: default
 #   week_number: "#6c7086"
 #   day_header: "#94e2d5"
 #   help_bar: "#6c7086"
+#   highlight: "#f9e2af"
+
+# Highlighted dates source (JSON array of yyyy-mm-dd strings):
+# highlight_source: ~/.local/share/pike/due.json
 
 # Padding (0-20, can also be set via --padding-* CLI flags):
 # padding_top: 0

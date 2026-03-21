@@ -41,6 +41,8 @@ go build -o wen ./cmd/wen
 |------|-------------|
 | `-h`, `--help` | Show help |
 | `-v`, `--version` | Show version |
+| `--format <layout>` | Output format (Go time layout string, default: `2006-01-02`) |
+| `--relative` | Output human-readable relative string (e.g., "in 11 days") |
 
 ## Usage
 
@@ -58,11 +60,54 @@ wen tomorrow
 wen "march 25 2026"
 wen "2 weeks ago"
 
+# Boundaries
+wen "end of month"
+wen "end of quarter"
+wen "end of year"
+wen "beginning of next quarter"
+
+# Ordinal weekday in month
+wen "first monday of next month"
+wen "third thursday in april"
+
+# Multi-date output
+wen "every friday in april"
+
 # Pipe from stdin
 echo "next friday" | wen
 ```
 
-Output is always `yyyy-mm-dd`.
+Output is always `yyyy-mm-dd` unless `--format` is specified.
+
+### Custom Output Format
+
+```bash
+wen --format "January 2, 2006" next friday
+# → March 27, 2026
+```
+
+### Relative Output
+
+```bash
+wen --relative 2026-04-01
+# → in 11 days
+
+wen --relative "march 25 2026"
+# → in 4 days
+```
+
+### Date Diff
+
+```bash
+wen diff today "april 10"
+# → 20 days
+
+wen diff today "april 10" --weeks
+# → 2 weeks, 6 days
+
+wen diff today "april 10" --workdays
+# → 14 workdays
+```
 
 ### Interactive Calendar
 
@@ -74,7 +119,7 @@ wen cal
 wen cal december 2026
 ```
 
-Navigate with vim keys (or arrow keys). Press `q`, `Esc`, or `ctrl+c` to exit.
+Navigate with vim keys (or arrow keys). Press `Enter` to select a date and print it to stdout (useful for scripting: `git log --since=$(wen cal)`). Press `q`, `Esc`, or `ctrl+c` to quit without selecting.
 
 #### Keybindings
 
@@ -87,6 +132,7 @@ Navigate with vim keys (or arrow keys). Press `q`, `Esc`, or `ctrl+c` to exit.
 | `t` | Jump to today |
 | `w` | Toggle week numbers |
 | `?` | Toggle help bar |
+| `Enter` | Select date (print to stdout and exit) |
 | `q` / `Esc` / `ctrl+c` | Quit |
 
 The calendar highlights today and your cursor position. Navigation wraps across boundaries (e.g., `l` on March 31 moves to April 1). Month and year jumps clamp the day (e.g., Jan 31 + `L` = Feb 28, Feb 29 + `J` = Feb 28).
@@ -99,6 +145,9 @@ The calendar highlights today and your cursor position. Navigation wraps across 
 | `--padding-right N` | Right padding in characters |
 | `--padding-bottom N` | Bottom padding in lines |
 | `--padding-left N` | Left padding in characters |
+| `--months N` | Number of months to display side by side |
+| `-N` | Shorthand for `--months N` (e.g., `-3` for three months) |
+| `--highlight-file P` | Path to JSON file with dates to highlight |
 
 #### Exit Codes
 
@@ -128,6 +177,10 @@ theme: default
 #   week_number: "#6c7086"
 #   day_header: "#94e2d5"
 #   help_bar: "#6c7086"
+#   highlight: "#f9e2af"
+
+# Highlighted dates source (JSON array of yyyy-mm-dd strings):
+# highlight_source: ~/.local/share/pike/due.json
 
 # Padding (0-20, can also be set via --padding-* CLI flags):
 # padding_top: 0

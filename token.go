@@ -17,6 +17,7 @@ const (
 	tokenMeridiem                     // "am", "pm"
 	tokenOrdinal                      // "1st", "first", etc. — IntVal holds numeric value
 	tokenBoundary                     // "beginning", "end"
+	tokenEvery                        // "every"
 	tokenColon                        // ":"
 	tokenNoise                        // "the", "a" — skipped by parser
 	tokenUnknown                      // unrecognized word
@@ -47,6 +48,8 @@ func (k tokenKind) String() string {
 		return "ordinal"
 	case tokenBoundary:
 		return "boundary"
+	case tokenEvery:
+		return "every"
 	case tokenColon:
 		return "colon"
 	case tokenNoise:

@@ -17,21 +17,25 @@ const DateLayout = "2006-01-02"
 
 // Model holds the state for the interactive calendar TUI.
 type Model struct {
-	cursor          time.Time
-	today           time.Time
-	quit            bool
-	showWeekNumbers bool
-	showHelp        bool
-	config          Config
-	keys            keyMap
-	help            help.Model
-	styles          resolvedStyles
+	cursor           time.Time
+	today            time.Time
+	quit             bool
+	selected         bool
+	showWeekNumbers  bool
+	showHelp         bool
+	months           int
+	highlightedDates map[time.Time]bool
+	config           Config
+	keys             keyMap
+	help             help.Model
+	styles           resolvedStyles
 }
 
 type resolvedStyles struct {
 	cursor      lipgloss.Style
 	cursorToday lipgloss.Style
 	today       lipgloss.Style
+	highlight   lipgloss.Style
 	title       lipgloss.Style
 	weekNum     lipgloss.Style
 	dayHeader   lipgloss.Style
@@ -43,16 +47,38 @@ type resolvedStyles struct {
 // IsQuit reports whether the user quit without selecting.
 func (m Model) IsQuit() bool { return m.quit }
 
+// Selected reports whether the user selected a date with Enter.
+func (m Model) Selected() bool { return m.selected }
+
 // Cursor returns the currently selected date.
 func (m Model) Cursor() time.Time { return m.cursor }
 
+// ModelOption configures optional Model properties.
+type ModelOption func(*Model)
+
+// WithHighlightedDates sets dates to be visually highlighted in the calendar.
+func WithHighlightedDates(dates map[time.Time]bool) ModelOption {
+	return func(m *Model) { m.highlightedDates = dates }
+}
+
+// WithMonths sets the number of months to display side by side.
+func WithMonths(n int) ModelOption {
+	return func(m *Model) {
+		if n < 1 {
+			n = 1
+		}
+		m.months = n
+	}
+}
+
 // New creates a calendar Model with the given cursor position, today's date, and configuration.
-func New(cursor, today time.Time, cfg Config) Model {
+func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 	colors := cfg.ResolvedColors()
 	m := Model{
 		cursor:          stripTime(cursor),
 		today:           stripTime(today),
 		showWeekNumbers: cfg.ShowWeekNumbers,
+		months:          1,
 		config:          cfg,
 		keys:            defaultKeyMap(),
 		help:            newHelpModel(colors),
@@ -63,6 +89,9 @@ func New(cursor, today time.Time, cfg Config) Model {
 		m.styles.padding = lipgloss.NewStyle().Padding(
 			cfg.PaddingTop, cfg.PaddingRight, cfg.PaddingBottom, cfg.PaddingLeft,
 		)
+	}
+	for _, opt := range opts {
+		opt(&m)
 	}
 	return m
 }
@@ -83,6 +112,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.help.Width = msg.Width
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, m.keys.Select):
+			m.selected = true
+			return m, tea.Quit
 		case key.Matches(msg, m.keys.Quit):
 			m.quit = true
 			return m, tea.Quit
@@ -139,6 +171,7 @@ type keyMap struct {
 	Today       key.Binding
 	ToggleWeeks key.Binding
 	ToggleHelp  key.Binding
+	Select      key.Binding
 	Quit        key.Binding
 }
 
@@ -188,6 +221,10 @@ func defaultKeyMap() keyMap {
 			key.WithKeys("?"),
 			key.WithHelp("?", "help"),
 		),
+		Select: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "select"),
+		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "esc", "ctrl+c"),
 			key.WithHelp("q/esc", "quit"),
@@ -196,7 +233,7 @@ func defaultKeyMap() keyMap {
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Left, k.Right, k.Quit, k.ToggleHelp}
+	return []key.Binding{k.Left, k.Right, k.Select, k.Quit, k.ToggleHelp}
 }
 
 func (k keyMap) FullHelp() [][]key.Binding {
@@ -204,6 +241,6 @@ func (k keyMap) FullHelp() [][]key.Binding {
 		{k.Left, k.Right, k.Up, k.Down},
 		{k.PrevMonth, k.NextMonth, k.PrevYear, k.NextYear},
 		{k.Today, k.ToggleWeeks},
-		{k.Quit},
+		{k.Select, k.Quit},
 	}
 }

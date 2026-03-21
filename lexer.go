@@ -35,6 +35,7 @@ var units = map[string]string{
 	"day": "day", "days": "day",
 	"week": "week", "weeks": "week",
 	"month": "month", "months": "month",
+	"quarter": "quarter", "quarters": "quarter",
 	"year": "year", "years": "year",
 	"hour": "hour", "hours": "hour",
 	"minute": "minute", "minutes": "minute",
@@ -182,6 +183,10 @@ func (l *lexer) scanWord() {
 	}
 	if boundaries[word] {
 		l.tokens = append(l.tokens, token{Kind: tokenBoundary, Value: word, Position: start})
+		return
+	}
+	if word == "every" {
+		l.tokens = append(l.tokens, token{Kind: tokenEvery, Value: word, Position: start})
 		return
 	}
 	if noiseWords[word] {

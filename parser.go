@@ -327,6 +327,39 @@ func (p *parser) parseOrdinalWeekdayInMonth() (time.Time, bool) {
 		p.skipNoise()
 	}
 
+	// Check for "next month" / "last month" / "this month" pattern
+	if p.peek().Kind == tokenModifier {
+		modSaved := p.save()
+		mod := p.advance()
+		p.skipNoise()
+		if p.peek().Kind == tokenUnit && p.peek().Value == "month" {
+			p.advance()
+			ref := truncateDay(p.ref)
+			loc := ref.Location()
+			var targetMonth time.Month
+			targetYear := ref.Year()
+			switch mod.Value {
+			case "this":
+				targetMonth = ref.Month()
+			case "next":
+				targetMonth = ref.Month() + 1
+				if targetMonth > 12 {
+					targetMonth = 1
+					targetYear++
+				}
+			case "last":
+				targetMonth = ref.Month() - 1
+				if targetMonth < 1 {
+					targetMonth = 12
+					targetYear--
+				}
+			}
+			_ = loc
+			return p.resolveOrdinalWeekdayInMonth(ordinal.IntVal, weekday.Weekday, targetMonth, targetYear)
+		}
+		p.restore(modSaved)
+	}
+
 	if p.peek().Kind != tokenMonth {
 		err := p.makeError("month")
 		p.restore(saved)
@@ -527,8 +560,9 @@ func (p *parser) parseBoundaryExpr() (time.Time, bool) {
 		p.skipNoise()
 	}
 
-	if p.peek().Kind != tokenUnit || (p.peek().Value != "week" && p.peek().Value != "month") {
-		err := p.makeError("week", "month")
+	tok := p.peek()
+	if tok.Kind != tokenUnit || (tok.Value != "week" && tok.Value != "month" && tok.Value != "quarter" && tok.Value != "year") {
+		err := p.makeError("week", "month", "quarter", "year")
 		p.restore(saved)
 		p.recordError(err)
 		return time.Time{}, false
@@ -583,9 +617,101 @@ func (p *parser) resolveBoundary(boundary, modifier, unit string) (time.Time, bo
 		// end = last day 23:59:59
 		firstOfNext := time.Date(targetYear, targetMonth+1, 1, 0, 0, 0, 0, loc)
 		return firstOfNext.Add(-time.Second), true
+
+	case "quarter":
+		q := (int(ref.Month()) - 1) / 3
+		switch modifier {
+		case "next":
+			q++
+		case "last":
+			q--
+		}
+		year := ref.Year()
+		for q < 0 {
+			q += 4
+			year--
+		}
+		for q > 3 {
+			q -= 4
+			year++
+		}
+		startMonth := time.Month(q*3 + 1)
+		if boundary == "beginning" {
+			return time.Date(year, startMonth, 1, 0, 0, 0, 0, loc), true
+		}
+		// end = last day of quarter 23:59:59
+		endMonth := startMonth + 3
+		firstOfNext := time.Date(year, endMonth, 1, 0, 0, 0, 0, loc)
+		return firstOfNext.Add(-time.Second), true
+
+	case "year":
+		year := ref.Year()
+		switch modifier {
+		case "next":
+			year++
+		case "last":
+			year--
+		}
+		if boundary == "beginning" {
+			return time.Date(year, time.January, 1, 0, 0, 0, 0, loc), true
+		}
+		// end = Dec 31 23:59:59
+		return time.Date(year, time.December, 31, 23, 59, 59, 0, loc), true
 	}
-	p.recordError(p.makeError("week", "month"))
+	p.recordError(p.makeError("week", "month", "quarter", "year"))
 	return time.Time{}, false
+}
+
+func (p *parser) parseMultiDate() ([]time.Time, bool) {
+	p.skipNoise()
+	if p.peek().Kind != tokenEvery {
+		return nil, false
+	}
+	saved := p.save()
+	p.advance() // consume "every"
+	p.skipNoise()
+
+	if p.peek().Kind != tokenWeekday {
+		p.restore(saved)
+		return nil, false
+	}
+	weekdayTok := p.advance()
+	p.skipNoise()
+
+	// Optional "in" or "of"
+	if p.peek().Kind == tokenPreposition && (p.peek().Value == "in" || p.peek().Value == "of") {
+		p.advance()
+		p.skipNoise()
+	}
+
+	if p.peek().Kind != tokenMonth {
+		p.restore(saved)
+		return nil, false
+	}
+	monthTok := p.advance()
+
+	// Optional year
+	p.skipNoise()
+	year := p.ref.Year()
+	if p.peek().Kind == tokenNumber && p.peek().IntVal > maxDayOfMonth {
+		year = p.advance().IntVal
+	} else if monthTok.Month < p.ref.Month() {
+		year++
+	}
+
+	// Enumerate all occurrences of the weekday in the month
+	loc := p.ref.Location()
+	first := time.Date(year, monthTok.Month, 1, 0, 0, 0, 0, loc)
+	d := first
+	for d.Weekday() != weekdayTok.Weekday {
+		d = d.AddDate(0, 0, 1)
+	}
+	var results []time.Time
+	for d.Month() == monthTok.Month {
+		results = append(results, d)
+		d = d.AddDate(0, 0, 7)
+	}
+	return results, true
 }
 
 func (p *parser) parseTimeExpr(base time.Time) (time.Time, bool) {

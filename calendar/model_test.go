@@ -128,3 +128,22 @@ func TestEscQuits(t *testing.T) {
 		t.Error("expected quit command")
 	}
 }
+
+func TestEnterSelects(t *testing.T) {
+	cursor := date(2026, time.April, 15)
+	m := New(cursor, date(2026, time.March, 17), DefaultConfig())
+	updated, cmd := m.Update(specialMsg(tea.KeyEnter))
+	m = updated.(Model)
+	if !m.Selected() {
+		t.Error("expected Selected to be true")
+	}
+	if m.IsQuit() {
+		t.Error("expected IsQuit to be false")
+	}
+	if cmd == nil {
+		t.Error("expected quit command")
+	}
+	if m.Cursor() != cursor {
+		t.Errorf("got cursor %v, want %v", m.Cursor(), cursor)
+	}
+}
