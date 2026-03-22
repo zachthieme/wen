@@ -335,7 +335,6 @@ func (p *parser) parseOrdinalWeekdayInMonth() (time.Time, bool) {
 		if p.peek().Kind == tokenUnit && p.peek().Value == "month" {
 			p.advance()
 			ref := truncateDay(p.ref)
-			loc := ref.Location()
 			var targetMonth time.Month
 			targetYear := ref.Year()
 			switch mod.Value {
@@ -354,7 +353,6 @@ func (p *parser) parseOrdinalWeekdayInMonth() (time.Time, bool) {
 					targetYear--
 				}
 			}
-			_ = loc
 			return p.resolveOrdinalWeekdayInMonth(ordinal.IntVal, weekday.Weekday, targetMonth, targetYear)
 		}
 		p.restore(modSaved)
@@ -630,8 +628,8 @@ func (p *parser) resolveBoundary(boundary, modifier, unit string) (time.Time, bo
 			fyYear--
 		}
 		// Fiscal quarter index (0-3) within this fiscal year.
-		fiscalMonth := (int(ref.Month()) - fyStart + 12) % 12
-		q := fiscalMonth / 3
+		fiscalMonth := (int(ref.Month()) - fyStart + monthsPerYear) % monthsPerYear
+		q := fiscalMonth / monthsPerQuarter
 		switch modifier {
 		case "next":
 			q++
@@ -639,15 +637,15 @@ func (p *parser) resolveBoundary(boundary, modifier, unit string) (time.Time, bo
 			q--
 		}
 		// Convert back to calendar month/year.
-		// Each fiscal quarter starts at fyStart + q*3 months from the FY start year.
-		totalMonths := (fyStart - 1) + q*3 // 0-indexed calendar month
+		// Each fiscal quarter starts at fyStart + q*monthsPerQuarter months from the FY start year.
+		totalMonths := (fyStart - 1) + q*monthsPerQuarter // 0-indexed calendar month
 		year := fyYear
 		for totalMonths < 0 {
-			totalMonths += 12
+			totalMonths += monthsPerYear
 			year--
 		}
-		for totalMonths >= 12 {
-			totalMonths -= 12
+		for totalMonths >= monthsPerYear {
+			totalMonths -= monthsPerYear
 			year++
 		}
 		startMonth := time.Month(totalMonths + 1)
@@ -655,7 +653,7 @@ func (p *parser) resolveBoundary(boundary, modifier, unit string) (time.Time, bo
 			return time.Date(year, startMonth, 1, 0, 0, 0, 0, loc), true
 		}
 		// end = last day of quarter 23:59:59
-		endMonth := startMonth + 3
+		endMonth := startMonth + monthsPerQuarter
 		firstOfNext := time.Date(year, endMonth, 1, 0, 0, 0, 0, loc)
 		return firstOfNext.Add(-time.Second), true
 
@@ -734,9 +732,11 @@ func (p *parser) parseTimeExpr(base time.Time) (time.Time, bool) {
 	p.skipNoise()
 
 	// Optional "at" prefix
+	hasAt := false
 	if p.peek().Kind == tokenPreposition && p.peek().Value == "at" {
 		p.advance()
 		p.skipNoise()
+		hasAt = true
 	}
 
 	tok := p.peek()
@@ -787,6 +787,11 @@ func (p *parser) parseTimeExpr(base time.Time) (time.Time, bool) {
 			}
 			h := applyMeridiem(num.IntVal, p.advance().Value)
 			return setTime(base, h, 0), true
+		}
+
+		// Bare number after "at" — treat as 24-hour time (e.g., "at 3" = 03:00)
+		if hasAt && num.IntVal >= 0 && num.IntVal <= 23 {
+			return setTime(base, num.IntVal, 0), true
 		}
 
 		// Just a number — not a time expression
