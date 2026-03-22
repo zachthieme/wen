@@ -21,7 +21,8 @@ type Model struct {
 	today            time.Time
 	quit             bool
 	selected         bool
-	showWeekNumbers  bool
+	rangeAnchor      *time.Time
+	weekNumPos       WeekNumPos
 	showHelp         bool
 	months           int
 	highlightedDates map[time.Time]bool
@@ -36,12 +37,12 @@ type resolvedStyles struct {
 	cursorToday lipgloss.Style
 	today       lipgloss.Style
 	highlight   lipgloss.Style
+	rangeDay    lipgloss.Style
 	title       lipgloss.Style
 	weekNum     lipgloss.Style
 	dayHeader   lipgloss.Style
 	helpBar     lipgloss.Style
 	padding     lipgloss.Style
-	hasPadding  bool
 }
 
 // IsQuit reports whether the user quit without selecting.
@@ -52,6 +53,33 @@ func (m Model) Selected() bool { return m.selected }
 
 // Cursor returns the currently selected date.
 func (m Model) Cursor() time.Time { return m.cursor }
+
+// InRange reports whether the user confirmed a multi-day range selection.
+func (m Model) InRange() bool {
+	return m.selected && m.rangeAnchor != nil && !m.rangeAnchor.Equal(m.cursor)
+}
+
+// RangeStart returns the earlier date of the confirmed range, or zero if no range.
+func (m Model) RangeStart() time.Time {
+	if !m.InRange() {
+		return time.Time{}
+	}
+	if m.rangeAnchor.Before(m.cursor) {
+		return *m.rangeAnchor
+	}
+	return m.cursor
+}
+
+// RangeEnd returns the later date of the confirmed range, or zero if no range.
+func (m Model) RangeEnd() time.Time {
+	if !m.InRange() {
+		return time.Time{}
+	}
+	if m.rangeAnchor.After(m.cursor) {
+		return *m.rangeAnchor
+	}
+	return m.cursor
+}
 
 // ModelOption configures optional Model properties.
 type ModelOption func(*Model)
@@ -75,21 +103,18 @@ func WithMonths(n int) ModelOption {
 func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 	colors := cfg.ResolvedColors()
 	m := Model{
-		cursor:          stripTime(cursor),
-		today:           stripTime(today),
-		showWeekNumbers: cfg.ShowWeekNumbers,
-		months:          1,
-		config:          cfg,
-		keys:            defaultKeyMap(),
-		help:            newHelpModel(colors),
+		cursor:     stripTime(cursor),
+		today:      stripTime(today),
+		weekNumPos: parseWeekNumPos(cfg.ShowWeekNumbers),
+		months:     1,
+		config:     cfg,
+		keys:       defaultKeyMap(),
+		help:       newHelpModel(colors),
 	}
 	m.styles = buildStyles(colors)
-	if cfg.PaddingTop > 0 || cfg.PaddingRight > 0 || cfg.PaddingBottom > 0 || cfg.PaddingLeft > 0 {
-		m.styles.hasPadding = true
-		m.styles.padding = lipgloss.NewStyle().Padding(
-			cfg.PaddingTop, cfg.PaddingRight, cfg.PaddingBottom, cfg.PaddingLeft,
-		)
-	}
+	m.styles.padding = lipgloss.NewStyle().Padding(
+		cfg.PaddingTop, cfg.PaddingRight, cfg.PaddingBottom, cfg.PaddingLeft,
+	)
 	for _, opt := range opts {
 		opt(&m)
 	}
@@ -112,10 +137,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.help.Width = msg.Width
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, m.keys.ForceQuit):
+			m.quit = true
+			return m, tea.Quit
+		case key.Matches(msg, m.keys.VisualSelect):
+			anchor := m.cursor
+			m.rangeAnchor = &anchor
+			return m, nil
 		case key.Matches(msg, m.keys.Select):
 			m.selected = true
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Quit):
+			if m.rangeAnchor != nil {
+				m.rangeAnchor = nil
+				return m, nil
+			}
 			m.quit = true
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Left):
@@ -137,7 +173,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Today):
 			m.cursor = m.today
 		case key.Matches(msg, m.keys.ToggleWeeks):
-			m.showWeekNumbers = !m.showWeekNumbers
+			switch m.weekNumPos {
+			case WeekNumOff:
+				m.weekNumPos = WeekNumLeft
+			case WeekNumLeft:
+				m.weekNumPos = WeekNumRight
+			case WeekNumRight:
+				m.weekNumPos = WeekNumOff
+			}
 		case key.Matches(msg, m.keys.ToggleHelp):
 			m.showHelp = !m.showHelp
 		}
@@ -160,19 +203,21 @@ func daysInMonth(year int, month time.Month, loc *time.Location) int {
 }
 
 type keyMap struct {
-	Left        key.Binding
-	Right       key.Binding
-	Up          key.Binding
-	Down        key.Binding
-	PrevMonth   key.Binding
-	NextMonth   key.Binding
-	PrevYear    key.Binding
-	NextYear    key.Binding
-	Today       key.Binding
-	ToggleWeeks key.Binding
-	ToggleHelp  key.Binding
-	Select      key.Binding
-	Quit        key.Binding
+	Left         key.Binding
+	Right        key.Binding
+	Up           key.Binding
+	Down         key.Binding
+	PrevMonth    key.Binding
+	NextMonth    key.Binding
+	PrevYear     key.Binding
+	NextYear     key.Binding
+	Today        key.Binding
+	ToggleWeeks  key.Binding
+	ToggleHelp   key.Binding
+	VisualSelect key.Binding
+	Select       key.Binding
+	Quit         key.Binding
+	ForceQuit    key.Binding
 }
 
 func defaultKeyMap() keyMap {
@@ -221,19 +266,27 @@ func defaultKeyMap() keyMap {
 			key.WithKeys("?"),
 			key.WithHelp("?", "help"),
 		),
+		VisualSelect: key.NewBinding(
+			key.WithKeys("v"),
+			key.WithHelp("v", "range"),
+		),
 		Select: key.NewBinding(
 			key.WithKeys("enter"),
 			key.WithHelp("enter", "select"),
 		),
 		Quit: key.NewBinding(
-			key.WithKeys("q", "esc", "ctrl+c"),
+			key.WithKeys("q", "esc"),
 			key.WithHelp("q/esc", "quit"),
+		),
+		ForceQuit: key.NewBinding(
+			key.WithKeys("ctrl+c"),
+			key.WithHelp("ctrl+c", "force quit"),
 		),
 	}
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Left, k.Right, k.Select, k.Quit, k.ToggleHelp}
+	return []key.Binding{k.Left, k.Right, k.VisualSelect, k.Select, k.Quit, k.ToggleHelp}
 }
 
 func (k keyMap) FullHelp() [][]key.Binding {
@@ -241,6 +294,6 @@ func (k keyMap) FullHelp() [][]key.Binding {
 		{k.Left, k.Right, k.Up, k.Down},
 		{k.PrevMonth, k.NextMonth, k.PrevYear, k.NextYear},
 		{k.Today, k.ToggleWeeks},
-		{k.Select, k.Quit},
+		{k.VisualSelect, k.Select, k.Quit},
 	}
 }

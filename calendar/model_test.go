@@ -81,16 +81,20 @@ func TestNavigation(t *testing.T) {
 
 func TestToggleWeekNumbers(t *testing.T) {
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
-	if m.showWeekNumbers {
-		t.Error("expected showWeekNumbers false initially")
+	if m.weekNumPos != WeekNumOff {
+		t.Errorf("expected weekNumPos off initially, got %d", m.weekNumPos)
 	}
 	m = pressKey(m, "w")
-	if !m.showWeekNumbers {
-		t.Error("expected showWeekNumbers true after toggle")
+	if m.weekNumPos != WeekNumLeft {
+		t.Errorf("expected weekNumPos left after first toggle, got %d", m.weekNumPos)
 	}
 	m = pressKey(m, "w")
-	if m.showWeekNumbers {
-		t.Error("expected showWeekNumbers false after second toggle")
+	if m.weekNumPos != WeekNumRight {
+		t.Errorf("expected weekNumPos right after second toggle, got %d", m.weekNumPos)
+	}
+	m = pressKey(m, "w")
+	if m.weekNumPos != WeekNumOff {
+		t.Errorf("expected weekNumPos off after third toggle, got %d", m.weekNumPos)
 	}
 }
 
@@ -145,5 +149,155 @@ func TestEnterSelects(t *testing.T) {
 	}
 	if m.Cursor() != cursor {
 		t.Errorf("got cursor %v, want %v", m.Cursor(), cursor)
+	}
+}
+
+func TestVisualSelectEnter(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+	// Press v to anchor
+	m = pressKey(m, "v")
+	// Move 5 days right
+	for i := 0; i < 5; i++ {
+		m = pressKey(m, "l")
+	}
+	// Press Enter to confirm
+	updated, _ := m.Update(specialMsg(tea.KeyEnter))
+	m = updated.(Model)
+	if !m.InRange() {
+		t.Error("expected InRange to be true")
+	}
+	if m.RangeStart() != date(2026, time.March, 17) {
+		t.Errorf("RangeStart got %s, want 2026-03-17", m.RangeStart().Format(DateLayout))
+	}
+	if m.RangeEnd() != date(2026, time.March, 22) {
+		t.Errorf("RangeEnd got %s, want 2026-03-22", m.RangeEnd().Format(DateLayout))
+	}
+}
+
+func TestVisualSelectCancel(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+	// Press v to anchor
+	m = pressKey(m, "v")
+	// Move right
+	m = pressKey(m, "l")
+	// Press Esc to cancel range (not quit)
+	updated, cmd := m.Update(specialMsg(tea.KeyEscape))
+	m = updated.(Model)
+	if m.IsQuit() {
+		t.Error("expected IsQuit to be false after first Esc (cancel range)")
+	}
+	if m.InRange() {
+		t.Error("expected InRange to be false after Esc cancel")
+	}
+	if cmd != nil {
+		t.Error("expected no quit command after first Esc")
+	}
+	// Press Esc again to quit
+	updated, cmd = m.Update(specialMsg(tea.KeyEscape))
+	m = updated.(Model)
+	if !m.IsQuit() {
+		t.Error("expected IsQuit to be true after second Esc")
+	}
+	if cmd == nil {
+		t.Error("expected quit command after second Esc")
+	}
+}
+
+func TestVisualSelectReanchor(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+	// Press v to anchor
+	m = pressKey(m, "v")
+	// Move 2 right
+	m = pressKey(m, "l")
+	m = pressKey(m, "l")
+	// Press v again to re-anchor at March 19
+	m = pressKey(m, "v")
+	// Move 1 right
+	m = pressKey(m, "l")
+	// Press Enter to confirm
+	updated, _ := m.Update(specialMsg(tea.KeyEnter))
+	m = updated.(Model)
+	if !m.InRange() {
+		t.Error("expected InRange to be true")
+	}
+	if m.RangeStart() != date(2026, time.March, 19) {
+		t.Errorf("RangeStart got %s, want 2026-03-19", m.RangeStart().Format(DateLayout))
+	}
+	if m.RangeEnd() != date(2026, time.March, 20) {
+		t.Errorf("RangeEnd got %s, want 2026-03-20", m.RangeEnd().Format(DateLayout))
+	}
+}
+
+func TestRangeReverseOrder(t *testing.T) {
+	start := date(2026, time.March, 20)
+	m := New(start, start, DefaultConfig())
+	// Press v to anchor at March 20
+	m = pressKey(m, "v")
+	// Move 5 left
+	for i := 0; i < 5; i++ {
+		m = pressKey(m, "h")
+	}
+	// Press Enter to confirm
+	updated, _ := m.Update(specialMsg(tea.KeyEnter))
+	m = updated.(Model)
+	if !m.InRange() {
+		t.Error("expected InRange to be true")
+	}
+	if m.RangeStart() != date(2026, time.March, 15) {
+		t.Errorf("RangeStart got %s, want 2026-03-15", m.RangeStart().Format(DateLayout))
+	}
+	if m.RangeEnd() != date(2026, time.March, 20) {
+		t.Errorf("RangeEnd got %s, want 2026-03-20", m.RangeEnd().Format(DateLayout))
+	}
+}
+
+func TestEnterWithoutRange(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+	// Press Enter without v
+	updated, _ := m.Update(specialMsg(tea.KeyEnter))
+	m = updated.(Model)
+	if !m.Selected() {
+		t.Error("expected Selected to be true")
+	}
+	if m.InRange() {
+		t.Error("expected InRange to be false")
+	}
+}
+
+func TestSameDayRange(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+	// Press v to anchor
+	m = pressKey(m, "v")
+	// Immediately press Enter (same day)
+	updated, _ := m.Update(specialMsg(tea.KeyEnter))
+	m = updated.(Model)
+	if !m.Selected() {
+		t.Error("expected Selected to be true")
+	}
+	if m.InRange() {
+		t.Error("expected InRange to be false for same day")
+	}
+}
+
+func TestCtrlCInRangeMode(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+	// Press v to anchor
+	m = pressKey(m, "v")
+	// Move right
+	m = pressKey(m, "l")
+	// Press ctrl+c to force quit
+	updated, cmd := m.Update(specialMsg(tea.KeyCtrlC))
+	m = updated.(Model)
+	if !m.IsQuit() {
+		t.Error("expected IsQuit to be true after ctrl+c")
+	}
+	if cmd == nil {
+		t.Error("expected quit command after ctrl+c")
 	}
 }
