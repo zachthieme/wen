@@ -124,6 +124,8 @@ wen cal december 2027
 
 Navigate with vim keys (or arrow keys). Press `Enter` to select a date and print it to stdout (useful for scripting: `git log --since=$(wen cal)`). Press `q`, `Esc`, or `ctrl+c` to quit without selecting.
 
+For date ranges, press `v` to anchor a start date, navigate to the end date, then press `Enter`. Both dates are printed (one per line), composable with tools like `git log --since=$(wen cal | head -1) --until=$(wen cal | tail -1)`. Press `Esc` or `q` to cancel the range and return to normal selection. Press `v` again to move the anchor.
+
 #### Keybindings
 
 | Key | Action |
@@ -133,9 +135,10 @@ Navigate with vim keys (or arrow keys). Press `Enter` to select a date and print
 | `H` / `L` | Previous / next month |
 | `J` / `K` | Next / previous year |
 | `t` | Jump to today |
-| `w` | Toggle week numbers |
+| `w` | Cycle week numbers: off → left → right → off |
 | `?` | Toggle help bar |
 | `Enter` | Select date (print to stdout and exit) |
+| `v` | Start range selection (move cursor, then Enter to confirm) |
 | `q` / `Esc` / `ctrl+c` | Quit |
 
 The calendar highlights today and your cursor position. Navigation wraps across boundaries (e.g., `l` on March 31 moves to April 1). Month and year jumps clamp the day (e.g., Jan 31 + `L` = Feb 28, Feb 29 + `J` = Feb 28).
@@ -165,7 +168,7 @@ Config lives at `~/.config/wen/config.yaml` (created automatically on first `wen
 
 ```yaml
 # Week numbers
-show_week_numbers: false
+show_week_numbers: false  # false, true/"left" (standard), or "right"
 week_numbering: us    # "us" or "iso"
 week_start_day: 0     # 0=Sunday, 1=Monday
 
@@ -177,6 +180,9 @@ week_start_day: 0     # 0=Sunday, 1=Monday
 # Show fiscal quarter in calendar title (e.g., "March 2026 · Q2 FY26")
 # Requires fiscal_year_start > 1 to take effect.
 # show_fiscal_quarter: false
+
+# Show quarter progress bar below calendar (e.g., "Q1 ████████░░░░ 86%")
+# show_quarter_bar: false
 
 # Theme (built-in: "default", "catppuccin-mocha", "dracula", "nord")
 theme: default
