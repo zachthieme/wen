@@ -17,6 +17,7 @@ const (
 // WeekNumPos controls where week numbers appear relative to the grid.
 type WeekNumPos int
 
+// Week number display positions.
 const (
 	WeekNumOff   WeekNumPos = iota // hidden
 	WeekNumLeft                    // left of grid (standard cal -w style)

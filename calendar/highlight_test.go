@@ -12,7 +12,9 @@ func TestLoadHighlightedDates(t *testing.T) {
 
 	t.Run("valid file", func(t *testing.T) {
 		path := filepath.Join(dir, "dates.json")
-		os.WriteFile(path, []byte(`["2026-03-25", "2026-04-01"]`), 0644)
+		if err := os.WriteFile(path, []byte(`["2026-03-25", "2026-04-01"]`), 0644); err != nil {
+			t.Fatal(err)
+		}
 
 		dates := LoadHighlightedDates(path)
 		if len(dates) != 2 {
@@ -35,7 +37,9 @@ func TestLoadHighlightedDates(t *testing.T) {
 
 	t.Run("malformed JSON", func(t *testing.T) {
 		path := filepath.Join(dir, "bad.json")
-		os.WriteFile(path, []byte(`not json`), 0644)
+		if err := os.WriteFile(path, []byte(`not json`), 0644); err != nil {
+			t.Fatal(err)
+		}
 		dates := LoadHighlightedDates(path)
 		if dates != nil {
 			t.Error("expected nil for malformed JSON")
@@ -51,7 +55,9 @@ func TestLoadHighlightedDates(t *testing.T) {
 
 	t.Run("invalid dates skipped", func(t *testing.T) {
 		path := filepath.Join(dir, "mixed.json")
-		os.WriteFile(path, []byte(`["2026-03-25", "not-a-date", "2026-04-01"]`), 0644)
+		if err := os.WriteFile(path, []byte(`["2026-03-25", "not-a-date", "2026-04-01"]`), 0644); err != nil {
+			t.Fatal(err)
+		}
 		dates := LoadHighlightedDates(path)
 		if len(dates) != 2 {
 			t.Fatalf("expected 2 valid dates, got %d", len(dates))

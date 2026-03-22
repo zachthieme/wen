@@ -11,6 +11,11 @@ linters:
     - revive
     - misspell
   settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
     gocritic:
       enabled-tags:
         - diagnostic

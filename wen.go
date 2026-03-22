@@ -61,11 +61,12 @@ func FiscalQuarter(month, year, startMonth int) (quarter, fiscalYear int) {
 	}
 	fm := (month - startMonth + monthsPerYear) % monthsPerYear
 	quarter = fm/monthsPerQuarter + 1
-	if startMonth == 1 {
+	switch {
+	case startMonth == 1:
 		fiscalYear = year
-	} else if month >= startMonth {
+	case month >= startMonth:
 		fiscalYear = year + 1
-	} else {
+	default:
 		fiscalYear = year
 	}
 	return quarter, fiscalYear
