@@ -14,6 +14,34 @@ const (
 	WeekNumberingISO = "iso"
 )
 
+// WeekNumPos controls where week numbers appear relative to the grid.
+type WeekNumPos int
+
+const (
+	WeekNumOff   WeekNumPos = iota // hidden
+	WeekNumLeft                    // left of grid (standard cal -w style)
+	WeekNumRight                   // right of grid
+)
+
+// String constants for YAML/config normalization.
+const (
+	weekNumStrOff   = ""
+	weekNumStrLeft  = "left"
+	weekNumStrRight = "right"
+)
+
+// parseWeekNumPos converts a config string to the typed WeekNumPos enum.
+func parseWeekNumPos(s string) WeekNumPos {
+	switch s {
+	case "left":
+		return WeekNumLeft
+	case "right":
+		return WeekNumRight
+	default:
+		return WeekNumOff
+	}
+}
+
 // MaxPadding is the upper bound for padding values.
 const MaxPadding = 20
 
@@ -26,28 +54,30 @@ type ThemeColors struct {
 	DayHeader  string `yaml:"day_header"`
 	HelpBar    string `yaml:"help_bar"`
 	Highlight  string `yaml:"highlight"`
+	Range      string `yaml:"range"`
 }
 
 // Config holds user preferences for the calendar display.
 type Config struct {
-	ShowWeekNumbers    bool        `yaml:"show_week_numbers"`
-	WeekNumbering      string      `yaml:"week_numbering"`
-	WeekStartDay       int         `yaml:"week_start_day"`
-	FiscalYearStart    int         `yaml:"fiscal_year_start"`
-	ShowFiscalQuarter  bool        `yaml:"show_fiscal_quarter"`
-	Theme           string      `yaml:"theme"`
-	Colors          ThemeColors `yaml:"colors"`
-	HighlightSource string      `yaml:"highlight_source"`
-	PaddingTop      int         `yaml:"padding_top"`
-	PaddingRight    int         `yaml:"padding_right"`
-	PaddingBottom   int         `yaml:"padding_bottom"`
-	PaddingLeft     int         `yaml:"padding_left"`
+	ShowWeekNumbers   string      `yaml:"show_week_numbers"`
+	WeekNumbering     string      `yaml:"week_numbering"`
+	WeekStartDay      int         `yaml:"week_start_day"`
+	FiscalYearStart   int         `yaml:"fiscal_year_start"`
+	ShowFiscalQuarter bool        `yaml:"show_fiscal_quarter"`
+	ShowQuarterBar    bool        `yaml:"show_quarter_bar"`
+	Theme             string      `yaml:"theme"`
+	Colors            ThemeColors `yaml:"colors"`
+	HighlightSource   string      `yaml:"highlight_source"`
+	PaddingTop        int         `yaml:"padding_top"`
+	PaddingRight      int         `yaml:"padding_right"`
+	PaddingBottom     int         `yaml:"padding_bottom"`
+	PaddingLeft       int         `yaml:"padding_left"`
 }
 
 // DefaultConfig returns a Config with sensible defaults (US week numbering, Sunday start, default theme).
 func DefaultConfig() Config {
 	return Config{
-		ShowWeekNumbers: false,
+		ShowWeekNumbers: "",
 		WeekNumbering:   WeekNumberingUS,
 		WeekStartDay:    0,
 		FiscalYearStart: 1,
@@ -62,6 +92,18 @@ func (c *Config) Normalize() []string {
 	if c.WeekNumbering != WeekNumberingUS && c.WeekNumbering != WeekNumberingISO {
 		warnings = append(warnings, "invalid config value for \"week_numbering\", using default")
 		c.WeekNumbering = WeekNumberingUS
+	}
+	// Normalize show_week_numbers: true → "left" (standard cal -w style), false → ""
+	switch c.ShowWeekNumbers {
+	case "true":
+		c.ShowWeekNumbers = weekNumStrLeft
+	case "false", "":
+		c.ShowWeekNumbers = weekNumStrOff
+	case weekNumStrLeft, weekNumStrRight:
+		// valid
+	default:
+		warnings = append(warnings, "invalid config value for \"show_week_numbers\", using default")
+		c.ShowWeekNumbers = weekNumStrOff
 	}
 	if c.WeekStartDay != 0 && c.WeekStartDay != 1 {
 		warnings = append(warnings, "invalid config value for \"week_start_day\", using default")
@@ -110,6 +152,7 @@ func (c Config) ResolvedColors() ThemeColors {
 		DayHeader:  mergeColor(base.DayHeader, c.Colors.DayHeader),
 		HelpBar:    mergeColor(base.HelpBar, c.Colors.HelpBar),
 		Highlight:  mergeColor(base.Highlight, c.Colors.Highlight),
+		Range:      mergeColor(base.Range, c.Colors.Range),
 	}
 }
 
@@ -123,6 +166,7 @@ var themePresets = map[string]ThemeColors{
 		DayHeader:  "#94e2d5",
 		HelpBar:    "#6c7086",
 		Highlight:  "#f9e2af",
+		Range:      "#a6e3a1",
 	},
 	"dracula": {
 		Cursor:     "#ff79c6",
@@ -132,6 +176,7 @@ var themePresets = map[string]ThemeColors{
 		DayHeader:  "#8be9fd",
 		HelpBar:    "#6272a4",
 		Highlight:  "#f1fa8c",
+		Range:      "#50fa7b",
 	},
 	"nord": {
 		Cursor:     "#88c0d0",
@@ -141,6 +186,7 @@ var themePresets = map[string]ThemeColors{
 		DayHeader:  "#8fbcbb",
 		HelpBar:    "#4c566a",
 		Highlight:  "#ebcb8b",
+		Range:      "#a3be8c",
 	},
 }
 
@@ -190,7 +236,7 @@ func writeDefaultConfig(path string) error {
 		return fmt.Errorf("could not create config directory: %w", err)
 	}
 	content := `# Week numbers
-show_week_numbers: false
+show_week_numbers: false  # false, true/"left" (standard), or "right"
 week_numbering: us    # "us" or "iso"
 week_start_day: 0     # 0=Sunday, 1=Monday
 
@@ -202,6 +248,9 @@ week_start_day: 0     # 0=Sunday, 1=Monday
 # Show fiscal quarter in calendar title (e.g., "March 2026 · Q2 FY26")
 # Requires fiscal_year_start > 1 to take effect.
 # show_fiscal_quarter: false
+
+# Show quarter progress bar below the calendar grid
+# show_quarter_bar: false
 
 # Theme (built-in: "default", "catppuccin-mocha", "dracula", "nord")
 theme: default
@@ -215,6 +264,7 @@ theme: default
 #   day_header: "#94e2d5"
 #   help_bar: "#6c7086"
 #   highlight: "#f9e2af"
+#   range: "#a6e3a1"
 
 # Highlighted dates source (JSON array of yyyy-mm-dd strings):
 # highlight_source: ~/.local/share/pike/due.json

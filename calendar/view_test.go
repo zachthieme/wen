@@ -9,7 +9,8 @@ import (
 )
 
 func TestRenderMarch2026(t *testing.T) {
-	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
+	// Use a different year for today so the year appears in the title
+	m := New(date(2026, time.March, 17), date(2025, time.March, 17), DefaultConfig())
 	output := m.View()
 
 	if !strings.Contains(output, "March 2026") {
@@ -21,7 +22,8 @@ func TestRenderMarch2026(t *testing.T) {
 }
 
 func TestRenderFebruary2026(t *testing.T) {
-	m := New(date(2026, time.February, 14), date(2026, time.March, 17), DefaultConfig())
+	// Use a different year for today so the year appears in the title
+	m := New(date(2026, time.February, 14), date(2025, time.March, 17), DefaultConfig())
 	output := m.View()
 
 	if !strings.Contains(output, "February 2026") {
@@ -31,7 +33,7 @@ func TestRenderFebruary2026(t *testing.T) {
 
 func TestRenderWithWeekNumbers(t *testing.T) {
 	cfg := DefaultConfig()
-	cfg.ShowWeekNumbers = true
+	cfg.ShowWeekNumbers = "left"
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
 	output := m.View()
 
@@ -118,7 +120,7 @@ func TestRenderWithLeftPadding(t *testing.T) {
 	noPadLines := strings.Split(noPadOutput, "\n")
 	padLines := strings.Split(padOutput, "\n")
 	for i, line := range padLines {
-		if strings.Contains(line, "March 2026") {
+		if strings.Contains(line, "March") {
 			if i < len(noPadLines) && len(line) <= len(noPadLines[i]) {
 				t.Errorf("expected padded title line to be wider, got len %d vs %d", len(line), len(noPadLines[i]))
 			}
@@ -202,7 +204,8 @@ func TestRenderNoFiscalQuarterByDefault(t *testing.T) {
 func TestRenderMultiMonth(t *testing.T) {
 	cfg := DefaultConfig()
 	cursor := date(2026, time.March, 17)
-	today := date(2026, time.March, 17)
+	// Use a different year for today so the year appears in titles
+	today := date(2025, time.March, 17)
 	m := New(cursor, today, cfg, WithMonths(3))
 	output := m.View()
 
@@ -227,6 +230,22 @@ func TestRenderMultiMonth(t *testing.T) {
 	}
 }
 
+func TestRenderMultiMonthWithWeekNumbers(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.ShowWeekNumbers = "left"
+	cursor := date(2026, time.March, 17)
+	today := date(2025, time.March, 17)
+	m := New(cursor, today, cfg, WithMonths(3))
+	output := m.View()
+	if !strings.Contains(output, "Wk") {
+		t.Error("expected 'Wk' header in multi-month view with week numbers")
+	}
+	// Week numbers should appear for each month column
+	if !strings.Contains(output, "March 2026") {
+		t.Error("expected 'March 2026' in output")
+	}
+}
+
 func TestRenderMultiMonthSingle(t *testing.T) {
 	// WithMonths(1) should produce same output as default
 	cfg := DefaultConfig()
@@ -236,5 +255,128 @@ func TestRenderMultiMonthSingle(t *testing.T) {
 	withOpt := New(cursor, today, cfg, WithMonths(1)).View()
 	if single != withOpt {
 		t.Error("WithMonths(1) should produce identical output to default")
+	}
+}
+
+func TestRangeRenderingProducesOutput(t *testing.T) {
+	// Verify that View() doesn't panic or produce empty output in range mode.
+	// Note: lipgloss strips ANSI in non-TTY environments, so we can't compare
+	// styled vs unstyled output directly. Instead we verify the output is
+	// well-formed and contains expected content.
+	cfg := DefaultConfig()
+	cursor := date(2026, time.March, 17)
+	today := date(2025, time.March, 17)
+	m := New(cursor, today, cfg)
+	m = pressKey(m, "v")
+	for range 3 {
+		m = pressKey(m, "l")
+	}
+	output := m.View()
+	if !strings.Contains(output, "March 2026") {
+		t.Error("expected 'March 2026' in range mode output")
+	}
+	// Days 17-20 should all appear in the output
+	if !strings.Contains(output, "17") || !strings.Contains(output, "20") {
+		t.Error("expected anchor and cursor days in output")
+	}
+}
+
+func TestRangeRenderingMultiMonth(t *testing.T) {
+	cfg := DefaultConfig()
+	cursor := date(2026, time.March, 28)
+	today := date(2025, time.March, 28)
+	m := New(cursor, today, cfg, WithMonths(3))
+	m = pressKey(m, "v")
+	for range 5 {
+		m = pressKey(m, "l")
+	}
+	output := m.View()
+	if !strings.Contains(output, "March 2026") {
+		t.Error("expected March in output")
+	}
+	if !strings.Contains(output, "April 2026") {
+		t.Error("expected April in output")
+	}
+}
+
+func TestSmartTitleCurrentYear(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+	output := m.View()
+	if !strings.Contains(output, "March") {
+		t.Error("expected 'March' in output")
+	}
+	if strings.Contains(output, "2026") {
+		t.Error("expected year to be omitted for current year")
+	}
+}
+
+func TestSmartTitleOtherYear(t *testing.T) {
+	cursor := date(2027, time.March, 17)
+	today := date(2026, time.March, 17)
+	m := New(cursor, today, DefaultConfig())
+	output := m.View()
+	if !strings.Contains(output, "March 2027") {
+		t.Error("expected 'March 2027' for non-current year")
+	}
+}
+
+func TestSmartTitleWithFiscalQuarter(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.FiscalYearStart = 10
+	cfg.ShowFiscalQuarter = true
+	today := date(2026, time.March, 17)
+	m := New(today, today, cfg)
+	output := m.View()
+	if !strings.Contains(output, "Q2 FY26") {
+		t.Errorf("expected fiscal quarter in title, got:\n%s", output)
+	}
+}
+
+func TestQuarterBarHiddenByDefault(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+	output := m.View()
+	if strings.Contains(output, "█") || strings.Contains(output, "░") {
+		t.Error("quarter bar should not appear with default config")
+	}
+}
+
+func TestQuarterBarRendering(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.ShowQuarterBar = true
+	today := date(2026, time.March, 17)
+	m := New(today, today, cfg)
+	output := m.View()
+	if !strings.Contains(output, "Q1") {
+		t.Errorf("expected Q1 in quarter bar, got:\n%s", output)
+	}
+	if !strings.Contains(output, "wd") {
+		t.Error("expected workdays remaining in bar")
+	}
+}
+
+func TestQuarterBarFiscalQuarter(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.ShowQuarterBar = true
+	cfg.FiscalYearStart = 10
+	today := date(2026, time.March, 17)
+	m := New(today, today, cfg)
+	output := m.View()
+	if !strings.Contains(output, "Q2") {
+		t.Errorf("expected Q2 for fiscal Oct start in March, got:\n%s", output)
+	}
+}
+
+func TestQuarterBarProgress(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.ShowQuarterBar = true
+	startOfQ := New(date(2026, time.January, 1), date(2026, time.January, 1), cfg)
+	if !strings.Contains(startOfQ.View(), "Q1") {
+		t.Error("expected Q1 at start of year")
+	}
+	endOfQ := New(date(2026, time.March, 31), date(2026, time.March, 31), cfg)
+	if !strings.Contains(endOfQ.View(), "Q1") {
+		t.Error("expected Q1 at end of March")
 	}
 }

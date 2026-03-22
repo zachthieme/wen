@@ -8,8 +8,8 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
-	if cfg.ShowWeekNumbers {
-		t.Error("expected ShowWeekNumbers false by default")
+	if cfg.ShowWeekNumbers != "" {
+		t.Errorf("expected ShowWeekNumbers empty by default, got %q", cfg.ShowWeekNumbers)
 	}
 	if cfg.WeekNumbering != "us" {
 		t.Errorf("expected week_numbering 'us', got %q", cfg.WeekNumbering)
@@ -109,8 +109,8 @@ func TestLoadConfigFromYAML(t *testing.T) {
 	if cfg.Theme != "dracula" {
 		t.Errorf("expected theme 'dracula', got %q", cfg.Theme)
 	}
-	if !cfg.ShowWeekNumbers {
-		t.Error("expected ShowWeekNumbers true")
+	if cfg.ShowWeekNumbers != "left" {
+		t.Errorf("expected ShowWeekNumbers 'left' (from true), got %q", cfg.ShowWeekNumbers)
 	}
 	if len(warnings) != 0 {
 		t.Errorf("expected no warnings for valid config, got %v", warnings)
