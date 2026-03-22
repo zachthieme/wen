@@ -2,11 +2,17 @@ package wen
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
 // DateLayout is the standard date format used for output (yyyy-mm-dd).
 const DateLayout = "2006-01-02"
+
+const (
+	monthsPerYear    = 12
+	monthsPerQuarter = 3
+)
 
 // PeriodMode controls how bare period references like "next week" resolve.
 type PeriodMode int
@@ -42,6 +48,34 @@ func WithFiscalYearStart(month int) Option {
 			o.fiscalYearStart = month
 		}
 	}
+}
+
+// FiscalQuarter returns the fiscal quarter (1-4) and fiscal year for a given
+// calendar month and year, with the fiscal year starting in startMonth (1-12).
+// The fiscal year number is the calendar year the FY ends in
+// (e.g., startMonth=10: Oct 2025 → Q1 FY2026, Mar 2026 → Q2 FY2026).
+// When startMonth is 1 (calendar year), Q1=Jan-Mar and fiscalYear equals year.
+func FiscalQuarter(month, year, startMonth int) (quarter, fiscalYear int) {
+	if startMonth < 1 || startMonth > monthsPerYear {
+		startMonth = 1
+	}
+	fm := (month - startMonth + monthsPerYear) % monthsPerYear
+	quarter = fm/monthsPerQuarter + 1
+	if startMonth == 1 {
+		fiscalYear = year
+	} else if month >= startMonth {
+		fiscalYear = year + 1
+	} else {
+		fiscalYear = year
+	}
+	return quarter, fiscalYear
+}
+
+// LookupMonth returns the time.Month for a month name or abbreviation (case-insensitive).
+// Returns 0 and false if the name is not recognized.
+func LookupMonth(name string) (time.Month, bool) {
+	m, ok := months[strings.ToLower(name)]
+	return m, ok
 }
 
 // Parse parses a natural language date/time expression relative to time.Now().

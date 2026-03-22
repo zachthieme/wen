@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/zachthieme/wen"
 )
 
 func TestRenderMarch2026(t *testing.T) {
@@ -164,13 +166,13 @@ func TestFiscalQuarter(t *testing.T) {
 		{"Mar 2026 FY-Apr", 3, 2026, 4, 4, 2026},
 		{"Jan 2026 FY-Apr", 1, 2026, 4, 4, 2026},
 		// Calendar year (FY starts Jan): standard quarters
-		{"Mar 2026 FY-Jan", 3, 2026, 1, 1, 2027},
+		{"Mar 2026 FY-Jan", 3, 2026, 1, 1, 2026},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q, fy := fiscalQuarter(tt.month, tt.year, tt.fyStart)
+			q, fy := wen.FiscalQuarter(tt.month, tt.year, tt.fyStart)
 			if q != tt.wantQ || fy != tt.wantFY {
-				t.Errorf("fiscalQuarter(%d, %d, %d) = Q%d FY%d, want Q%d FY%d",
+				t.Errorf("FiscalQuarter(%d, %d, %d) = Q%d FY%d, want Q%d FY%d",
 					tt.month, tt.year, tt.fyStart, q, fy, tt.wantQ, tt.wantFY)
 			}
 		})
@@ -194,5 +196,45 @@ func TestRenderNoFiscalQuarterByDefault(t *testing.T) {
 	output := m.View()
 	if strings.Contains(output, "FY") {
 		t.Error("expected no fiscal quarter in default config")
+	}
+}
+
+func TestRenderMultiMonth(t *testing.T) {
+	cfg := DefaultConfig()
+	cursor := date(2026, time.March, 17)
+	today := date(2026, time.March, 17)
+	m := New(cursor, today, cfg, WithMonths(3))
+	output := m.View()
+
+	// With 3 months centered on March, we expect February, March, April
+	if !strings.Contains(output, "February 2026") {
+		t.Error("expected 'February 2026' in multi-month output")
+	}
+	if !strings.Contains(output, "March 2026") {
+		t.Error("expected 'March 2026' in multi-month output")
+	}
+	if !strings.Contains(output, "April 2026") {
+		t.Error("expected 'April 2026' in multi-month output")
+	}
+
+	// Months should appear on the same lines (side by side),
+	// so line count should be similar to single month.
+	single := New(cursor, today, cfg).View()
+	multiLines := len(strings.Split(output, "\n"))
+	singleLines := len(strings.Split(single, "\n"))
+	if multiLines > singleLines+2 {
+		t.Errorf("multi-month should render side by side, got %d lines vs single %d lines", multiLines, singleLines)
+	}
+}
+
+func TestRenderMultiMonthSingle(t *testing.T) {
+	// WithMonths(1) should produce same output as default
+	cfg := DefaultConfig()
+	cursor := date(2026, time.March, 17)
+	today := date(2026, time.March, 17)
+	single := New(cursor, today, cfg).View()
+	withOpt := New(cursor, today, cfg, WithMonths(1)).View()
+	if single != withOpt {
+		t.Error("WithMonths(1) should produce identical output to default")
 	}
 }
