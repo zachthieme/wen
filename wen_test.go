@@ -92,6 +92,12 @@ func TestRelativeOffset(t *testing.T) {
 		{"2 weeks from now", date(2026, 4, 1)},
 		{"in 2 hours", ref.Add(2 * time.Hour)},
 		{"in 30 minutes", ref.Add(30 * time.Minute)},
+		// Cardinal number words
+		{"two weeks ago", date(2026, 3, 4)},
+		{"three days ago", date(2026, 3, 15)},
+		{"in five days", date(2026, 3, 23)},
+		{"in ten days", date(2026, 3, 28)},
+		{"one month ago", date(2026, 2, 18)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
@@ -407,6 +413,10 @@ func TestTimeExpr(t *testing.T) {
 		// 12am = midnight, 12pm = noon
 		{"at 12am", time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC)},
 		{"at 12pm", time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)},
+		// Bare number after "at" — 24-hour time
+		{"at 3", time.Date(2026, 3, 18, 3, 0, 0, 0, time.UTC)},
+		{"at 15", time.Date(2026, 3, 18, 15, 0, 0, 0, time.UTC)},
+		{"at 0", time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
@@ -432,6 +442,9 @@ func TestCombinedExpr(t *testing.T) {
 		{"yesterday at midnight", time.Date(2026, 3, 17, 0, 0, 0, 0, time.UTC)},
 		{"next thursday at 15:00", time.Date(2026, 3, 26, 15, 0, 0, 0, time.UTC)},
 		{"today at 8:30am", time.Date(2026, 3, 18, 8, 30, 0, 0, time.UTC)},
+		// Bare number after "at"
+		{"tomorrow at 3", time.Date(2026, 3, 19, 3, 0, 0, 0, time.UTC)},
+		{"tomorrow at 15", time.Date(2026, 3, 19, 15, 0, 0, 0, time.UTC)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
@@ -845,5 +858,219 @@ func TestWithPeriodStartExplicit(t *testing.T) {
 	got2, _ := ParseRelative("next week", r, WithPeriodStart())
 	if !got1.Equal(got2) {
 		t.Errorf("WithPeriodStart should match default: got %v vs %v", got1, got2)
+	}
+}
+
+func TestFiscalQuarter(t *testing.T) {
+	tests := []struct {
+		name       string
+		month      int
+		year       int
+		startMonth int
+		wantQ      int
+		wantFY     int
+	}{
+		// 1. Standard calendar year (startMonth=1)
+		{"cal: Jan→Q1", 1, 2026, 1, 1, 2026},
+		{"cal: Apr→Q2", 4, 2026, 1, 2, 2026},
+		{"cal: Jul→Q3", 7, 2026, 1, 3, 2026},
+		{"cal: Oct→Q4", 10, 2026, 1, 4, 2026},
+
+		// 2. US federal fiscal year (startMonth=10)
+		{"us fed: Oct 2025→Q1 FY2026", 10, 2025, 10, 1, 2026},
+		{"us fed: Jan 2026→Q2 FY2026", 1, 2026, 10, 2, 2026},
+		{"us fed: Apr 2026→Q3 FY2026", 4, 2026, 10, 3, 2026},
+		{"us fed: Jul 2026→Q4 FY2026", 7, 2026, 10, 4, 2026},
+		{"us fed: Sep 2026→Q4 FY2026", 9, 2026, 10, 4, 2026},
+
+		// 3. UK/Japan fiscal year (startMonth=4)
+		{"uk: Apr 2026→Q1 FY2027", 4, 2026, 4, 1, 2027},
+		{"uk: Jul 2026→Q2 FY2027", 7, 2026, 4, 2, 2027},
+		{"uk: Jan 2026→Q4 FY2026", 1, 2026, 4, 4, 2026},
+
+		// 4. December start (startMonth=12)
+		{"dec start: Dec 2025→Q1 FY2026", 12, 2025, 12, 1, 2026},
+		{"dec start: Mar 2026→Q2 FY2026", 3, 2026, 12, 2, 2026},
+		{"dec start: Jun 2026→Q3 FY2026", 6, 2026, 12, 3, 2026},
+		{"dec start: Nov 2026→Q4 FY2026", 11, 2026, 12, 4, 2026},
+
+		// 5. Invalid startMonth values → treated as 1
+		{"invalid startMonth=0 → Q1", 1, 2026, 0, 1, 2026},
+		{"invalid startMonth=13 → Q1", 1, 2026, 13, 1, 2026},
+		{"invalid startMonth=-1 → Q1", 1, 2026, -1, 1, 2026},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotQ, gotFY := FiscalQuarter(tt.month, tt.year, tt.startMonth)
+			if gotQ != tt.wantQ || gotFY != tt.wantFY {
+				t.Errorf("FiscalQuarter(%d, %d, %d) = (Q%d, FY%d), want (Q%d, FY%d)",
+					tt.month, tt.year, tt.startMonth, gotQ, gotFY, tt.wantQ, tt.wantFY)
+			}
+		})
+	}
+}
+
+func TestBoundaryConditions(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		ref   time.Time
+		opts  []Option
+		want  time.Time
+	}{
+		{
+			name:  "year boundary: tomorrow from Dec 31",
+			input: "tomorrow",
+			ref:   time.Date(2025, 12, 31, 10, 0, 0, 0, time.UTC),
+			want:  date(2026, 1, 1),
+		},
+		{
+			name:  "year boundary: yesterday from Jan 1",
+			input: "yesterday",
+			ref:   time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),
+			want:  date(2025, 12, 31),
+		},
+		{
+			name:  "month boundary: in 1 month from Jan 31 (Go AddDate rollover)",
+			input: "in 1 month",
+			ref:   time.Date(2026, 1, 31, 12, 0, 0, 0, time.UTC),
+			want:  date(2026, 3, 3),
+		},
+		{
+			name:  "month boundary: end of month from Feb in leap year 2028",
+			input: "end of month",
+			ref:   time.Date(2028, 2, 10, 0, 0, 0, 0, time.UTC),
+			want:  time.Date(2028, 2, 29, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:  "month boundary: end of month from Feb in non-leap year",
+			input: "end of month",
+			ref:   time.Date(2027, 2, 10, 0, 0, 0, 0, time.UTC),
+			want:  time.Date(2027, 2, 28, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:  "zero offset: in 0 days",
+			input: "in 0 days",
+			ref:   time.Date(2026, 3, 18, 14, 30, 0, 0, time.UTC),
+			want:  date(2026, 3, 18),
+		},
+		{
+			name:  "zero offset: in 0 weeks",
+			input: "in 0 weeks",
+			ref:   time.Date(2026, 3, 18, 14, 30, 0, 0, time.UTC),
+			want:  date(2026, 3, 18),
+		},
+		{
+			name:  "week at year boundary: beginning of week from Jan 1 2026 (Thursday)",
+			input: "beginning of week",
+			ref:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			want:  date(2025, 12, 28),
+		},
+		{
+			name:  "end of next year from Dec 2026",
+			input: "end of next year",
+			ref:   time.Date(2026, 12, 15, 0, 0, 0, 0, time.UTC),
+			want:  time.Date(2027, 12, 31, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:  "beginning of last year from Jan 2026",
+			input: "beginning of last year",
+			ref:   time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+			want:  date(2025, 1, 1),
+		},
+		{
+			name:  "end of quarter from boundary month March 31",
+			input: "end of quarter",
+			ref:   time.Date(2026, 3, 31, 12, 0, 0, 0, time.UTC),
+			want:  time.Date(2026, 3, 31, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:  "fiscal year start=12: end of quarter from March",
+			input: "end of quarter",
+			ref:   time.Date(2026, 3, 18, 14, 30, 0, 0, time.UTC),
+			opts:  []Option{WithFiscalYearStart(12)},
+			want:  time.Date(2026, 5, 31, 23, 59, 59, 0, time.UTC),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseRelative(tt.input, tt.ref, tt.opts...)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !got.Equal(tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestErrorPaths(t *testing.T) {
+	ref := time.Date(2026, 3, 18, 14, 30, 0, 0, time.UTC)
+
+	tests := []struct {
+		name     string
+		input    string
+		wantErr  bool
+		useMulti bool // if true, test via ParseMulti instead of ParseRelative
+	}{
+		{
+			name:    "0th ordinal is invalid",
+			input:   "0th monday in march",
+			wantErr: true,
+		},
+		{
+			name:    "tab characters in input fail gracefully",
+			input:   "\tnext\tfriday",
+			wantErr: true,
+		},
+		{
+			name:    "negative number in offset",
+			input:   "in -5 days",
+			wantErr: true,
+		},
+		{
+			name:    "incomplete boundary: end of",
+			input:   "end of",
+			wantErr: true,
+		},
+		{
+			name:     "incomplete multi-date: every",
+			input:    "every",
+			wantErr:  true,
+			useMulti: true,
+		},
+		{
+			name:    "invalid unit after boundary: beginning of foo",
+			input:   "beginning of foo",
+			wantErr: true,
+		},
+		{
+			name:    "double spaces still parse",
+			input:   "next  friday",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.useMulti {
+				_, err := ParseMulti(tt.input, ref)
+				if tt.wantErr && err == nil {
+					t.Errorf("ParseMulti(%q): expected error, got nil", tt.input)
+				}
+				if !tt.wantErr && err != nil {
+					t.Errorf("ParseMulti(%q): unexpected error: %v", tt.input, err)
+				}
+			} else {
+				_, err := ParseRelative(tt.input, ref)
+				if tt.wantErr && err == nil {
+					t.Errorf("ParseRelative(%q): expected error, got nil", tt.input)
+				}
+				if !tt.wantErr && err != nil {
+					t.Errorf("ParseRelative(%q): unexpected error: %v", tt.input, err)
+				}
+			}
+		})
 	}
 }

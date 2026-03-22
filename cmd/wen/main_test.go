@@ -38,16 +38,18 @@ func runTests(m *testing.M) int {
 }
 
 func TestNoArgs_PrintsToday(t *testing.T) {
-	today := time.Now().Format(wen.DateLayout)
+	// Capture time before and after to handle midnight boundary.
+	before := time.Now().Format(wen.DateLayout)
 	cmd := exec.Command(testBinary)
 	cmd.Stdin = strings.NewReader("")
 	out, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
+	after := time.Now().Format(wen.DateLayout)
 	got := strings.TrimSpace(string(out))
-	if got != today {
-		t.Errorf("got %q, want %q", got, today)
+	if got != before && got != after {
+		t.Errorf("got %q, want %q or %q", got, before, after)
 	}
 }
 
@@ -164,8 +166,11 @@ func TestHelpFlag(t *testing.T) {
 	if !strings.Contains(got, "wen - a natural language date tool") {
 		t.Errorf("help output missing header: %s", got)
 	}
-	if !strings.Contains(got, "wen cal") {
+	if !strings.Contains(got, "cal, calendar") {
 		t.Errorf("help output missing cal subcommand: %s", got)
+	}
+	if !strings.Contains(got, "rel, relative") {
+		t.Errorf("help output missing rel subcommand: %s", got)
 	}
 }
 
@@ -213,6 +218,306 @@ func TestMultipleParseErrors(t *testing.T) {
 	}
 }
 
+func TestDiff(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"basic days", []string{"diff", "march 1 2026", "march 11 2026"}, "10 days"},
+		{"reversed dates", []string{"diff", "march 11 2026", "march 1 2026"}, "10 days"},
+		{"same date", []string{"diff", "march 1 2026", "march 1 2026"}, "0 days"},
+		{"weeks even", []string{"diff", "--weeks", "march 1 2026", "march 15 2026"}, "2 weeks"},
+		{"weeks remainder", []string{"diff", "--weeks", "march 1 2026", "march 11 2026"}, "1 weeks, 3 days"},
+		{"weeks reversed", []string{"diff", "--weeks", "march 11 2026", "march 1 2026"}, "1 weeks, 3 days"},
+		{"workdays", []string{"diff", "--workdays", "march 2 2026", "march 6 2026"}, "4 workdays"},
+		{"workdays reversed", []string{"diff", "--workdays", "march 6 2026", "march 2 2026"}, "4 workdays"},
+		{"weeks trailing flag", []string{"diff", "march 1 2026", "march 15 2026", "--weeks"}, "2 weeks"},
+		{"workdays trailing flag", []string{"diff", "march 2 2026", "march 6 2026", "--workdays"}, "4 workdays"},
+		{"weeks between flags and dates", []string{"diff", "march 1 2026", "march 8 2026", "--weeks"}, "1 weeks"},
+		{"workdays between flags and dates", []string{"diff", "march 2 2026", "--workdays", "march 4 2026"}, "2 workdays"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command(testBinary, tt.args...)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			got := strings.TrimSpace(string(out))
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDiffErrors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{"no args", []string{"diff"}},
+		{"one arg", []string{"diff", "2026-03-01"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command(testBinary, tt.args...)
+			_, err := cmd.Output()
+			if err == nil {
+				t.Fatal("expected non-zero exit code")
+			}
+		})
+	}
+}
+
+func TestFormatFlag(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"custom format", []string{"--format", "01/02/2006", "march 25 2026"}, "03/25/2026"},
+		{"long format", []string{"--format", "January 2, 2006", "march 25 2026"}, "March 25, 2026"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command(testBinary, tt.args...)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			got := strings.TrimSpace(string(out))
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatNoArgs(t *testing.T) {
+	t.Parallel()
+	before := time.Now().Format("01/02/2006")
+	cmd := exec.Command(testBinary, "--format", "01/02/2006")
+	cmd.Stdin = strings.NewReader("")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	after := time.Now().Format("01/02/2006")
+	got := strings.TrimSpace(string(out))
+	if got != before && got != after {
+		t.Errorf("got %q, want %q or %q", got, before, after)
+	}
+}
+
+func TestRelativeSubcommand(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"rel today", []string{"rel", "today"}, "today"},
+		{"relative today", []string{"relative", "today"}, "today"},
+		{"rel tomorrow", []string{"rel", "tomorrow"}, "tomorrow"},
+		{"rel yesterday", []string{"rel", "yesterday"}, "yesterday"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command(testBinary, tt.args...)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			got := strings.TrimSpace(string(out))
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRelativeNoArgs(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "rel")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := strings.TrimSpace(string(out))
+	if got != "today" {
+		t.Errorf("got %q, want %q", got, "today")
+	}
+}
+
+func TestExpandMonthShorthand(t *testing.T) {
+	tests := []struct {
+		input []string
+		want  []string
+	}{
+		{[]string{"-3"}, []string{"--months", "3"}},
+		{[]string{"-12"}, []string{"--months", "12"}},
+		{[]string{"-3", "march"}, []string{"--months", "3", "march"}},
+		{[]string{"--padding-top", "2"}, []string{"--padding-top", "2"}},
+		{[]string{"-h"}, []string{"-h"}}, // not a number, leave alone
+	}
+	for _, tt := range tests {
+		t.Run(strings.Join(tt.input, " "), func(t *testing.T) {
+			got := expandMonthShorthand(tt.input)
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("got[%d] = %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestFormatDoesNotEatSubcommand(t *testing.T) {
+	t.Parallel()
+	// `wen --format diff ...` should error, not silently consume "diff" as the format value.
+	cmd := exec.Command(testBinary, "--format", "diff", "march 1 2026", "march 15 2026")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatal("expected error when --format value is a subcommand name")
+	}
+	got := string(out)
+	if !strings.Contains(got, "subcommand") {
+		t.Errorf("expected error mentioning subcommand, got: %s", got)
+	}
+}
+
+func TestSubcommandAliases(t *testing.T) {
+	t.Parallel()
+	// "calendar" should work the same as "cal" — we can't test the TUI,
+	// but we can test that "relative" works the same as "rel".
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"relative alias", []string{"relative", "today"}, "today"},
+		{"rel alias", []string{"rel", "today"}, "today"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command(testBinary, tt.args...)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			got := strings.TrimSpace(string(out))
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseCalArgs(t *testing.T) {
+	today := time.Date(2026, 3, 21, 12, 0, 0, 0, time.Local)
+	tests := []struct {
+		name      string
+		args      []string
+		wantMonth time.Month
+		wantYear  int
+	}{
+		{"empty", nil, time.March, 2026},
+		{"month only", []string{"march"}, time.March, 2026},
+		{"month abbrev", []string{"dec"}, time.December, 2026},
+		{"month and year", []string{"march", "2027"}, time.March, 2027},
+		{"month mixed case", []string{"APRIL"}, time.April, 2026},
+		{"december 2025", []string{"december", "2025"}, time.December, 2025},
+		{"ignores small numbers as year", []string{"march", "32"}, time.March, 2026},
+		{"ignores two-digit year", []string{"march", "99"}, time.March, 2026},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseCalArgs(tt.args, today)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got.Month() != tt.wantMonth {
+				t.Errorf("month: got %v, want %v", got.Month(), tt.wantMonth)
+			}
+			if got.Year() != tt.wantYear {
+				t.Errorf("year: got %d, want %d", got.Year(), tt.wantYear)
+			}
+		})
+	}
+}
+
+func TestRunWithWriter(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"parse date", []string{"march 25 2026"}, "2026-03-25"},
+		{"format flag", []string{"--format", "01/02/2006", "march 25 2026"}, "03/25/2026"},
+		{"relative today", []string{"rel", "today"}, "today"},
+		{"relative tomorrow", []string{"rel", "tomorrow"}, "tomorrow"},
+		{"diff days", []string{"diff", "march 1 2026", "march 11 2026"}, "10 days"},
+		{"diff weeks", []string{"diff", "--weeks", "march 1 2026", "march 15 2026"}, "2 weeks"},
+		{"help flag", []string{"--help"}, "wen - a natural language date tool"},
+		{"version flag", []string{"--version"}, "wen dev"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var buf strings.Builder
+			err := run(&buf, tt.args)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got := strings.TrimSpace(buf.String())
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("got %q, want substring %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRunErrors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"invalid date", []string{"pizza"}, "could not parse date"},
+		{"format missing value", []string{"--format"}, "--format requires a value"},
+		{"format eats subcommand", []string{"--format", "diff"}, "subcommand"},
+		{"diff missing args", []string{"diff"}, "diff requires two"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var buf strings.Builder
+			err := run(&buf, tt.args)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("error %q should contain %q", err.Error(), tt.want)
+			}
+		})
+	}
+}
+
 func TestCalFlagParsing(t *testing.T) {
 	fs := flag.NewFlagSet("cal", flag.ContinueOnError)
 	paddingTop := fs.Int("padding-top", 0, "")
@@ -246,5 +551,135 @@ func TestCalFlagParsing(t *testing.T) {
 	fs.Visit(func(f *flag.Flag) { visited = append(visited, f.Name) })
 	if len(visited) != 2 {
 		t.Errorf("expected 2 visited flags, got %d: %v", len(visited), visited)
+	}
+}
+
+// TestDiffAcrossDST is a regression test for DST-related off-by-one errors.
+// The bug: date diff used d2.Sub(d1).Hours()/24 with local times, which could
+// produce 23 or 25 hours across a DST boundary, yielding wrong day counts.
+// The fix normalizes to UTC before computing. These tests verify the fix holds.
+func TestDiffAcrossDST(t *testing.T) {
+	t.Parallel()
+
+	// --- Part 1: test countWorkdays directly with UTC dates ---
+	// March 8 2026 is the US spring-forward date. Using UTC ensures
+	// the function is immune to local timezone DST transitions.
+	t.Run("countWorkdays across DST boundary", func(t *testing.T) {
+		t.Parallel()
+		// March 1 (Sun) to March 15 (Sun) 2026 — crosses spring-forward on March 8.
+		// Workdays: Mar 2-6 (5) + Mar 9-13 (5) = 10.
+		start := time.Date(2026, time.March, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2026, time.March, 15, 0, 0, 0, 0, time.UTC)
+		got := countWorkdays(start, end)
+		if got != 10 {
+			t.Errorf("countWorkdays(March 1 -> March 15) = %d, want 10", got)
+		}
+	})
+
+	t.Run("countWorkdays to DST day itself", func(t *testing.T) {
+		t.Parallel()
+		// March 1 (Sun) to March 8 (Sun) 2026 — the DST transition day.
+		// Workdays: Mar 2-6 (Mon-Fri) = 5.
+		start := time.Date(2026, time.March, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2026, time.March, 8, 0, 0, 0, 0, time.UTC)
+		got := countWorkdays(start, end)
+		if got != 5 {
+			t.Errorf("countWorkdays(March 1 -> March 8) = %d, want 5", got)
+		}
+	})
+
+	// --- Part 2: test through the binary with absolute dates crossing DST ---
+	t.Run("binary diff days across DST", func(t *testing.T) {
+		t.Parallel()
+		// March 1 to March 15 = 14 calendar days (not 13).
+		cmd := exec.Command(testBinary, "diff", "march 1 2026", "march 15 2026")
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		got := strings.TrimSpace(string(out))
+		if got != "14 days" {
+			t.Errorf("got %q, want %q", got, "14 days")
+		}
+	})
+
+	t.Run("binary diff weeks across DST", func(t *testing.T) {
+		t.Parallel()
+		// March 1 to March 15 = exactly 2 weeks.
+		cmd := exec.Command(testBinary, "diff", "march 1 2026", "march 15 2026", "--weeks")
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		got := strings.TrimSpace(string(out))
+		if got != "2 weeks" {
+			t.Errorf("got %q, want %q", got, "2 weeks")
+		}
+	})
+}
+
+func TestParseCalArgsErrors(t *testing.T) {
+	today := time.Date(2026, 3, 21, 12, 0, 0, 0, time.Local)
+
+	t.Run("completely invalid input", func(t *testing.T) {
+		_, err := parseCalArgs([]string{"xyzzy"}, today)
+		if err == nil {
+			t.Error("expected error for invalid input \"xyzzy\", got nil")
+		}
+	})
+
+	t.Run("empty slice returns today", func(t *testing.T) {
+		got, err := parseCalArgs([]string{}, today)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Year() != today.Year() || got.Month() != today.Month() || got.Day() != today.Day() {
+			t.Errorf("got %v, want %v", got, today)
+		}
+	})
+}
+
+func TestCountWorkdays(t *testing.T) {
+	tests := []struct {
+		name  string
+		start time.Time
+		end   time.Time
+		want  int
+	}{
+		{
+			name:  "same day yields 0 workdays",
+			start: time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC), // Wednesday
+			end:   time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC),
+			want:  0,
+		},
+		{
+			name:  "Saturday to Monday yields 0 workdays (weekend only)",
+			start: time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), // Saturday
+			end:   time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC), // Monday
+			want:  0,
+		},
+		{
+			name:  "Monday to Saturday yields 5 workdays",
+			start: time.Date(2026, 3, 16, 0, 0, 0, 0, time.UTC), // Monday
+			end:   time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), // Saturday
+			want:  5,
+		},
+		{
+			name:  "reversed args still works (swaps internally)",
+			start: time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), // Saturday
+			end:   time.Date(2026, 3, 16, 0, 0, 0, 0, time.UTC), // Monday
+			want:  5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := countWorkdays(tt.start, tt.end)
+			if got != tt.want {
+				t.Errorf("countWorkdays(%s, %s) = %d, want %d",
+					tt.start.Format("2006-01-02"), tt.end.Format("2006-01-02"),
+					got, tt.want)
+			}
+		})
 	}
 }
