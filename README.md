@@ -42,7 +42,6 @@ go build -o wen ./cmd/wen
 | `-h`, `--help` | Show help |
 | `-v`, `--version` | Show version |
 | `--format <layout>` | Output format (Go time layout string, default: `2006-01-02`) |
-| `--relative` | Output human-readable relative string (e.g., "in 11 days") |
 
 ## Usage
 
@@ -89,10 +88,10 @@ wen --format "January 2, 2006" next friday
 ### Relative Output
 
 ```bash
-wen --relative 2026-04-01
+wen rel "april 1 2026"
 # → in 11 days
 
-wen --relative "march 25 2026"
+wen relative "march 25 2026"
 # → in 4 days
 ```
 
@@ -115,8 +114,12 @@ wen diff today "april 10" --workdays
 # Open calendar at current month
 wen cal
 
-# Open calendar at a specific month
-wen cal december 2026
+# Open at a specific month (assumes current year)
+wen cal december
+wen calendar march
+
+# Open at a specific month and year
+wen cal december 2027
 ```
 
 Navigate with vim keys (or arrow keys). Press `Enter` to select a date and print it to stdout (useful for scripting: `git log --since=$(wen cal)`). Press `q`, `Esc`, or `ctrl+c` to quit without selecting.

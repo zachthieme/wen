@@ -53,6 +53,12 @@ var ordinalWords = map[string]int{
 	"eleventh": 11, "twelfth": 12,
 }
 
+var cardinalWords = map[string]int{
+	"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+	"six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+	"eleven": 11, "twelve": 12, "twenty": 20, "thirty": 30,
+}
+
 type lexer struct {
 	input  string
 	lower  string
@@ -179,6 +185,10 @@ func (l *lexer) scanWord() {
 	}
 	if v, ok := ordinalWords[word]; ok {
 		l.tokens = append(l.tokens, token{Kind: tokenOrdinal, Value: word, IntVal: v, Position: start})
+		return
+	}
+	if v, ok := cardinalWords[word]; ok {
+		l.tokens = append(l.tokens, token{Kind: tokenNumber, Value: word, IntVal: v, Position: start})
 		return
 	}
 	if boundaries[word] {
