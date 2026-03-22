@@ -1,5 +1,52 @@
 # Changelog
 
+### v1.5.0 — March 21, 2026
+
+**New features:**
+- Date range selection in calendar: `v` to anchor, navigate, `Enter` to confirm. Outputs two dates.
+- Subcommands with aliases: `cal`/`calendar`, `rel`/`relative`, `diff`
+- Smart calendar title: omits year for current year, abbreviates month when fiscal quarter shown
+- Quarter progress bar: `show_quarter_bar` config shows workdays remaining (e.g., `Q1 ████████░░░░ 23wd`)
+- Week number positioning: `show_week_numbers` accepts `false`/`true`/`"left"`/`"right"`. `w` key cycles off → left → right → off
+- Cardinal number words: `"two weeks ago"`, `"in five days"` now parse
+- Bare hour after "at": `"tomorrow at 3"` resolves to 03:00
+- Fiscal year config: `fiscal_year_start` and `show_fiscal_quarter` for custom quarter boundaries
+- Date picker: `Enter` in calendar prints date to stdout for scripting
+- Highlighted dates: `--highlight-file` flag and `highlight_source` config
+- Multi-month view: `--months N` or `-3` shorthand
+- Custom output format: `--format` flag with Go time layout strings
+- Date diff: `wen diff <date1> <date2>` with `--weeks`/`--workdays`
+- Month-only calendar: `wen cal march` opens March of current year
+- Range color in theme system
+- `wen.FiscalQuarter()`, `wen.LookupMonth()`, `wen.ParseMulti()` library exports
+
+**Bug fixes:**
+- DST off-by-one in date diff/relative (UTC normalization)
+- Negative `--weeks` output for reversed dates
+- Diff flags rejected after positional args
+- `--format` consuming subcommand names
+- Week numbers missing in multi-month view
+- Quarter bar misaligned in multi-month view
+- Timezone mismatch in highlight/range date lookups
+- Year validation in calendar month parsing
+
+**Improvements:**
+- `io.Writer` threaded through CLI for testability (cmd/wen coverage 2% → 63%)
+- `WeekNumPos` type-safe enum, `dateKey()` UTC helper
+- Idiomatic lipgloss: `Align(Center)`, `Width()`, removed `hasPadding` bool
+- `view.go` split into `styles.go`, `render.go`, `view.go`
+- O(1) workday counting (closed-form formula)
+- Config loaded once, threaded via `appContext`
+- Comprehensive test hardening: boundary conditions, DST regression, error paths
+
+---
+
+### v1.4.1 — March 21, 2026
+
+- Fix release workflow and test for unwritable config path.
+
+---
+
 ### v1.4.0 — March 18, 2026
 
 **New features:**

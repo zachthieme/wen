@@ -58,6 +58,8 @@ wen last tuesday
 wen tomorrow
 wen "march 25 2026"
 wen "2 weeks ago"
+wen "two weeks ago"
+wen "in five days"
 
 # Boundaries
 wen "end of month"
@@ -139,7 +141,8 @@ For date ranges, press `v` to anchor a start date, navigate to the end date, the
 | `?` | Toggle help bar |
 | `Enter` | Select date (print to stdout and exit) |
 | `v` | Start range selection (move cursor, then Enter to confirm) |
-| `q` / `Esc` / `ctrl+c` | Quit |
+| `q` / `Esc` | Quit (cancels range first if active) |
+| `ctrl+c` | Force quit |
 
 The calendar highlights today and your cursor position. Navigation wraps across boundaries (e.g., `l` on March 31 moves to April 1). Month and year jumps clamp the day (e.g., Jan 31 + `L` = Feb 28, Feb 29 + `J` = Feb 28).
 
@@ -181,7 +184,7 @@ week_start_day: 0     # 0=Sunday, 1=Monday
 # Requires fiscal_year_start > 1 to take effect.
 # show_fiscal_quarter: false
 
-# Show quarter progress bar below calendar (e.g., "Q1 ████████░░░░ 86%")
+# Show quarter progress bar below calendar (e.g., "Q1 ████████░░░░ 23wd")
 # show_quarter_bar: false
 
 # Theme (built-in: "default", "catppuccin-mocha", "dracula", "nord")
@@ -196,6 +199,7 @@ theme: default
 #   day_header: "#94e2d5"
 #   help_bar: "#6c7086"
 #   highlight: "#f9e2af"
+#   range: "#a6e3a1"
 
 # Highlighted dates source (JSON array of yyyy-mm-dd strings):
 # highlight_source: ~/.local/share/pike/due.json
@@ -224,6 +228,15 @@ t, err := wen.ParseRelative("march 25 at 3pm", refTime)
 
 // Control how period references resolve
 t, err := wen.ParseRelative("next week", refTime, wen.WithPeriodSame())
+
+// Parse multi-date expressions
+dates, err := wen.ParseMulti("every friday in april", refTime)
+
+// Fiscal quarter calculation
+q, fy := wen.FiscalQuarter(3, 2026, 10) // → Q2, FY2026
+
+// Month name lookup
+month, ok := wen.LookupMonth("sep") // → time.September, true
 ```
 
 See the [package documentation](https://pkg.go.dev/github.com/zachthieme/wen) for full API details and examples.
@@ -242,14 +255,17 @@ wen next friday | xargs -I{} echo "Meeting on {}"
 
 ```
 cmd/wen/
-  main.go            CLI entry: subcommand routing, flag parsing, calendar runner
-wen.go               Library API: Parse, ParseRelative, options
-lexer.go             Tokenizer: keywords, numbers, ordinals, meridiems
-parser.go            Recursive descent parser: dates, times, boundaries
+  main.go            CLI entry: subcommand routing, flag parsing
+wen.go               Library API: Parse, ParseRelative, ParseMulti, FiscalQuarter
+lexer.go             Tokenizer: keywords, numbers, ordinals, cardinals, meridiems
+parser.go            Recursive descent parser: dates, times, boundaries, ranges
 token.go             Token type definitions
 errors.go            ParseError with position and input context
 calendar/
-  config.go          Config loading: YAML, themes, XDG path
-  model.go           Bubble Tea model: cursor state, key bindings, navigation
-  view.go            Lipgloss rendering: month grid, highlights, themes, help
+  config.go          Config loading: YAML, themes, XDG path, validation
+  model.go           Bubble Tea model: cursor, range selection, key bindings
+  styles.go          Style construction: theme resolution, color application
+  render.go          Content rendering: grid, title, quarter bar, date math
+  view.go            Layout composition: single/multi-month, week number wrapping
+  highlight.go       Highlighted dates: JSON loading, path resolution
 ```
