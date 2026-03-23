@@ -29,7 +29,7 @@ func startFileWatcher(path string) tea.Cmd {
 		}
 		dir := filepath.Dir(path)
 		if err := watcher.Add(dir); err != nil {
-			watcher.Close()
+			_ = watcher.Close()
 			return nil
 		}
 		return watchLoop(watcher, path)

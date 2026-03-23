@@ -54,7 +54,7 @@ func TestWatchLoopDetectsFileChange(t *testing.T) {
 			t.Errorf("path = %q, want %q", msg.path, path)
 		}
 		// Clean up watcher
-		msg.watcher.Close()
+		_ = msg.watcher.Close()
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for file change detection")
 	}
@@ -94,7 +94,7 @@ func TestWatchLoopFileDeleted(t *testing.T) {
 		if msg.dates != nil {
 			t.Errorf("expected nil dates after deletion, got %d dates", len(msg.dates))
 		}
-		msg.watcher.Close()
+		_ = msg.watcher.Close()
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for delete detection")
 	}
@@ -165,7 +165,7 @@ func TestWaitForNextChange(t *testing.T) {
 			if len(msg2.dates) != 2 {
 				t.Errorf("expected 2 dates on second change, got %d", len(msg2.dates))
 			}
-			msg2.watcher.Close()
+			_ = msg2.watcher.Close()
 		case <-time.After(5 * time.Second):
 			t.Fatal("timed out waiting for second file change")
 		}

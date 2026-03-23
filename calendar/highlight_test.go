@@ -73,7 +73,7 @@ func TestExpandTilde(t *testing.T) {
 
 	t.Run("expands tilde prefix", func(t *testing.T) {
 		got := expandTilde("~/foo/bar")
-		want := filepath.Join(home, "foo/bar")
+		want := filepath.Join(home, "foo", "bar")
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}

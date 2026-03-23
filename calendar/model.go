@@ -133,7 +133,7 @@ type midnightTickMsg struct{}
 // scheduleMidnightTick returns a tea.Cmd that fires at the next midnight.
 func scheduleMidnightTick(now time.Time) tea.Cmd {
 	next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
-	return tea.Tick(time.Until(next), func(t time.Time) tea.Msg {
+	return tea.Tick(time.Until(next), func(_ time.Time) tea.Msg {
 		return midnightTickMsg{}
 	})
 }
