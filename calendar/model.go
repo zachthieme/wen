@@ -126,9 +126,21 @@ func stripTime(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
+// midnightTickMsg is sent when the clock crosses midnight, triggering a
+// refresh of the "today" highlight.
+type midnightTickMsg struct{}
+
+// scheduleMidnightTick returns a tea.Cmd that fires at the next midnight.
+func scheduleMidnightTick(now time.Time) tea.Cmd {
+	next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	return tea.Tick(time.Until(next), func(t time.Time) tea.Msg {
+		return midnightTickMsg{}
+	})
+}
+
 // Init satisfies the tea.Model interface.
 func (m Model) Init() tea.Cmd {
-	return nil
+	return scheduleMidnightTick(m.today)
 }
 
 // Update handles input messages and updates model state.
@@ -136,6 +148,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
+	case midnightTickMsg:
+		now := time.Now()
+		m.today = stripTime(now)
+		return m, scheduleMidnightTick(now)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keys.ForceQuit):
