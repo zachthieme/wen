@@ -65,6 +65,35 @@ func TestLoadHighlightedDates(t *testing.T) {
 	})
 }
 
+func TestExpandTilde(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("cannot determine home dir")
+	}
+
+	t.Run("expands tilde prefix", func(t *testing.T) {
+		got := expandTilde("~/foo/bar")
+		want := filepath.Join(home, "foo/bar")
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("leaves absolute path unchanged", func(t *testing.T) {
+		got := expandTilde("/absolute/path")
+		if got != "/absolute/path" {
+			t.Errorf("got %q, want %q", got, "/absolute/path")
+		}
+	})
+
+	t.Run("leaves empty string unchanged", func(t *testing.T) {
+		got := expandTilde("")
+		if got != "" {
+			t.Errorf("got %q, want %q", got, "")
+		}
+	})
+}
+
 func TestResolveHighlightSource(t *testing.T) {
 	t.Run("flag takes priority", func(t *testing.T) {
 		got := ResolveHighlightSource("/flag/path", "/config/path")
