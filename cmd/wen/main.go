@@ -274,13 +274,12 @@ func runCalendar(ctx appContext, args []string) error {
 		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}
 
-	// Load highlighted dates from file (priority: --highlight-file > config > default path).
+	// Resolve highlight source (priority: --highlight-file > config > default path).
 	highlightPath := calendar.ResolveHighlightSource(*highlightFile, cfg.HighlightSource)
-	highlightedDates := calendar.LoadHighlightedDates(highlightPath)
 
 	var modelOpts []calendar.ModelOption
-	if highlightedDates != nil {
-		modelOpts = append(modelOpts, calendar.WithHighlightedDates(highlightedDates))
+	if highlightPath != "" {
+		modelOpts = append(modelOpts, calendar.WithHighlightSource(highlightPath))
 	}
 	if *monthCount > 1 {
 		modelOpts = append(modelOpts, calendar.WithMonths(*monthCount))
