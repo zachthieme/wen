@@ -137,3 +137,31 @@ func TestWithHighlightSourceMissing(t *testing.T) {
 		t.Error("expected nil highlightedDates for missing file")
 	}
 }
+
+func TestWithHighlightedDatesClearsHighlightPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "dates.json")
+	if err := os.WriteFile(path, []byte(`["2026-03-25"]`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	today := time.Date(2026, time.March, 17, 0, 0, 0, 0, time.Local)
+	manualDates := map[time.Time]bool{
+		time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC): true,
+	}
+	// WithHighlightSource first, then WithHighlightedDates — last option wins.
+	m := New(today, today, DefaultConfig(),
+		WithHighlightSource(path),
+		WithHighlightedDates(manualDates),
+	)
+
+	if m.highlightPath != "" {
+		t.Errorf("expected highlightPath cleared, got %q", m.highlightPath)
+	}
+	if !m.highlightedDates[time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)] {
+		t.Error("expected manual date 2026-04-01 to be highlighted")
+	}
+	if m.highlightedDates[time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC)] {
+		t.Error("expected file date 2026-03-25 to NOT be highlighted")
+	}
+}

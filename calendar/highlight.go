@@ -59,8 +59,9 @@ func LoadHighlightedDates(path string) map[time.Time]bool {
 
 // WithHighlightSource sets the path to a JSON file of dates to highlight.
 // It expands ~ to the user's home directory, performs the initial load, and
-// enables file watching when Init() runs. Last option wins if both
-// WithHighlightSource and WithHighlightedDates are provided.
+// enables file watching when Init() runs. If both WithHighlightSource and
+// WithHighlightedDates are used, the last one applied wins (WithHighlightedDates
+// clears the highlight path, disabling file watching).
 func WithHighlightSource(path string) ModelOption {
 	return func(m *Model) {
 		m.highlightPath = expandTilde(path)
