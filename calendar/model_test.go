@@ -1,6 +1,8 @@
 package calendar
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -330,5 +332,70 @@ func TestInitReturnsMidnightTick(t *testing.T) {
 	cmd := m.Init()
 	if cmd == nil {
 		t.Error("expected Init() to return a non-nil cmd for midnight tick")
+	}
+}
+
+func TestUpdateHighlightChangedMsg(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+
+	// Simulate receiving a highlightChangedMsg
+	newDates := map[time.Time]bool{
+		time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC): true,
+	}
+	updated, cmd := m.Update(highlightChangedMsg{
+		dates:   newDates,
+		watcher: nil, // cmd is checked but never executed, so nil watcher is safe here
+		path:    "/test/path",
+	})
+	m = updated.(Model)
+
+	if len(m.highlightedDates) != 1 {
+		t.Errorf("expected 1 highlighted date, got %d", len(m.highlightedDates))
+	}
+	key := time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC)
+	if !m.highlightedDates[key] {
+		t.Error("expected 2026-03-25 to be highlighted")
+	}
+
+	// Should return a cmd to wait for next change
+	if cmd == nil {
+		t.Error("expected non-nil cmd for next file watch")
+	}
+}
+
+func TestUpdateHighlightChangedMsgNilDates(t *testing.T) {
+	today := date(2026, time.March, 17)
+	initialDates := map[time.Time]bool{
+		time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC): true,
+	}
+	m := New(today, today, DefaultConfig(), WithHighlightedDates(initialDates))
+
+	// Simulate file deletion (nil dates)
+	updated, _ := m.Update(highlightChangedMsg{
+		dates:   nil,
+		watcher: nil,
+		path:    "/test/path",
+	})
+	m = updated.(Model)
+
+	if m.highlightedDates != nil {
+		t.Errorf("expected nil highlightedDates, got %d dates", len(m.highlightedDates))
+	}
+}
+
+func TestInitWithHighlightSource(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "dates.json")
+	if err := os.WriteFile(path, []byte(`["2026-03-25"]`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig(), WithHighlightSource(path))
+
+	cmd := m.Init()
+	if cmd == nil {
+		t.Error("expected Init() to return a non-nil cmd")
 	}
 }

@@ -140,7 +140,12 @@ func scheduleMidnightTick(now time.Time) tea.Cmd {
 
 // Init satisfies the tea.Model interface.
 func (m Model) Init() tea.Cmd {
-	return scheduleMidnightTick(m.today)
+	var cmds []tea.Cmd
+	cmds = append(cmds, scheduleMidnightTick(m.today))
+	if m.highlightPath != "" {
+		cmds = append(cmds, startFileWatcher(m.highlightPath))
+	}
+	return tea.Batch(cmds...)
 }
 
 // Update handles input messages and updates model state.
@@ -152,6 +157,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		now := time.Now()
 		m.today = stripTime(now)
 		return m, scheduleMidnightTick(now)
+	case highlightChangedMsg:
+		m.highlightedDates = msg.dates
+		return m, waitForNextChange(msg.watcher, msg.path)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keys.ForceQuit):
