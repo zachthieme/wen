@@ -109,3 +109,31 @@ func TestResolveHighlightSource(t *testing.T) {
 		}
 	})
 }
+
+func TestWithHighlightSource(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "dates.json")
+	if err := os.WriteFile(path, []byte(`["2026-03-25"]`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	today := time.Date(2026, time.March, 17, 0, 0, 0, 0, time.Local)
+	m := New(today, today, DefaultConfig(), WithHighlightSource(path))
+
+	if m.highlightPath != path {
+		t.Errorf("highlightPath = %q, want %q", m.highlightPath, path)
+	}
+	key := time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC)
+	if !m.highlightedDates[key] {
+		t.Error("expected 2026-03-25 to be highlighted")
+	}
+}
+
+func TestWithHighlightSourceMissing(t *testing.T) {
+	today := time.Date(2026, time.March, 17, 0, 0, 0, 0, time.Local)
+	m := New(today, today, DefaultConfig(), WithHighlightSource("/nonexistent/file.json"))
+
+	if m.highlightedDates != nil {
+		t.Error("expected nil highlightedDates for missing file")
+	}
+}

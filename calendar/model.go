@@ -26,6 +26,7 @@ type Model struct {
 	showHelp         bool
 	months           int
 	highlightedDates map[time.Time]bool
+	highlightPath    string
 	config           Config
 	keys             keyMap
 	help             help.Model
