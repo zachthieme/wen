@@ -13,14 +13,20 @@ type parser struct {
 	pos     int
 	ref     time.Time
 	opts    options
+	input   string
 	bestErr *ParseError
 }
 
-func newParser(tokens []token, ref time.Time, opts options) *parser {
-	return &parser{tokens: tokens, ref: ref, opts: opts}
+func newParser(tokens []token, ref time.Time, opts options, input string) *parser {
+	return &parser{tokens: tokens, ref: ref, opts: opts, input: input}
 }
 
-func (p *parser) peek() token     { return p.tokens[p.pos] }
+func (p *parser) peek() token {
+	if p.pos >= len(p.tokens) {
+		return token{Kind: tokenEOF}
+	}
+	return p.tokens[p.pos]
+}
 func (p *parser) advance() token  { t := p.tokens[p.pos]; p.pos++; return t }
 func (p *parser) save() int       { return p.pos }
 func (p *parser) restore(pos int) { p.pos = pos }
@@ -34,6 +40,7 @@ func (p *parser) skipNoise() {
 func (p *parser) makeError(expected ...string) *ParseError {
 	tok := p.peek()
 	return &ParseError{
+		Input:    p.input,
 		Position: tok.Position,
 		Expected: expected,
 		Found:    tok.Value,
@@ -407,6 +414,7 @@ func (p *parser) resolveOrdinalWeekdayInMonth(n int, target time.Weekday, month 
 			c = c.AddDate(0, 0, 7)
 		}
 		p.recordError(&ParseError{
+			Input:    p.input,
 			Position: 0,
 			Expected: []string{fmt.Sprintf("%d or fewer", maxOccurrences)},
 			Found:    fmt.Sprintf("%d", n),
@@ -481,6 +489,7 @@ func (p *parser) parseAbsoluteDate() (time.Time, bool) {
 	maxDay := daysIn(year, monthTok.Month, p.ref.Location())
 	if day < 1 || day > maxDay {
 		p.recordError(&ParseError{
+			Input:    p.input,
 			Position: saved,
 			Expected: []string{fmt.Sprintf("day between 1 and %d", maxDay)},
 			Found:    fmt.Sprintf("%d", day),

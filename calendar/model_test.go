@@ -1,6 +1,8 @@
 package calendar
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -299,5 +301,101 @@ func TestCtrlCInRangeMode(t *testing.T) {
 	}
 	if cmd == nil {
 		t.Error("expected quit command after ctrl+c")
+	}
+}
+
+func TestMidnightTickUpdatesToday(t *testing.T) {
+	// Start with today = March 17
+	oldToday := date(2026, time.March, 17)
+	m := New(oldToday, oldToday, DefaultConfig())
+
+	// Simulate midnight tick
+	updated, cmd := m.Update(midnightTickMsg{})
+	m = updated.(Model)
+
+	// today should be updated to the real current time
+	now := time.Now()
+	expected := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	if m.today != expected {
+		t.Errorf("today = %s, want %s", m.today.Format(DateLayout), expected.Format(DateLayout))
+	}
+
+	// Should return a non-nil cmd to schedule the next tick
+	if cmd == nil {
+		t.Error("expected non-nil cmd for next midnight tick")
+	}
+}
+
+func TestInitReturnsMidnightTick(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+	cmd := m.Init()
+	if cmd == nil {
+		t.Error("expected Init() to return a non-nil cmd for midnight tick")
+	}
+}
+
+func TestUpdateHighlightChangedMsg(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+
+	// Simulate receiving a highlightChangedMsg
+	newDates := map[time.Time]bool{
+		time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC): true,
+	}
+	updated, cmd := m.Update(highlightChangedMsg{
+		dates:   newDates,
+		watcher: nil, // cmd is checked but never executed, so nil watcher is safe here
+		path:    "/test/path",
+	})
+	m = updated.(Model)
+
+	if len(m.highlightedDates) != 1 {
+		t.Errorf("expected 1 highlighted date, got %d", len(m.highlightedDates))
+	}
+	key := time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC)
+	if !m.highlightedDates[key] {
+		t.Error("expected 2026-03-25 to be highlighted")
+	}
+
+	// Should return a cmd to wait for next change
+	if cmd == nil {
+		t.Error("expected non-nil cmd for next file watch")
+	}
+}
+
+func TestUpdateHighlightChangedMsgNilDates(t *testing.T) {
+	today := date(2026, time.March, 17)
+	initialDates := map[time.Time]bool{
+		time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC): true,
+	}
+	m := New(today, today, DefaultConfig(), WithHighlightedDates(initialDates))
+
+	// Simulate file deletion (nil dates)
+	updated, _ := m.Update(highlightChangedMsg{
+		dates:   nil,
+		watcher: nil,
+		path:    "/test/path",
+	})
+	m = updated.(Model)
+
+	if m.highlightedDates != nil {
+		t.Errorf("expected nil highlightedDates, got %d dates", len(m.highlightedDates))
+	}
+}
+
+func TestInitWithHighlightSource(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "dates.json")
+	if err := os.WriteFile(path, []byte(`["2026-03-25"]`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig(), WithHighlightSource(path))
+
+	cmd := m.Init()
+	if cmd == nil {
+		t.Error("expected Init() to return a non-nil cmd")
 	}
 }

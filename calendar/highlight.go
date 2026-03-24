@@ -9,6 +9,20 @@ import (
 
 const defaultHighlightPath = ".local/share/pike/due.json"
 
+// expandTilde replaces a leading ~ with the user's home directory.
+// Returns the path unchanged if it doesn't start with ~ or if the home
+// directory cannot be determined.
+func expandTilde(path string) string {
+	if len(path) == 0 || path[0] != '~' {
+		return path
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+	return filepath.Join(home, path[1:])
+}
+
 // LoadHighlightedDates loads highlighted dates from a JSON file.
 // The file should contain a JSON array of yyyy-mm-dd strings.
 // Returns nil if the file doesn't exist or is malformed (fail silently).
@@ -17,14 +31,7 @@ func LoadHighlightedDates(path string) map[time.Time]bool {
 		return nil
 	}
 
-	// Expand ~ prefix
-	if len(path) > 0 && path[0] == '~' {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil
-		}
-		path = filepath.Join(home, path[1:])
-	}
+	path = expandTilde(path)
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -48,6 +55,18 @@ func LoadHighlightedDates(path string) map[time.Time]bool {
 		return nil
 	}
 	return result
+}
+
+// WithHighlightSource sets the path to a JSON file of dates to highlight.
+// It expands ~ to the user's home directory, performs the initial load, and
+// enables file watching when Init() runs. If both WithHighlightSource and
+// WithHighlightedDates are used, the last one applied wins (WithHighlightedDates
+// clears the highlight path, disabling file watching).
+func WithHighlightSource(path string) ModelOption {
+	return func(m *Model) {
+		m.highlightPath = expandTilde(path)
+		m.highlightedDates = LoadHighlightedDates(m.highlightPath)
+	}
 }
 
 // ResolveHighlightSource determines the highlight file path based on priority:

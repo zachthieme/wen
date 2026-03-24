@@ -2,6 +2,7 @@ package calendar
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -77,7 +78,10 @@ func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursor
 	todayYear, todayMonth, todayDay := m.today.Date()
 
 	for day := 1; day <= days; day++ {
-		dayStr := fmt.Sprintf("%2d", day)
+		dayStr := strconv.Itoa(day)
+		if day < 10 {
+			dayStr = " " + dayStr
+		}
 
 		isCursor := day == cursorDay
 		isToday := year == todayYear && month == todayMonth && day == todayDay

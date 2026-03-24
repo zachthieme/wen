@@ -54,7 +54,7 @@ func TestNoArgs_PrintsToday(t *testing.T) {
 }
 
 func TestPositionalArg(t *testing.T) {
-	cmd := exec.Command(testBinary, "next friday")
+	cmd := exec.Command(testBinary, "next", "friday")
 	out, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
@@ -229,13 +229,13 @@ func TestDiff(t *testing.T) {
 		{"reversed dates", []string{"diff", "march 11 2026", "march 1 2026"}, "10 days"},
 		{"same date", []string{"diff", "march 1 2026", "march 1 2026"}, "0 days"},
 		{"weeks even", []string{"diff", "--weeks", "march 1 2026", "march 15 2026"}, "2 weeks"},
-		{"weeks remainder", []string{"diff", "--weeks", "march 1 2026", "march 11 2026"}, "1 weeks, 3 days"},
-		{"weeks reversed", []string{"diff", "--weeks", "march 11 2026", "march 1 2026"}, "1 weeks, 3 days"},
+		{"weeks remainder", []string{"diff", "--weeks", "march 1 2026", "march 11 2026"}, "1 week, 3 days"},
+		{"weeks reversed", []string{"diff", "--weeks", "march 11 2026", "march 1 2026"}, "1 week, 3 days"},
 		{"workdays", []string{"diff", "--workdays", "march 2 2026", "march 6 2026"}, "4 workdays"},
 		{"workdays reversed", []string{"diff", "--workdays", "march 6 2026", "march 2 2026"}, "4 workdays"},
 		{"weeks trailing flag", []string{"diff", "march 1 2026", "march 15 2026", "--weeks"}, "2 weeks"},
 		{"workdays trailing flag", []string{"diff", "march 2 2026", "march 6 2026", "--workdays"}, "4 workdays"},
-		{"weeks between flags and dates", []string{"diff", "march 1 2026", "march 8 2026", "--weeks"}, "1 weeks"},
+		{"weeks between flags and dates", []string{"diff", "march 1 2026", "march 8 2026", "--weeks"}, "1 week"},
 		{"workdays between flags and dates", []string{"diff", "march 2 2026", "--workdays", "march 4 2026"}, "2 workdays"},
 	}
 	for _, tt := range tests {
@@ -470,10 +470,18 @@ func TestRunWithWriter(t *testing.T) {
 		{"format flag", []string{"--format", "01/02/2006", "march 25 2026"}, "03/25/2026"},
 		{"relative today", []string{"rel", "today"}, "today"},
 		{"relative tomorrow", []string{"rel", "tomorrow"}, "tomorrow"},
+		{"relative yesterday", []string{"rel", "yesterday"}, "yesterday"},
+		{"relative future", []string{"rel", "march 30 2030"}, "in"},
+		{"relative past", []string{"rel", "march 1 2020"}, "ago"},
 		{"diff days", []string{"diff", "march 1 2026", "march 11 2026"}, "10 days"},
 		{"diff weeks", []string{"diff", "--weeks", "march 1 2026", "march 15 2026"}, "2 weeks"},
+		{"diff weeks remainder", []string{"diff", "--weeks", "march 1 2026", "march 10 2026"}, "1 week, 2 days"},
+		{"diff workdays", []string{"diff", "--workdays", "march 2 2026", "march 6 2026"}, "4 workdays"},
 		{"help flag", []string{"--help"}, "wen - a natural language date tool"},
+		{"short help flag", []string{"-h"}, "wen - a natural language date tool"},
 		{"version flag", []string{"--version"}, "wen dev"},
+		{"short version flag", []string{"-v"}, "wen dev"},
+		{"relative no args", []string{"rel"}, "today"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -501,7 +509,12 @@ func TestRunErrors(t *testing.T) {
 		{"invalid date", []string{"pizza"}, "could not parse date"},
 		{"format missing value", []string{"--format"}, "--format requires a value"},
 		{"format eats subcommand", []string{"--format", "diff"}, "subcommand"},
+		{"format eats rel", []string{"--format", "rel"}, "subcommand"},
+		{"format eats cal", []string{"--format", "cal"}, "subcommand"},
 		{"diff missing args", []string{"diff"}, "diff requires two"},
+		{"diff one arg", []string{"diff", "today"}, "diff requires two"},
+		{"diff unparseable", []string{"diff", "pizza", "cake"}, "could not parse date"},
+		{"relative invalid", []string{"rel", "pizza"}, "could not parse date"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

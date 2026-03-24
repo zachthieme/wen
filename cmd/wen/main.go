@@ -274,13 +274,12 @@ func runCalendar(ctx appContext, args []string) error {
 		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}
 
-	// Load highlighted dates from file (priority: --highlight-file > config > default path).
+	// Resolve highlight source (priority: --highlight-file > config > default path).
 	highlightPath := calendar.ResolveHighlightSource(*highlightFile, cfg.HighlightSource)
-	highlightedDates := calendar.LoadHighlightedDates(highlightPath)
 
 	var modelOpts []calendar.ModelOption
-	if highlightedDates != nil {
-		modelOpts = append(modelOpts, calendar.WithHighlightedDates(highlightedDates))
+	if highlightPath != "" {
+		modelOpts = append(modelOpts, calendar.WithHighlightSource(highlightPath))
 	}
 	if *monthCount > 1 {
 		modelOpts = append(modelOpts, calendar.WithMonths(*monthCount))
@@ -359,21 +358,28 @@ func runDiff(ctx appContext, args []string) error {
 		w := totalDays / 7
 		rem := totalDays % 7
 		if rem != 0 {
-			fmt.Fprintf(ctx.w, "%d weeks, %d days\n", w, rem)
+			fmt.Fprintf(ctx.w, "%d %s, %d %s\n", w, plural(w, "week"), rem, plural(rem, "day"))
 		} else {
-			fmt.Fprintf(ctx.w, "%d weeks\n", w)
+			fmt.Fprintf(ctx.w, "%d %s\n", w, plural(w, "week"))
 		}
 	case workdays:
 		wd := countWorkdays(d1, d2)
-		fmt.Fprintf(ctx.w, "%d workdays\n", wd)
+		fmt.Fprintf(ctx.w, "%d %s\n", wd, plural(wd, "workday"))
 	default:
 		totalDays := int(d2.Sub(d1).Hours() / 24)
 		if totalDays < 0 {
 			totalDays = -totalDays
 		}
-		fmt.Fprintf(ctx.w, "%d days\n", totalDays)
+		fmt.Fprintf(ctx.w, "%d %s\n", totalDays, plural(totalDays, "day"))
 	}
 	return nil
+}
+
+func plural(n int, singular string) string {
+	if n == 1 {
+		return singular
+	}
+	return singular + "s"
 }
 
 func countWorkdays(start, end time.Time) int {

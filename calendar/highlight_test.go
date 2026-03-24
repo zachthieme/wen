@@ -65,6 +65,35 @@ func TestLoadHighlightedDates(t *testing.T) {
 	})
 }
 
+func TestExpandTilde(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("cannot determine home dir")
+	}
+
+	t.Run("expands tilde prefix", func(t *testing.T) {
+		got := expandTilde("~/foo/bar")
+		want := filepath.Join(home, "foo", "bar")
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("leaves absolute path unchanged", func(t *testing.T) {
+		got := expandTilde("/absolute/path")
+		if got != "/absolute/path" {
+			t.Errorf("got %q, want %q", got, "/absolute/path")
+		}
+	})
+
+	t.Run("leaves empty string unchanged", func(t *testing.T) {
+		got := expandTilde("")
+		if got != "" {
+			t.Errorf("got %q, want %q", got, "")
+		}
+	})
+}
+
 func TestResolveHighlightSource(t *testing.T) {
 	t.Run("flag takes priority", func(t *testing.T) {
 		got := ResolveHighlightSource("/flag/path", "/config/path")
@@ -79,4 +108,60 @@ func TestResolveHighlightSource(t *testing.T) {
 			t.Errorf("expected config path, got %q", got)
 		}
 	})
+}
+
+func TestWithHighlightSource(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "dates.json")
+	if err := os.WriteFile(path, []byte(`["2026-03-25"]`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	today := time.Date(2026, time.March, 17, 0, 0, 0, 0, time.Local)
+	m := New(today, today, DefaultConfig(), WithHighlightSource(path))
+
+	if m.highlightPath != path {
+		t.Errorf("highlightPath = %q, want %q", m.highlightPath, path)
+	}
+	key := time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC)
+	if !m.highlightedDates[key] {
+		t.Error("expected 2026-03-25 to be highlighted")
+	}
+}
+
+func TestWithHighlightSourceMissing(t *testing.T) {
+	today := time.Date(2026, time.March, 17, 0, 0, 0, 0, time.Local)
+	m := New(today, today, DefaultConfig(), WithHighlightSource("/nonexistent/file.json"))
+
+	if m.highlightedDates != nil {
+		t.Error("expected nil highlightedDates for missing file")
+	}
+}
+
+func TestWithHighlightedDatesClearsHighlightPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "dates.json")
+	if err := os.WriteFile(path, []byte(`["2026-03-25"]`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	today := time.Date(2026, time.March, 17, 0, 0, 0, 0, time.Local)
+	manualDates := map[time.Time]bool{
+		time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC): true,
+	}
+	// WithHighlightSource first, then WithHighlightedDates — last option wins.
+	m := New(today, today, DefaultConfig(),
+		WithHighlightSource(path),
+		WithHighlightedDates(manualDates),
+	)
+
+	if m.highlightPath != "" {
+		t.Errorf("expected highlightPath cleared, got %q", m.highlightPath)
+	}
+	if !m.highlightedDates[time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)] {
+		t.Error("expected manual date 2026-04-01 to be highlighted")
+	}
+	if m.highlightedDates[time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC)] {
+		t.Error("expected file date 2026-03-25 to NOT be highlighted")
+	}
 }

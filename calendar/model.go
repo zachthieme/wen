@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/fsnotify/fsnotify"
 )
 
 // DateLayout is the standard date format used for output (yyyy-mm-dd).
@@ -26,6 +27,8 @@ type Model struct {
 	showHelp         bool
 	months           int
 	highlightedDates map[time.Time]bool
+	highlightPath    string
+	activeWatcher    *fsnotify.Watcher // closed on quit to unblock watcher goroutine
 	config           Config
 	keys             keyMap
 	help             help.Model
@@ -85,8 +88,12 @@ func (m Model) RangeEnd() time.Time {
 type ModelOption func(*Model)
 
 // WithHighlightedDates sets dates to be visually highlighted in the calendar.
+// Clears any highlight source path, disabling file watching.
 func WithHighlightedDates(dates map[time.Time]bool) ModelOption {
-	return func(m *Model) { m.highlightedDates = dates }
+	return func(m *Model) {
+		m.highlightedDates = dates
+		m.highlightPath = ""
+	}
 }
 
 // WithMonths sets the number of months to display side by side.
@@ -125,9 +132,27 @@ func stripTime(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
-// Init satisfies the tea.Model interface.
+// midnightTickMsg is sent when the clock crosses midnight, triggering a
+// refresh of the "today" highlight.
+type midnightTickMsg struct{}
+
+// scheduleMidnightTick returns a tea.Cmd that fires at the next midnight.
+func scheduleMidnightTick(now time.Time) tea.Cmd {
+	next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	return tea.Tick(time.Until(next), func(_ time.Time) tea.Msg {
+		return midnightTickMsg{}
+	})
+}
+
+// Init schedules the midnight tick (to refresh the "today" highlight at midnight)
+// and, if a highlight source path is configured, starts an fsnotify file watcher.
 func (m Model) Init() tea.Cmd {
-	return nil
+	var cmds []tea.Cmd
+	cmds = append(cmds, scheduleMidnightTick(m.today))
+	if m.highlightPath != "" {
+		cmds = append(cmds, startFileWatcher(m.highlightPath))
+	}
+	return tea.Batch(cmds...)
 }
 
 // Update handles input messages and updates model state.
@@ -135,10 +160,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
+		return m, nil
+	case watcherErrMsg:
+		// File watching failed silently — degrade gracefully.
+		return m, nil
+	case midnightTickMsg:
+		now := time.Now()
+		m.today = stripTime(now)
+		return m, scheduleMidnightTick(now)
+	case highlightChangedMsg:
+		m.highlightedDates = msg.dates
+		m.activeWatcher = msg.watcher
+		return m, waitForNextChange(msg.watcher, msg.path)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keys.ForceQuit):
 			m.quit = true
+			if m.activeWatcher != nil {
+				_ = m.activeWatcher.Close()
+				m.activeWatcher = nil
+			}
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.VisualSelect):
 			anchor := m.cursor
@@ -146,6 +187,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case key.Matches(msg, m.keys.Select):
 			m.selected = true
+			if m.activeWatcher != nil {
+				_ = m.activeWatcher.Close()
+				m.activeWatcher = nil
+			}
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Quit):
 			if m.rangeAnchor != nil {
@@ -153,6 +198,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.quit = true
+			if m.activeWatcher != nil {
+				_ = m.activeWatcher.Close()
+				m.activeWatcher = nil
+			}
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Left):
 			m.cursor = m.cursor.AddDate(0, 0, -1)

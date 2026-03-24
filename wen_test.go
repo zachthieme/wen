@@ -1020,9 +1020,9 @@ func TestErrorPaths(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "tab characters in input fail gracefully",
+			name:    "tab characters in input parse as whitespace",
 			input:   "\tnext\tfriday",
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name:    "negative number in offset",
