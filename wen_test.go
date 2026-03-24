@@ -1,6 +1,7 @@
 package wen
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -1000,6 +1001,104 @@ func TestBoundaryConditions(t *testing.T) {
 			}
 			if !got.Equal(tt.want) {
 				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestContextCancellation(t *testing.T) {
+	t.Run("cancelled context returns error", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		_, err := ParseRelativeContext(ctx, "tomorrow", ref)
+		if err == nil {
+			t.Error("expected error from cancelled context")
+		}
+	})
+
+	t.Run("valid context works normally", func(t *testing.T) {
+		ctx := context.Background()
+		got, err := ParseRelativeContext(ctx, "tomorrow", ref)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := date(2026, 3, 19)
+		if !got.Equal(want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("ParseContext works", func(t *testing.T) {
+		_, err := ParseContext(context.Background(), "tomorrow")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("ParseMultiContext works", func(t *testing.T) {
+		got, err := ParseMultiContext(context.Background(), "every friday in april", ref)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(got) != 4 {
+			t.Errorf("expected 4 fridays, got %d", len(got))
+		}
+	})
+
+	t.Run("ParseMultiContext cancelled", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		_, err := ParseMultiContext(ctx, "tomorrow", ref)
+		if err == nil {
+			t.Error("expected error from cancelled context")
+		}
+	})
+}
+
+func TestTruncateDay(t *testing.T) {
+	input := time.Date(2026, 3, 18, 14, 30, 45, 123, time.UTC)
+	got := TruncateDay(input)
+	want := time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC)
+	if !got.Equal(want) {
+		t.Errorf("TruncateDay() = %v, want %v", got, want)
+	}
+	// Preserves location
+	loc := time.FixedZone("EST", -5*3600)
+	input2 := time.Date(2026, 3, 18, 14, 30, 0, 0, loc)
+	got2 := TruncateDay(input2)
+	if got2.Location() != loc {
+		t.Errorf("TruncateDay should preserve location, got %v", got2.Location())
+	}
+}
+
+func TestDaysIn(t *testing.T) {
+	tests := []struct {
+		year  int
+		month time.Month
+		want  int
+	}{
+		{2026, time.February, 28},
+		{2028, time.February, 29}, // leap year
+		{2026, time.March, 31},
+		{2026, time.April, 30},
+	}
+	for _, tt := range tests {
+		got := DaysIn(tt.year, tt.month, time.UTC)
+		if got != tt.want {
+			t.Errorf("DaysIn(%d, %s) = %d, want %d", tt.year, tt.month, got, tt.want)
+		}
+	}
+}
+
+func TestNonASCIIInput(t *testing.T) {
+	// Non-ASCII input should not panic and should return an error (not a recognized expression).
+	// The key behavior: "mañana" should be lexed as a single unknown token, not split on ñ.
+	inputs := []string{"mañana", "demain", "übermorgen", "日曜日"}
+	for _, input := range inputs {
+		t.Run(input, func(t *testing.T) {
+			_, err := ParseRelative(input, ref)
+			if err == nil {
+				t.Errorf("expected error for non-English input %q", input)
 			}
 		})
 	}

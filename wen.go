@@ -1,6 +1,7 @@
 package wen
 
 import (
+	"context"
 	"strings"
 	"time"
 )
@@ -85,19 +86,31 @@ func Parse(input string, opts ...Option) (time.Time, error) {
 	return ParseRelative(input, time.Now(), opts...)
 }
 
-func buildParser(input string, ref time.Time, opts ...Option) *parser {
+// ParseContext is like Parse but accepts a context for cancellation.
+func ParseContext(ctx context.Context, input string, opts ...Option) (time.Time, error) {
+	return ParseRelativeContext(ctx, input, time.Now(), opts...)
+}
+
+func buildParser(ctx context.Context, input string, ref time.Time, opts ...Option) *parser {
 	o := options{periodMode: PeriodStart}
 	for _, opt := range opts {
 		opt(&o)
 	}
 	l := newLexer(input)
 	tokens := l.tokenize()
-	return newParser(tokens, ref, o, input)
+	p := newParser(tokens, ref, o, input)
+	p.ctx = ctx
+	return p
 }
 
 // ParseRelative parses a natural language date/time expression relative to ref.
 func ParseRelative(input string, ref time.Time, opts ...Option) (time.Time, error) {
-	p := buildParser(input, ref, opts...)
+	return ParseRelativeContext(context.Background(), input, ref, opts...)
+}
+
+// ParseRelativeContext is like ParseRelative but accepts a context for cancellation.
+func ParseRelativeContext(ctx context.Context, input string, ref time.Time, opts ...Option) (time.Time, error) {
+	p := buildParser(ctx, input, ref, opts...)
 	result, err := p.parse()
 	if err != nil {
 		return time.Time{}, err
@@ -108,7 +121,12 @@ func ParseRelative(input string, ref time.Time, opts ...Option) (time.Time, erro
 // ParseMulti parses expressions that may produce multiple dates (e.g., "every friday in april").
 // Returns a slice of dates. Falls back to single-date parsing if not a multi-date expression.
 func ParseMulti(input string, ref time.Time, opts ...Option) ([]time.Time, error) {
-	p := buildParser(input, ref, opts...)
+	return ParseMultiContext(context.Background(), input, ref, opts...)
+}
+
+// ParseMultiContext is like ParseMulti but accepts a context for cancellation.
+func ParseMultiContext(ctx context.Context, input string, ref time.Time, opts ...Option) ([]time.Time, error) {
+	p := buildParser(ctx, input, ref, opts...)
 
 	// Try multi-date parse first
 	if results, ok := p.parseMultiDate(); ok {

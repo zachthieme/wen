@@ -66,7 +66,7 @@ func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursor
 	startDay := m.config.WeekStartDay
 	first := time.Date(year, month, 1, 0, 0, 0, 0, loc)
 	weekday := (int(first.Weekday()) - startDay + 7) % 7
-	days := daysInMonth(year, month, loc)
+	days := wen.DaysIn(year, month, loc)
 
 	wn := weekNumber(first, m.config.WeekNumbering)
 	var weekNums []int

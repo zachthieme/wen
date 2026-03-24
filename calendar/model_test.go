@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/zachthieme/wen"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -75,7 +77,7 @@ func TestNavigation(t *testing.T) {
 			updated, _ := m.Update(tt.msg)
 			got := updated.(Model)
 			if got.cursor != tt.expected {
-				t.Errorf("got %s, want %s", got.cursor.Format(DateLayout), tt.expected.Format(DateLayout))
+				t.Errorf("got %s, want %s", got.cursor.Format(wen.DateLayout), tt.expected.Format(wen.DateLayout))
 			}
 		})
 	}
@@ -170,10 +172,10 @@ func TestVisualSelectEnter(t *testing.T) {
 		t.Error("expected InRange to be true")
 	}
 	if m.RangeStart() != date(2026, time.March, 17) {
-		t.Errorf("RangeStart got %s, want 2026-03-17", m.RangeStart().Format(DateLayout))
+		t.Errorf("RangeStart got %s, want 2026-03-17", m.RangeStart().Format(wen.DateLayout))
 	}
 	if m.RangeEnd() != date(2026, time.March, 22) {
-		t.Errorf("RangeEnd got %s, want 2026-03-22", m.RangeEnd().Format(DateLayout))
+		t.Errorf("RangeEnd got %s, want 2026-03-22", m.RangeEnd().Format(wen.DateLayout))
 	}
 }
 
@@ -226,10 +228,10 @@ func TestVisualSelectReanchor(t *testing.T) {
 		t.Error("expected InRange to be true")
 	}
 	if m.RangeStart() != date(2026, time.March, 19) {
-		t.Errorf("RangeStart got %s, want 2026-03-19", m.RangeStart().Format(DateLayout))
+		t.Errorf("RangeStart got %s, want 2026-03-19", m.RangeStart().Format(wen.DateLayout))
 	}
 	if m.RangeEnd() != date(2026, time.March, 20) {
-		t.Errorf("RangeEnd got %s, want 2026-03-20", m.RangeEnd().Format(DateLayout))
+		t.Errorf("RangeEnd got %s, want 2026-03-20", m.RangeEnd().Format(wen.DateLayout))
 	}
 }
 
@@ -249,10 +251,10 @@ func TestRangeReverseOrder(t *testing.T) {
 		t.Error("expected InRange to be true")
 	}
 	if m.RangeStart() != date(2026, time.March, 15) {
-		t.Errorf("RangeStart got %s, want 2026-03-15", m.RangeStart().Format(DateLayout))
+		t.Errorf("RangeStart got %s, want 2026-03-15", m.RangeStart().Format(wen.DateLayout))
 	}
 	if m.RangeEnd() != date(2026, time.March, 20) {
-		t.Errorf("RangeEnd got %s, want 2026-03-20", m.RangeEnd().Format(DateLayout))
+		t.Errorf("RangeEnd got %s, want 2026-03-20", m.RangeEnd().Format(wen.DateLayout))
 	}
 }
 
@@ -317,7 +319,7 @@ func TestMidnightTickUpdatesToday(t *testing.T) {
 	now := time.Now()
 	expected := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	if m.today != expected {
-		t.Errorf("today = %s, want %s", m.today.Format(DateLayout), expected.Format(DateLayout))
+		t.Errorf("today = %s, want %s", m.today.Format(wen.DateLayout), expected.Format(wen.DateLayout))
 	}
 
 	// Should return a non-nil cmd to schedule the next tick

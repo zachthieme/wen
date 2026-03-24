@@ -696,3 +696,65 @@ func TestCountWorkdays(t *testing.T) {
 		})
 	}
 }
+
+func TestDiffSameDateFlags(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"same date weeks", []string{"diff", "--weeks", "march 1 2026", "march 1 2026"}, "0 weeks"},
+		{"same date workdays", []string{"diff", "--workdays", "march 1 2026", "march 1 2026"}, "0 workdays"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var buf strings.Builder
+			err := run(&buf, tt.args)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got := strings.TrimSpace(buf.String())
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatFlagGuardsAllSubcommands(t *testing.T) {
+	t.Parallel()
+	// Verify all subcommand names are rejected as --format values.
+	subcmds := []string{"cal", "calendar", "diff", "rel", "relative", "--help", "-h", "--version", "-v"}
+	for _, sub := range subcmds {
+		t.Run(sub, func(t *testing.T) {
+			t.Parallel()
+			var buf strings.Builder
+			err := run(&buf, []string{"--format", sub})
+			if err == nil {
+				t.Errorf("expected error for --format %s", sub)
+			}
+		})
+	}
+}
+
+func TestPlural(t *testing.T) {
+	tests := []struct {
+		n    int
+		word string
+		want string
+	}{
+		{0, "day", "days"},
+		{1, "day", "day"},
+		{2, "day", "days"},
+		{1, "week", "week"},
+		{5, "week", "weeks"},
+	}
+	for _, tt := range tests {
+		got := plural(tt.n, tt.word)
+		if got != tt.want {
+			t.Errorf("plural(%d, %q) = %q, want %q", tt.n, tt.word, got, tt.want)
+		}
+	}
+}

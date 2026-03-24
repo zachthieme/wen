@@ -53,6 +53,10 @@ func watchLoop(watcher *fsnotify.Watcher, path string) tea.Msg {
 	target := filepath.Base(path)
 	debounce := time.NewTimer(time.Hour)
 	debounce.Stop()
+	// triggered tracks whether we've ever Reset the timer. We need this because
+	// timer.Stop() returns false both when the timer has already fired AND when
+	// it was never started. Without this flag, the drain on debounce.C below
+	// could block forever on a timer that was stopped but never started.
 	triggered := false
 
 	for {

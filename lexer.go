@@ -216,8 +216,11 @@ func (l *lexer) followedByLetter(pos int) bool {
 	return pos < len(l.lower) && isLetter(l.lower[pos])
 }
 
+// isLetter reports whether ch is a letter byte. It includes non-ASCII bytes
+// (0x80+) so that multi-byte UTF-8 characters are kept together as part of a
+// single word token rather than splitting on non-ASCII boundaries.
 func isLetter(ch byte) bool {
-	return ch >= 'a' && ch <= 'z'
+	return (ch >= 'a' && ch <= 'z') || ch > 127
 }
 
 func isOrdinalSuffix(s string) bool {

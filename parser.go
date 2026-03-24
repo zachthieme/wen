@@ -1,6 +1,7 @@
 package wen
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -15,6 +16,7 @@ type parser struct {
 	opts    options
 	input   string
 	bestErr *ParseError
+	ctx     context.Context
 }
 
 func newParser(tokens []token, ref time.Time, opts options, input string) *parser {
@@ -60,15 +62,23 @@ func (p *parser) finalError() *ParseError {
 	return p.makeError("date or time expression")
 }
 
-func truncateDay(t time.Time) time.Time {
+// TruncateDay returns t with the time-of-day components zeroed out,
+// preserving the location.
+func TruncateDay(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
-func daysIn(year int, month time.Month, loc *time.Location) int {
+// DaysIn returns the number of days in the given month and year.
+func DaysIn(year int, month time.Month, loc *time.Location) int {
 	return time.Date(year, month+1, 0, 0, 0, 0, 0, loc).Day()
 }
 
 func (p *parser) parse() (time.Time, error) {
+	if p.ctx != nil {
+		if err := p.ctx.Err(); err != nil {
+			return time.Time{}, err
+		}
+	}
 	p.skipNoise()
 
 	result, ok := p.parseDateExpr()
@@ -86,7 +96,7 @@ func (p *parser) parse() (time.Time, error) {
 		p.pos = 0
 		p.skipNoise()
 		var matched bool
-		result, matched = p.parseTimeExpr(truncateDay(p.ref))
+		result, matched = p.parseTimeExpr(TruncateDay(p.ref))
 		if !matched {
 			return time.Time{}, p.finalError()
 		}
@@ -130,7 +140,7 @@ func (p *parser) parseDateExpr() (time.Time, bool) {
 
 func (p *parser) parseRelativeDay() (time.Time, bool) {
 	tok := p.advance()
-	base := truncateDay(p.ref)
+	base := TruncateDay(p.ref)
 	switch tok.Value {
 	case "today":
 		return base, true
@@ -149,28 +159,12 @@ func (p *parser) parseModifierExpr() (time.Time, bool) {
 
 	tok := p.peek()
 	if tok.Kind == tokenWeekday {
-		// Peek further: is this "last friday in november" or "last friday"?
-		weekdaySaved := p.save()
-		p.advance() // consume weekday
-		p.skipNoise()
-		next := p.peek()
-		if next.Kind == tokenPreposition && (next.Value == "in" || next.Value == "of") {
-			p.advance() // consume "in"/"of"
-			p.skipNoise()
-			if p.peek().Kind == tokenMonth {
-				monthTok := p.advance()
-				if modifier.Value == "last" {
-					// Optional year
-					p.skipNoise()
-					year := 0
-					if p.peek().Kind == tokenNumber && p.peek().IntVal > maxDayOfMonth {
-						year = p.advance().IntVal
-					}
-					return p.resolveLastWeekdayInMonth(tok.Weekday, monthTok.Month, year)
-				}
+		// "last friday in november" is a distinct production from "last friday".
+		if modifier.Value == "last" {
+			if result, ok := p.tryLastWeekdayInMonth(tok); ok {
+				return result, true
 			}
 		}
-		p.restore(weekdaySaved)
 		return p.resolveModWeekday(modifier.Value, tok)
 	}
 	if tok.Kind == tokenUnit && (tok.Value == "week" || tok.Value == "month") {
@@ -181,6 +175,37 @@ func (p *parser) parseModifierExpr() (time.Time, bool) {
 	p.recordError(p.makeError("weekday", "week", "month"))
 	p.restore(saved)
 	return time.Time{}, false
+}
+
+// tryLastWeekdayInMonth attempts to parse "last <weekday> in/of <month> [year]".
+// The weekday token has been peeked but not consumed. Returns false and restores
+// position if the pattern does not match.
+func (p *parser) tryLastWeekdayInMonth(weekdayTok token) (time.Time, bool) {
+	saved := p.save()
+	p.advance() // consume weekday
+	p.skipNoise()
+
+	next := p.peek()
+	if next.Kind != tokenPreposition || (next.Value != "in" && next.Value != "of") {
+		p.restore(saved)
+		return time.Time{}, false
+	}
+	p.advance() // consume "in"/"of"
+	p.skipNoise()
+
+	if p.peek().Kind != tokenMonth {
+		p.restore(saved)
+		return time.Time{}, false
+	}
+	monthTok := p.advance()
+
+	// Optional year
+	p.skipNoise()
+	year := 0
+	if p.peek().Kind == tokenNumber && p.peek().IntVal > maxDayOfMonth {
+		year = p.advance().IntVal
+	}
+	return p.resolveLastWeekdayInMonth(weekdayTok.Weekday, monthTok.Month, year)
 }
 
 func (p *parser) resolveModWeekday(modifier string, tok token) (time.Time, bool) {
@@ -204,7 +229,7 @@ func weekdayInWeek(ref time.Time, target time.Weekday, weekOffset int) time.Time
 	refDow := int(ref.Weekday())    // Sunday=0 ... Saturday=6
 	targetDow := int(target)
 	// Find Sunday of ref's week
-	sunday := truncateDay(ref).AddDate(0, 0, -refDow)
+	sunday := TruncateDay(ref).AddDate(0, 0, -refDow)
 	// Apply week offset
 	sunday = sunday.AddDate(0, 0, 7*weekOffset)
 	// Find target day in that week
@@ -282,13 +307,13 @@ func (p *parser) resolveRelativeOffset(n int, unit string, direction int) (time.
 	amount := n * direction
 	switch unit {
 	case "day":
-		return truncateDay(p.ref).AddDate(0, 0, amount), true
+		return TruncateDay(p.ref).AddDate(0, 0, amount), true
 	case "week":
-		return truncateDay(p.ref).AddDate(0, 0, amount*7), true
+		return TruncateDay(p.ref).AddDate(0, 0, amount*7), true
 	case "month":
-		return truncateDay(p.ref).AddDate(0, amount, 0), true
+		return TruncateDay(p.ref).AddDate(0, amount, 0), true
 	case "year":
-		return truncateDay(p.ref).AddDate(amount, 0, 0), true
+		return TruncateDay(p.ref).AddDate(amount, 0, 0), true
 	case "hour":
 		return p.ref.Add(time.Duration(amount) * time.Hour), true
 	case "minute":
@@ -304,7 +329,7 @@ func (p *parser) resolveCountedWeekday(count int, target time.Weekday) (time.Tim
 		return time.Time{}, false
 	}
 	// Start from the day after ref
-	d := truncateDay(p.ref).AddDate(0, 0, 1)
+	d := TruncateDay(p.ref).AddDate(0, 0, 1)
 	// Find the first occurrence of the target weekday
 	for d.Weekday() != target {
 		d = d.AddDate(0, 0, 1)
@@ -341,7 +366,7 @@ func (p *parser) parseOrdinalWeekdayInMonth() (time.Time, bool) {
 		p.skipNoise()
 		if p.peek().Kind == tokenUnit && p.peek().Value == "month" {
 			p.advance()
-			ref := truncateDay(p.ref)
+			ref := TruncateDay(p.ref)
 			var targetMonth time.Month
 			targetYear := ref.Year()
 			switch mod.Value {
@@ -486,7 +511,7 @@ func (p *parser) parseAbsoluteDate() (time.Time, bool) {
 		year++
 	}
 
-	maxDay := daysIn(year, monthTok.Month, p.ref.Location())
+	maxDay := DaysIn(year, monthTok.Month, p.ref.Location())
 	if day < 1 || day > maxDay {
 		p.recordError(&ParseError{
 			Input:    p.input,
@@ -502,7 +527,7 @@ func (p *parser) parseAbsoluteDate() (time.Time, bool) {
 }
 
 func (p *parser) resolvePeriodRef(modifier, unit string) (time.Time, bool) {
-	ref := truncateDay(p.ref)
+	ref := TruncateDay(p.ref)
 
 	switch unit {
 	case "week":
@@ -580,7 +605,7 @@ func (p *parser) parseBoundaryExpr() (time.Time, bool) {
 }
 
 func (p *parser) resolveBoundary(boundary, modifier, unit string) (time.Time, bool) {
-	ref := truncateDay(p.ref)
+	ref := TruncateDay(p.ref)
 	loc := ref.Location()
 
 	switch unit {

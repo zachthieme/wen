@@ -4,17 +4,14 @@ package calendar
 import (
 	"time"
 
+	"github.com/zachthieme/wen"
+
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fsnotify/fsnotify"
 )
-
-// DateLayout is the standard date format used for output (yyyy-mm-dd).
-//
-// Deprecated: Use wen.DateLayout instead.
-const DateLayout = "2006-01-02"
 
 // Model holds the state for the interactive calendar TUI.
 type Model struct {
@@ -110,8 +107,8 @@ func WithMonths(n int) ModelOption {
 func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 	colors := cfg.ResolvedColors()
 	m := Model{
-		cursor:     stripTime(cursor),
-		today:      stripTime(today),
+		cursor:     wen.TruncateDay(cursor),
+		today:      wen.TruncateDay(today),
 		weekNumPos: parseWeekNumPos(cfg.ShowWeekNumbers),
 		months:     1,
 		config:     cfg,
@@ -128,9 +125,6 @@ func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 	return m
 }
 
-func stripTime(t time.Time) time.Time {
-	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
-}
 
 // midnightTickMsg is sent when the clock crosses midnight, triggering a
 // refresh of the "today" highlight.
@@ -166,7 +160,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case midnightTickMsg:
 		now := time.Now()
-		m.today = stripTime(now)
+		m.today = wen.TruncateDay(now)
 		return m, scheduleMidnightTick(now)
 	case highlightChangedMsg:
 		m.highlightedDates = msg.dates
@@ -240,15 +234,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func shiftDate(t time.Time, years, months int) time.Time {
 	y, m, d := t.Date()
 	target := time.Date(y+years, m+time.Month(months), 1, 0, 0, 0, 0, t.Location())
-	maxDay := daysInMonth(target.Year(), target.Month(), t.Location())
+	maxDay := wen.DaysIn(target.Year(), target.Month(), t.Location())
 	if d > maxDay {
 		d = maxDay
 	}
 	return time.Date(target.Year(), target.Month(), d, 0, 0, 0, 0, t.Location())
-}
-
-func daysInMonth(year int, month time.Month, loc *time.Location) int {
-	return time.Date(year, month+1, 0, 0, 0, 0, 0, loc).Day()
 }
 
 type keyMap struct {
