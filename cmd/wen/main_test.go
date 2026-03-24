@@ -583,9 +583,9 @@ func TestDiffAcrossDST(t *testing.T) {
 		// Workdays: Mar 2-6 (5) + Mar 9-13 (5) = 10.
 		start := time.Date(2026, time.March, 1, 0, 0, 0, 0, time.UTC)
 		end := time.Date(2026, time.March, 15, 0, 0, 0, 0, time.UTC)
-		got := countWorkdays(start, end)
+		got := wen.CountWorkdays(start, end)
 		if got != 10 {
-			t.Errorf("countWorkdays(March 1 -> March 15) = %d, want 10", got)
+			t.Errorf("CountWorkdays(March 1 -> March 15) = %d, want 10", got)
 		}
 	})
 
@@ -595,9 +595,9 @@ func TestDiffAcrossDST(t *testing.T) {
 		// Workdays: Mar 2-6 (Mon-Fri) = 5.
 		start := time.Date(2026, time.March, 1, 0, 0, 0, 0, time.UTC)
 		end := time.Date(2026, time.March, 8, 0, 0, 0, 0, time.UTC)
-		got := countWorkdays(start, end)
+		got := wen.CountWorkdays(start, end)
 		if got != 5 {
-			t.Errorf("countWorkdays(March 1 -> March 8) = %d, want 5", got)
+			t.Errorf("CountWorkdays(March 1 -> March 8) = %d, want 5", got)
 		}
 	})
 
@@ -687,9 +687,9 @@ func TestCountWorkdays(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := countWorkdays(tt.start, tt.end)
+			got := wen.CountWorkdays(tt.start, tt.end)
 			if got != tt.want {
-				t.Errorf("countWorkdays(%s, %s) = %d, want %d",
+				t.Errorf("CountWorkdays(%s, %s) = %d, want %d",
 					tt.start.Format("2006-01-02"), tt.end.Format("2006-01-02"),
 					got, tt.want)
 			}
@@ -736,6 +736,17 @@ func TestFormatFlagGuardsAllSubcommands(t *testing.T) {
 				t.Errorf("expected error for --format %s", sub)
 			}
 		})
+	}
+}
+
+func TestCalMonthsFlagShorthand(t *testing.T) {
+	t.Parallel()
+	// -m N should work the same as --months N and -N.
+	// Verify -m is accepted as a flag by the cal subcommand.
+	cmd := exec.Command(testBinary, "cal", "-m", "3", "--help")
+	out, _ := cmd.CombinedOutput()
+	if strings.Contains(string(out), "flag provided but not defined") {
+		t.Errorf("-m flag not recognized: %s", out)
 	}
 }
 

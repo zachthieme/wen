@@ -157,7 +157,7 @@ Calendar flags:
   --padding-right N    Right padding in characters (default: from config or 0)
   --padding-bottom N   Bottom padding in lines (default: from config or 0)
   --padding-left N     Left padding in characters (default: from config or 0)
-  --months N           Number of months to display side by side (default: 1)
+  -m, --months N       Number of months to display side by side (default: 1)
   -N                   Shorthand for --months N (e.g., -3 for three months)
   --highlight-file P   Path to JSON file with dates to highlight
 

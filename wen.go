@@ -74,6 +74,34 @@ func FiscalQuarter(month, year, startMonth int) (quarter, fiscalYear int) {
 	return quarter, fiscalYear
 }
 
+// CountWorkdays returns the number of weekdays (Mon-Fri) in the half-open
+// interval [start, end). That is, it counts start's weekday but not end's.
+// If start equals end, returns 0.
+// The order of start and end does not matter — the result is always non-negative.
+func CountWorkdays(start, end time.Time) int {
+	// Normalize to UTC midnight
+	start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC)
+	end = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, time.UTC)
+	if start.After(end) {
+		start, end = end, start
+	}
+	totalDays := int(end.Sub(start).Hours() / 24)
+	if totalDays == 0 {
+		return 0
+	}
+	fullWeeks := totalDays / 7
+	remaining := totalDays % 7
+	workdays := fullWeeks * 5
+	startDow := int(start.Weekday())
+	for i := range remaining {
+		dow := (startDow + i) % 7
+		if dow != int(time.Saturday) && dow != int(time.Sunday) {
+			workdays++
+		}
+	}
+	return workdays
+}
+
 // LookupMonth returns the time.Month for a month name or abbreviation (case-insensitive).
 // Returns 0 and false if the name is not recognized.
 func LookupMonth(name string) (time.Month, bool) {

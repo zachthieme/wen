@@ -2,6 +2,7 @@ package wen
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 )
@@ -1171,5 +1172,75 @@ func TestErrorPaths(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCountWorkdays(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		start time.Time
+		end   time.Time
+		want  int
+	}{
+		{"same_day", date(2026, 3, 18), date(2026, 3, 18), 0},
+		{"one_weekday", date(2026, 3, 18), date(2026, 3, 19), 1},
+		{"over_weekend", date(2026, 3, 20), date(2026, 3, 23), 1}, // Fri to Mon
+		{"full_week", date(2026, 3, 16), date(2026, 3, 23), 5},
+		{"two_weeks", date(2026, 3, 16), date(2026, 3, 30), 10},
+		{"reversed", date(2026, 3, 23), date(2026, 3, 16), 5},
+		{"start_on_weekend", date(2026, 3, 21), date(2026, 3, 23), 0}, // Sat to Mon
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := CountWorkdays(tt.start, tt.end)
+			if got != tt.want {
+				t.Errorf("CountWorkdays(%s, %s) = %d, want %d",
+					tt.start.Format(DateLayout), tt.end.Format(DateLayout), got, tt.want)
+			}
+		})
+	}
+}
+
+func TestModifierErrorContext(t *testing.T) {
+	t.Parallel()
+	_, err := ParseRelative("last pizza", ref)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	pe, ok := err.(*ParseError)
+	if !ok {
+		t.Fatalf("expected *ParseError, got %T", err)
+	}
+	// Error should mention the consumed modifier for context
+	msg := pe.Error()
+	if !strings.Contains(msg, "last") {
+		t.Errorf("error message should mention consumed modifier 'last', got: %s", msg)
+	}
+}
+
+func TestTokenKindStringExhaustive(t *testing.T) {
+	t.Parallel()
+	// Every tokenKind from tokenNumber (0) through tokenEOF must have
+	// an explicit String() case. If a new kind is added without updating
+	// String(), this test catches it.
+	allKinds := []tokenKind{
+		tokenNumber, tokenWeekday, tokenMonth, tokenModifier,
+		tokenPreposition, tokenUnit, tokenRelativeDay, tokenNamedTime,
+		tokenMeridiem, tokenOrdinal, tokenBoundary, tokenEvery,
+		tokenColon, tokenNoise, tokenUnknown, tokenEOF,
+	}
+	for _, k := range allKinds {
+		name := k.String()
+		if name == "" {
+			t.Errorf("tokenKind(%d).String() returned empty string", k)
+		}
+	}
+	// Verify count matches: if someone adds a new token between tokenNumber
+	// and tokenEOF without adding it to allKinds above, the total won't match.
+	if int(tokenEOF) != len(allKinds)-1 {
+		t.Errorf("tokenKind enum has %d values but test covers %d — update the allKinds list",
+			int(tokenEOF)+1, len(allKinds))
 	}
 }

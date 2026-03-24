@@ -63,6 +63,7 @@ func runCalendar(ctx appContext, args []string) error {
 	paddingLeft := fs.Int("padding-left", 0, "left padding (characters)")
 	highlightFile := fs.String("highlight-file", "", "path to JSON file with dates to highlight")
 	monthCount := fs.Int("months", 1, "number of months to display side by side")
+	fs.IntVar(monthCount, "m", 1, "shorthand for --months")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil

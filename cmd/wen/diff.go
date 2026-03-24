@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/zachthieme/wen"
 )
 
 func runDiff(ctx appContext, args []string) error {
@@ -28,8 +30,12 @@ func runDiff(ctx appContext, args []string) error {
 		return fmt.Errorf("diff requires two date arguments\nusage: wen diff <date1> <date2>")
 	}
 
-	// Split remaining into two date expressions.
-	// Try parsing progressively longer first-arg combinations.
+	// Split remaining into two date expressions using greedy-left search:
+	// try parsing progressively longer first-arg combinations until both
+	// halves parse successfully. This is correct because the parser requires
+	// structure (e.g., a unit after a bare number), so the earliest valid
+	// split point is always unambiguous — "3 days ago tomorrow" can only
+	// split as ["3 days ago", "tomorrow"], never ["3", "days ago tomorrow"].
 	var date1, date2 time.Time
 	var found bool
 	for split := 1; split < len(remaining); split++ {
@@ -63,7 +69,7 @@ func runDiff(ctx appContext, args []string) error {
 			fmt.Fprintf(ctx.w, "%d %s\n", w, plural(w, "week"))
 		}
 	case workdays:
-		wd := countWorkdays(d1, d2)
+		wd := wen.CountWorkdays(d1, d2)
 		fmt.Fprintf(ctx.w, "%d %s\n", wd, plural(wd, "workday"))
 	default:
 		totalDays := int(d2.Sub(d1).Hours() / 24)
@@ -82,24 +88,3 @@ func plural(n int, singular string) string {
 	return singular + "s"
 }
 
-func countWorkdays(start, end time.Time) int {
-	if start.After(end) {
-		start, end = end, start
-	}
-	totalDays := int(end.Sub(start).Hours() / 24)
-	if totalDays == 0 {
-		return 0
-	}
-	fullWeeks := totalDays / 7
-	remaining := totalDays % 7
-	workdays := fullWeeks * 5
-	// Count workdays in the partial week starting from start's weekday.
-	startDow := int(start.Weekday()) // Sunday=0
-	for i := range remaining {
-		dow := (startDow + i) % 7
-		if dow != int(time.Saturday) && dow != int(time.Sunday) {
-			workdays++
-		}
-	}
-	return workdays
-}

@@ -49,6 +49,12 @@ func waitForNextChange(watcher *fsnotify.Watcher, path string) tea.Cmd {
 
 // watchLoop blocks on the watcher's event channel, debounces rapid events,
 // and returns a highlightChangedMsg when the target file changes.
+//
+// Cancellation uses channel closure (watcher.Close) rather than context.Context
+// because Bubble Tea's Cmd model returns tea.Msg from blocking functions — there
+// is no context to thread. Closing the watcher unblocks the select on Events,
+// which returns ok=false and exits the loop. This is the idiomatic Bubble Tea
+// approach for long-running Cmds.
 func watchLoop(watcher *fsnotify.Watcher, path string) tea.Msg {
 	target := filepath.Base(path)
 	debounce := time.NewTimer(time.Hour)

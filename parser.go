@@ -172,7 +172,10 @@ func (p *parser) parseModifierExpr() (time.Time, bool) {
 		return p.resolvePeriodRef(modifier.Value, tok.Value)
 	}
 
-	p.recordError(p.makeError("weekday", "week", "month"))
+	p.recordError(p.makeError(
+		fmt.Sprintf("weekday after %q", modifier.Value),
+		fmt.Sprintf("week/month after %q", modifier.Value),
+	))
 	p.restore(saved)
 	return time.Time{}, false
 }

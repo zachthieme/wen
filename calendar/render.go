@@ -150,24 +150,14 @@ func quarterStartDate(cursor time.Time, fiscalYearStart int) time.Time {
 }
 
 // countQuarterWorkdaysLeft counts workdays remaining from the day after cursor
-// through qEnd (inclusive) using a closed-form calculation.
+// through qEnd (inclusive). Delegates to wen.CountWorkdays by converting the
+// interval (cursor, qEnd] to the equivalent [cursor+1, qEnd+1).
 func countQuarterWorkdaysLeft(cursor, qEnd time.Time) int {
-	start := cursor.AddDate(0, 0, 1) // day after cursor
-	if start.After(qEnd) {
+	next := cursor.AddDate(0, 0, 1)
+	if next.After(qEnd) {
 		return 0
 	}
-	totalDays := int(qEnd.Sub(start).Hours()/24) + 1
-	fullWeeks := totalDays / 7
-	remaining := totalDays % 7
-	workdays := fullWeeks * 5
-	startDow := int(start.Weekday()) // Sunday=0
-	for i := range remaining {
-		dow := (startDow + i) % 7
-		if dow != int(time.Saturday) && dow != int(time.Sunday) {
-			workdays++
-		}
-	}
-	return workdays
+	return wen.CountWorkdays(next, qEnd.AddDate(0, 0, 1))
 }
 
 func (m Model) renderQuarterBar(b *strings.Builder, width int) {

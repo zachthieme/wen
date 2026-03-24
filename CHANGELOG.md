@@ -1,5 +1,24 @@
 # Changelog
 
+### v1.5.1 — March 24, 2026
+
+**New features:**
+- `-m` shorthand flag for `--months` in `cal` subcommand (e.g., `wen cal -m 3`)
+- `wen.CountWorkdays()` exported from core library
+
+**Bug fixes:**
+- Parser error messages now include consumed modifier for context (e.g., `expected weekday after "last"` instead of `expected weekday`)
+- `atoi` panics on invariant violation instead of returning silent zero
+
+**Improvements:**
+- Deduplicated workday counting logic into `wen.CountWorkdays()` (was duplicated in `diff.go` and `render.go`)
+- Documented watcher cancellation pattern (channel closure vs context.Context)
+- Documented greedy-left heuristic in diff arg splitting
+- Exhaustive `tokenKind` String() coverage test catches missing cases when new token types are added
+- External `_test` package (`api_test.go`) verifies public API surface from a consumer's perspective
+
+---
+
 ### v1.5.0 — March 21, 2026
 
 **New features:**
