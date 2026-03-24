@@ -14,10 +14,10 @@
         wenVersion = "1.5.1";
 
         hashes = {
-          x86_64-linux = "sha256-VBBFJ7kL0D59QcxGomYOjIJZHNGtxkVTnHaOgHgh4A8=";
-          aarch64-linux = "sha256-btXPbI1nxmLrG0QcTw0wU1GrxgBHkGVQ/i+NIvZmpXQ=";
-          x86_64-darwin = "sha256-OKE/NYCd3A4Jr1zGQp1fZCNc8YnpHkQUQpxvcgZJMP0=";
-          aarch64-darwin = "sha256-7camqkbuOYTfUodUgvZzsz1X9I1tHOOBea1uQLTaHoA=";
+          x86_64-linux = "sha256-2LPusPVTHy6PGD73nlxdJpSDFMAtNTLhYR3uxgxziWI=";
+          aarch64-linux = "sha256-y7wgoGd6quwekOA9TTg8qX4w26guaQ52HOwGob4vTjM=";
+          x86_64-darwin = "sha256-8BPcintOwUo+WAmGL9fgSYPIo+9s6BN+3GYQTtQaafM=";
+          aarch64-darwin = "sha256-BDANIg44Na8rwIh1xI0AJrFkuyIvOxuj/GXER7GIPOY=";
         };
 
         archMap = {
