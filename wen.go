@@ -1,7 +1,6 @@
 package wen
 
 import (
-	"errors"
 	"strings"
 	"time"
 )
@@ -42,6 +41,7 @@ func WithPeriodSame() Option { return func(o *options) { o.periodMode = PeriodSa
 // This affects quarter calculations: e.g., WithFiscalYearStart(10) makes
 // Q1=Oct-Dec, Q2=Jan-Mar, Q3=Apr-Jun, Q4=Jul-Sep.
 // Default is 1 (January), which gives standard calendar quarters.
+// Values outside 1-12 are silently ignored (the default is retained).
 func WithFiscalYearStart(month int) Option {
 	return func(o *options) {
 		if month >= 1 && month <= 12 {
@@ -55,6 +55,7 @@ func WithFiscalYearStart(month int) Option {
 // The fiscal year number is the calendar year the FY ends in
 // (e.g., startMonth=10: Oct 2025 → Q1 FY2026, Mar 2026 → Q2 FY2026).
 // When startMonth is 1 (calendar year), Q1=Jan-Mar and fiscalYear equals year.
+// Values of startMonth outside 1-12 are coerced to 1 (January).
 func FiscalQuarter(month, year, startMonth int) (quarter, fiscalYear int) {
 	if startMonth < 1 || startMonth > monthsPerYear {
 		startMonth = 1
@@ -84,21 +85,21 @@ func Parse(input string, opts ...Option) (time.Time, error) {
 	return ParseRelative(input, time.Now(), opts...)
 }
 
-// ParseRelative parses a natural language date/time expression relative to ref.
-func ParseRelative(input string, ref time.Time, opts ...Option) (time.Time, error) {
+func buildParser(input string, ref time.Time, opts ...Option) *parser {
 	o := options{periodMode: PeriodStart}
 	for _, opt := range opts {
 		opt(&o)
 	}
 	l := newLexer(input)
 	tokens := l.tokenize()
-	p := newParser(tokens, ref, o)
+	return newParser(tokens, ref, o, input)
+}
+
+// ParseRelative parses a natural language date/time expression relative to ref.
+func ParseRelative(input string, ref time.Time, opts ...Option) (time.Time, error) {
+	p := buildParser(input, ref, opts...)
 	result, err := p.parse()
 	if err != nil {
-		var pe *ParseError
-		if errors.As(err, &pe) {
-			pe.Input = input
-		}
 		return time.Time{}, err
 	}
 	return result, nil
@@ -107,13 +108,7 @@ func ParseRelative(input string, ref time.Time, opts ...Option) (time.Time, erro
 // ParseMulti parses expressions that may produce multiple dates (e.g., "every friday in april").
 // Returns a slice of dates. Falls back to single-date parsing if not a multi-date expression.
 func ParseMulti(input string, ref time.Time, opts ...Option) ([]time.Time, error) {
-	o := options{periodMode: PeriodStart}
-	for _, opt := range opts {
-		opt(&o)
-	}
-	l := newLexer(input)
-	tokens := l.tokenize()
-	p := newParser(tokens, ref, o)
+	p := buildParser(input, ref, opts...)
 
 	// Try multi-date parse first
 	if results, ok := p.parseMultiDate(); ok {
@@ -127,10 +122,6 @@ func ParseMulti(input string, ref time.Time, opts ...Option) ([]time.Time, error
 	p.pos = 0
 	result, err := p.parse()
 	if err != nil {
-		var pe *ParseError
-		if errors.As(err, &pe) {
-			pe.Input = input
-		}
 		return nil, err
 	}
 	return []time.Time{result}, nil

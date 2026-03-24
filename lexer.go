@@ -1,6 +1,7 @@
 package wen
 
 import (
+	"strconv"
 	"strings"
 	"time"
 )
@@ -74,6 +75,7 @@ func newLexer(input string) *lexer {
 }
 
 func (l *lexer) tokenize() []token {
+	l.tokens = make([]token, 0, len(l.input)/4+1)
 	for l.pos < len(l.lower) {
 		l.skipWhitespace()
 		if l.pos >= len(l.lower) {
@@ -98,7 +100,11 @@ func (l *lexer) tokenize() []token {
 }
 
 func (l *lexer) skipWhitespace() {
-	for l.pos < len(l.lower) && l.lower[l.pos] == ' ' {
+	for l.pos < len(l.lower) {
+		ch := l.lower[l.pos]
+		if ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n' {
+			break
+		}
 		l.pos++
 	}
 }
@@ -211,7 +217,7 @@ func (l *lexer) followedByLetter(pos int) bool {
 }
 
 func isLetter(ch byte) bool {
-	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+	return ch >= 'a' && ch <= 'z'
 }
 
 func isOrdinalSuffix(s string) bool {
@@ -219,9 +225,9 @@ func isOrdinalSuffix(s string) bool {
 }
 
 func atoi(s string) int {
-	val := 0
-	for _, ch := range s {
-		val = val*10 + int(ch-'0')
+	val, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
 	}
 	return val
 }
