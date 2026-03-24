@@ -1,4 +1,4 @@
-.PHONY: build test lint check install clean help
+.PHONY: build test lint check cover bench install clean help
 
 build:
 	go build -o wen ./cmd/wen
@@ -11,11 +11,22 @@ lint:
 
 check: test lint
 
+cover:
+	go test -race -coverprofile=coverage.out ./...
+	go tool cover -func=coverage.out
+	@echo "---"
+	@echo "HTML report: go tool cover -html=coverage.out"
+
+bench:
+	go test -run=^$$ -bench=. -benchmem -count=6 ./... | tee bench.txt
+	@echo "---"
+	@echo "Compare with: benchstat old.txt bench.txt"
+
 install:
 	go install ./cmd/wen
 
 clean:
-	rm -f wen
+	rm -f wen coverage.out bench.txt
 
 help:
 	@echo "Available targets:"
@@ -23,6 +34,8 @@ help:
 	@echo "  test     Run tests with race detector"
 	@echo "  lint     Run golangci-lint"
 	@echo "  check    Run tests and lint"
+	@echo "  cover    Run tests with coverage report"
+	@echo "  bench    Run benchmarks (benchstat-compatible output)"
 	@echo "  install  Install wen to GOPATH/bin"
-	@echo "  clean    Remove built binary"
+	@echo "  clean    Remove built binary and reports"
 	@echo "  help     Show this help"

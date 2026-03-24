@@ -3,6 +3,7 @@ package wen
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -15,6 +16,7 @@ func date(year int, month time.Month, day int) time.Time {
 }
 
 func TestRelativeDay(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  time.Time
@@ -39,6 +41,7 @@ func TestRelativeDay(t *testing.T) {
 }
 
 func TestModWeekday(t *testing.T) {
+	t.Parallel()
 	// ref = Wednesday March 18, 2026
 	tests := []struct {
 		input string
@@ -78,6 +81,7 @@ func TestModWeekday(t *testing.T) {
 }
 
 func TestRelativeOffset(t *testing.T) {
+	t.Parallel()
 	// ref = Wednesday March 18, 2026 14:30 UTC
 	tests := []struct {
 		input string
@@ -115,6 +119,7 @@ func TestRelativeOffset(t *testing.T) {
 }
 
 func TestCountedWeekday(t *testing.T) {
+	t.Parallel()
 	// ref = Wednesday March 18, 2026
 	tests := []struct {
 		input string
@@ -140,6 +145,7 @@ func TestCountedWeekday(t *testing.T) {
 }
 
 func TestLexer(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input  string
 		tokens []token
@@ -325,6 +331,7 @@ func TestLexer(t *testing.T) {
 }
 
 func TestAbsoluteDate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  time.Time
@@ -355,6 +362,7 @@ func TestAbsoluteDate(t *testing.T) {
 }
 
 func TestPeriodRef(t *testing.T) {
+	t.Parallel()
 	// ref = Wednesday March 18, 2026
 	// Sunday of this week = March 15
 	tests := []struct {
@@ -397,6 +405,7 @@ func TestPeriodRef(t *testing.T) {
 }
 
 func TestTimeExpr(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  time.Time
@@ -434,6 +443,7 @@ func TestTimeExpr(t *testing.T) {
 }
 
 func TestCombinedExpr(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  time.Time
@@ -462,6 +472,7 @@ func TestCombinedExpr(t *testing.T) {
 }
 
 func TestErrors(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input    string
 		wantPos  int
@@ -506,6 +517,7 @@ func TestErrors(t *testing.T) {
 }
 
 func TestEdgeCases(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -577,6 +589,7 @@ func TestEdgeCases(t *testing.T) {
 }
 
 func TestOrdinalWeekdayInMonth(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		ref   time.Time
@@ -628,6 +641,7 @@ func TestOrdinalWeekdayInMonth(t *testing.T) {
 }
 
 func TestParseConvenience(t *testing.T) {
+	t.Parallel()
 	// Smoke test for Parse() - just verify it doesn't error on valid input
 	_, err := Parse("tomorrow")
 	if err != nil {
@@ -645,19 +659,69 @@ func FuzzParse(f *testing.F) {
 		"beginning of next week", "end of this month",
 		"at noon", "at 3pm", "march 15 at 15:30",
 		"in 3 fridays",
-		"", "   ", "not a date", "999999999 days ago",
+		"", "   ", "not a date",
 		"the the the", "at at at", "next next next",
+		"999999999 days ago", // extreme offset — intentionally outside range check
 	}
 	for _, s := range seeds {
 		f.Add(s)
 	}
-	f.Fuzz(func(_ *testing.T, input string) {
-		// Must not panic regardless of input.
-		_, _ = ParseRelative(input, ref)
+
+	// Reasonable bounds: a successful parse should not produce a date
+	// more than 200 years from the reference time.
+	const maxYears = 200
+	lower := ref.AddDate(-maxYears, 0, 0)
+	upper := ref.AddDate(maxYears, 0, 0)
+
+	f.Fuzz(func(t *testing.T, input string) {
+		got, err := ParseRelative(input, ref)
+		if err != nil {
+			return // parse failures are fine — we only assert on successes
+		}
+
+		// Property 1: result must not be the zero time.
+		if got.IsZero() {
+			t.Errorf("ParseRelative(%q) returned zero time without error", input)
+		}
+
+		// Property 2: result should be within a reasonable range of the reference.
+		// Log (don't fail) extreme dates — intentional seeds like "999999999 days ago"
+		// produce valid but extreme results.
+		if got.Before(lower) || got.After(upper) {
+			t.Logf("ParseRelative(%q) = %v, outside reasonable window of %v",
+				input, got, ref)
+		}
+
+		// Property 3: successful ParseMulti must also not panic and must
+		// return at least one result.
+		results, err := ParseMulti(input, ref)
+		if err == nil && len(results) == 0 {
+			t.Errorf("ParseMulti(%q) returned 0 results without error", input)
+		}
 	})
 }
 
+func TestParseConcurrentSafety(t *testing.T) {
+	t.Parallel()
+	inputs := []string{
+		"tomorrow", "next friday", "in 3 days", "march 15 2026",
+		"last monday", "end of quarter", "every friday in april",
+		"first monday of march", "2 weeks ago", "at noon",
+	}
+	var wg sync.WaitGroup
+	for i := range 100 {
+		input := inputs[i%len(inputs)]
+		wg.Go(func() {
+			// ParseRelative and ParseMulti must be safe for concurrent use.
+			_, _ = ParseRelative(input, ref)
+			_, _ = ParseMulti(input, ref)
+		})
+	}
+	wg.Wait()
+}
+
 func TestValidation(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -683,6 +747,7 @@ func TestValidation(t *testing.T) {
 }
 
 func TestBoundaryQuarterYear(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  time.Time
@@ -713,6 +778,7 @@ func TestBoundaryQuarterYear(t *testing.T) {
 }
 
 func TestFiscalYearQuarters(t *testing.T) {
+	t.Parallel()
 	// ref = March 18, 2026
 	// With fiscal year starting in October:
 	// FY Q1 = Oct-Dec, Q2 = Jan-Mar, Q3 = Apr-Jun, Q4 = Jul-Sep
@@ -770,6 +836,7 @@ func TestFiscalYearQuarters(t *testing.T) {
 }
 
 func TestOrdinalWeekdayNextMonth(t *testing.T) {
+	t.Parallel()
 	// ref = March 18, 2026
 	// Next month = April 2026, starts on Wednesday
 	// Mondays in April: 6, 13, 20, 27
@@ -796,6 +863,7 @@ func TestOrdinalWeekdayNextMonth(t *testing.T) {
 }
 
 func TestEveryWeekdayInMonth(t *testing.T) {
+	t.Parallel()
 	// ref = March 18, 2026
 	// Fridays in April 2026: 3, 10, 17, 24
 	got, err := ParseMulti("every friday in april", ref)
@@ -819,6 +887,7 @@ func TestEveryWeekdayInMonth(t *testing.T) {
 }
 
 func TestEveryWeekdayInMonthWithYear(t *testing.T) {
+	t.Parallel()
 	got, err := ParseMulti("every monday in march 2027", ref)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -843,6 +912,7 @@ func TestEveryWeekdayInMonthWithYear(t *testing.T) {
 }
 
 func TestParseMultiFallsBack(t *testing.T) {
+	t.Parallel()
 	// Single-date expressions should still work via ParseMulti
 	got, err := ParseMulti("next friday", ref)
 	if err != nil {
@@ -854,6 +924,7 @@ func TestParseMultiFallsBack(t *testing.T) {
 }
 
 func TestWithPeriodStartExplicit(t *testing.T) {
+	t.Parallel()
 	// Verify explicit WithPeriodStart matches default behavior
 	r := time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC)
 	got1, _ := ParseRelative("next week", r)
@@ -864,6 +935,7 @@ func TestWithPeriodStartExplicit(t *testing.T) {
 }
 
 func TestFiscalQuarter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		month      int
@@ -913,6 +985,7 @@ func TestFiscalQuarter(t *testing.T) {
 }
 
 func TestBoundaryConditions(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -1008,6 +1081,7 @@ func TestBoundaryConditions(t *testing.T) {
 }
 
 func TestContextCancellation(t *testing.T) {
+	t.Parallel()
 	t.Run("cancelled context returns error", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
@@ -1057,6 +1131,7 @@ func TestContextCancellation(t *testing.T) {
 }
 
 func TestTruncateDay(t *testing.T) {
+	t.Parallel()
 	input := time.Date(2026, 3, 18, 14, 30, 45, 123, time.UTC)
 	got := TruncateDay(input)
 	want := time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC)
@@ -1073,6 +1148,7 @@ func TestTruncateDay(t *testing.T) {
 }
 
 func TestDaysIn(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		year  int
 		month time.Month
@@ -1092,6 +1168,7 @@ func TestDaysIn(t *testing.T) {
 }
 
 func TestNonASCIIInput(t *testing.T) {
+	t.Parallel()
 	// Non-ASCII input should not panic and should return an error (not a recognized expression).
 	// The key behavior: "mañana" should be lexed as a single unknown token, not split on ñ.
 	inputs := []string{"mañana", "demain", "übermorgen", "日曜日"}
@@ -1106,6 +1183,7 @@ func TestNonASCIIInput(t *testing.T) {
 }
 
 func TestErrorPaths(t *testing.T) {
+	t.Parallel()
 	ref := time.Date(2026, 3, 18, 14, 30, 0, 0, time.UTC)
 
 	tests := []struct {

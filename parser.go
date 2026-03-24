@@ -6,6 +6,36 @@ import (
 	"time"
 )
 
+// Grammar (informal BNF):
+//
+//   input        = dateExpr [timeExpr] | timeExpr
+//   dateExpr     = relativeDay
+//                | [modifier] weekday
+//                | modifier ("week" | "month")
+//                | "in" number (weekday | unit)
+//                | number unit ("ago" | "from" "now")
+//                | ordinal weekday [prep] (month [year] | modifier "month")
+//                | "last" weekday prep month [year]
+//                | month (day [year] | year)
+//                | boundary "of" [modifier] ("week" | "month" | "quarter" | "year")
+//   multiExpr    = "every" weekday [prep] month [year]
+//   timeExpr     = ["at"] (namedTime | number ":" number [meridiem] | number meridiem | "at" number)
+//   relativeDay  = "today" | "tomorrow" | "yesterday"
+//   modifier     = "this" | "next" | "last"
+//   boundary     = "beginning" | "end"
+//   prep         = "in" | "of"
+//   namedTime    = "noon" | "midnight"
+//   meridiem     = "am" | "pm"
+//   ordinal      = "first" | "1st" | ... | "twelfth" | "12th"
+//   number       = digit+ | "one" | "two" | ... | "thirty"
+//   unit         = "day" | "week" | "month" | "quarter" | "year" | "hour" | "minute"
+//   day          = number | ordinal
+//   year         = number (> 31)
+//   weekday      = "monday" | ... | "sunday"
+//   month        = "january" | ... | "december"
+//
+// Noise words ("the", "a") are silently skipped between tokens.
+
 // maxDayOfMonth is the maximum valid day number; values above this are treated as years.
 const maxDayOfMonth = 31
 
@@ -71,6 +101,33 @@ func TruncateDay(t time.Time) time.Time {
 // DaysIn returns the number of days in the given month and year.
 func DaysIn(year int, month time.Month, loc *time.Location) int {
 	return time.Date(year, month+1, 0, 0, 0, 0, 0, loc).Day()
+}
+
+// shiftMonth shifts a month by delta and adjusts the year on
+// overflow (>12) or underflow (<1).
+func shiftMonth(month time.Month, year, delta int) (time.Month, int) {
+	m := int(month) + delta
+	for m > 12 {
+		m -= 12
+		year++
+	}
+	for m < 1 {
+		m += 12
+		year--
+	}
+	return time.Month(m), year
+}
+
+// modifierDelta converts "next"/"last"/"this" to +1/-1/0.
+func modifierDelta(modifier string) int {
+	switch modifier {
+	case "next":
+		return 1
+	case "last":
+		return -1
+	default:
+		return 0
+	}
 }
 
 func (p *parser) parse() (time.Time, error) {
@@ -370,24 +427,7 @@ func (p *parser) parseOrdinalWeekdayInMonth() (time.Time, bool) {
 		if p.peek().Kind == tokenUnit && p.peek().Value == "month" {
 			p.advance()
 			ref := TruncateDay(p.ref)
-			var targetMonth time.Month
-			targetYear := ref.Year()
-			switch mod.Value {
-			case "this":
-				targetMonth = ref.Month()
-			case "next":
-				targetMonth = ref.Month() + 1
-				if targetMonth > 12 {
-					targetMonth = 1
-					targetYear++
-				}
-			case "last":
-				targetMonth = ref.Month() - 1
-				if targetMonth < 1 {
-					targetMonth = 12
-					targetYear--
-				}
-			}
+			targetMonth, targetYear := shiftMonth(ref.Month(), ref.Year(), modifierDelta(mod.Value))
 			return p.resolveOrdinalWeekdayInMonth(ordinal.IntVal, weekday.Weekday, targetMonth, targetYear)
 		}
 		p.restore(modSaved)
@@ -553,22 +593,14 @@ func (p *parser) resolvePeriodRef(modifier, unit string) (time.Time, bool) {
 		}
 
 	case "month":
-		firstOfMonth := time.Date(ref.Year(), ref.Month(), 1, 0, 0, 0, 0, ref.Location())
-
-		switch modifier {
-		case "this":
-			return firstOfMonth, true
-		case "next":
-			if p.opts.periodMode == PeriodSame {
-				return ref.AddDate(0, 1, 0), true
-			}
-			return firstOfMonth.AddDate(0, 1, 0), true
-		case "last":
-			if p.opts.periodMode == PeriodSame {
-				return ref.AddDate(0, -1, 0), true
-			}
-			return firstOfMonth.AddDate(0, -1, 0), true
+		delta := modifierDelta(modifier)
+		// PeriodSame uses AddDate to preserve day-of-month rollover semantics
+		// (e.g., Jan 31 + 1 month = Mar 3).
+		if p.opts.periodMode == PeriodSame && delta != 0 {
+			return ref.AddDate(0, delta, 0), true
 		}
+		targetMonth, targetYear := shiftMonth(ref.Month(), ref.Year(), delta)
+		return time.Date(targetYear, targetMonth, 1, 0, 0, 0, 0, ref.Location()), true
 	}
 	p.recordError(p.makeError("week", "month"))
 	return time.Time{}, false
@@ -628,24 +660,7 @@ func (p *parser) resolveBoundary(boundary, modifier, unit string) (time.Time, bo
 		return sunday.AddDate(0, 0, 6).Add(23*time.Hour + 59*time.Minute + 59*time.Second), true
 
 	case "month":
-		var targetMonth time.Month
-		targetYear := ref.Year()
-		switch modifier {
-		case "this":
-			targetMonth = ref.Month()
-		case "next":
-			targetMonth = ref.Month() + 1
-			if targetMonth > 12 {
-				targetMonth = 1
-				targetYear++
-			}
-		case "last":
-			targetMonth = ref.Month() - 1
-			if targetMonth < 1 {
-				targetMonth = 12
-				targetYear--
-			}
-		}
+		targetMonth, targetYear := shiftMonth(ref.Month(), ref.Year(), modifierDelta(modifier))
 		if boundary == "beginning" {
 			return time.Date(targetYear, targetMonth, 1, 0, 0, 0, 0, loc), true
 		}

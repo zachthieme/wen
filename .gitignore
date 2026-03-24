@@ -1,3 +1,5 @@
 /wen
 docs/superpowers/
 .worktrees/
+coverage.out
+bench.txt

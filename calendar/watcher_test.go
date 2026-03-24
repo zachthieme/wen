@@ -8,7 +8,14 @@ import (
 	"time"
 )
 
+// watchTimeout is a generous deadline for filesystem-event tests so they
+// don't flake on loaded CI runners.
+const watchTimeout = 30 * time.Second
+
 func TestWatchLoopDetectsFileChange(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping filesystem watcher test in short mode")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "dates.json")
 
@@ -55,12 +62,15 @@ func TestWatchLoopDetectsFileChange(t *testing.T) {
 		}
 		// Clean up watcher
 		_ = msg.watcher.Close()
-	case <-time.After(5 * time.Second):
+	case <-time.After(watchTimeout):
 		t.Fatal("timed out waiting for file change detection")
 	}
 }
 
 func TestWatchLoopFileDeleted(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping filesystem watcher test in short mode")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "dates.json")
 
@@ -95,7 +105,7 @@ func TestWatchLoopFileDeleted(t *testing.T) {
 			t.Errorf("expected nil dates after deletion, got %d dates", len(msg.dates))
 		}
 		_ = msg.watcher.Close()
-	case <-time.After(5 * time.Second):
+	case <-time.After(watchTimeout):
 		t.Fatal("timed out waiting for delete detection")
 	}
 }
@@ -113,6 +123,9 @@ func TestStartFileWatcherMissingParentDir(t *testing.T) {
 }
 
 func TestWaitForNextChange(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping filesystem watcher test in short mode")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "dates.json")
 
@@ -166,10 +179,10 @@ func TestWaitForNextChange(t *testing.T) {
 				t.Errorf("expected 2 dates on second change, got %d", len(msg2.dates))
 			}
 			_ = msg2.watcher.Close()
-		case <-time.After(5 * time.Second):
+		case <-time.After(watchTimeout):
 			t.Fatal("timed out waiting for second file change")
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(watchTimeout):
 		t.Fatal("timed out waiting for first file change")
 	}
 }

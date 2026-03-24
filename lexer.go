@@ -216,9 +216,12 @@ func (l *lexer) followedByLetter(pos int) bool {
 	return pos < len(l.lower) && isLetter(l.lower[pos])
 }
 
-// isLetter reports whether ch is a letter byte. It includes non-ASCII bytes
-// (0x80+) so that multi-byte UTF-8 characters are kept together as part of a
-// single word token rather than splitting on non-ASCII boundaries.
+// isLetter reports whether ch is a letter byte. Only lowercase ASCII letters
+// are recognized (the lexer operates on lowercased input). Non-ASCII bytes
+// (0x80+) are included so that multi-byte UTF-8 characters are kept together
+// as part of a single word token rather than splitting on non-ASCII boundaries.
+// The parser is English-only by design; non-ASCII words are lexed intact but
+// classified as tokenUnknown.
 func isLetter(ch byte) bool {
 	return (ch >= 'a' && ch <= 'z') || ch > 127
 }
