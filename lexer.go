@@ -227,12 +227,13 @@ func isOrdinalSuffix(s string) bool {
 	return s == "st" || s == "nd" || s == "rd" || s == "th"
 }
 
-// atoi converts a digit-only string to int. Panics if s contains non-digit
-// characters — callers must guarantee s is all digits (e.g., from scanNumber).
+// atoi converts a digit-only string to int. Returns 0 on overflow, which is
+// harmless since no valid date component is zero. Callers must guarantee s is
+// all digits (e.g., from scanNumber).
 func atoi(s string) int {
 	val, err := strconv.Atoi(s)
 	if err != nil {
-		panic("wen: atoi called with non-numeric input: " + s)
+		return 0 // overflow — digit string too large for int
 	}
 	return val
 }
