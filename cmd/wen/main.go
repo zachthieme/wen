@@ -358,21 +358,28 @@ func runDiff(ctx appContext, args []string) error {
 		w := totalDays / 7
 		rem := totalDays % 7
 		if rem != 0 {
-			fmt.Fprintf(ctx.w, "%d weeks, %d days\n", w, rem)
+			fmt.Fprintf(ctx.w, "%d %s, %d %s\n", w, plural(w, "week"), rem, plural(rem, "day"))
 		} else {
-			fmt.Fprintf(ctx.w, "%d weeks\n", w)
+			fmt.Fprintf(ctx.w, "%d %s\n", w, plural(w, "week"))
 		}
 	case workdays:
 		wd := countWorkdays(d1, d2)
-		fmt.Fprintf(ctx.w, "%d workdays\n", wd)
+		fmt.Fprintf(ctx.w, "%d %s\n", wd, plural(wd, "workday"))
 	default:
 		totalDays := int(d2.Sub(d1).Hours() / 24)
 		if totalDays < 0 {
 			totalDays = -totalDays
 		}
-		fmt.Fprintf(ctx.w, "%d days\n", totalDays)
+		fmt.Fprintf(ctx.w, "%d %s\n", totalDays, plural(totalDays, "day"))
 	}
 	return nil
+}
+
+func plural(n int, singular string) string {
+	if n == 1 {
+		return singular
+	}
+	return singular + "s"
 }
 
 func countWorkdays(start, end time.Time) int {
