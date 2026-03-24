@@ -155,20 +155,15 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// closeWatcher closes the active fsnotify watcher if one exists, unblocking
-// the watcher goroutine so it can exit cleanly.
-func (m *Model) closeWatcher() {
-	if m.activeWatcher != nil {
-		_ = m.activeWatcher.Close()
-		m.activeWatcher = nil
-	}
-}
-
 // Update handles input messages and updates model state.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
+		return m, nil
+	case watcherErrMsg:
+		// File watching failed silently — degrade gracefully.
+		return m, nil
 	case midnightTickMsg:
 		now := time.Now()
 		m.today = stripTime(now)
@@ -181,7 +176,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, m.keys.ForceQuit):
 			m.quit = true
-			m.closeWatcher()
+			if m.activeWatcher != nil {
+				_ = m.activeWatcher.Close()
+				m.activeWatcher = nil
+			}
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.VisualSelect):
 			anchor := m.cursor
@@ -189,7 +187,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case key.Matches(msg, m.keys.Select):
 			m.selected = true
-			m.closeWatcher()
+			if m.activeWatcher != nil {
+				_ = m.activeWatcher.Close()
+				m.activeWatcher = nil
+			}
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Quit):
 			if m.rangeAnchor != nil {
@@ -197,7 +198,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.quit = true
-			m.closeWatcher()
+			if m.activeWatcher != nil {
+				_ = m.activeWatcher.Close()
+				m.activeWatcher = nil
+			}
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Left):
 			m.cursor = m.cursor.AddDate(0, 0, -1)

@@ -18,6 +18,9 @@ type highlightChangedMsg struct {
 	path    string
 }
 
+// watcherErrMsg is sent when the file watcher encounters an error.
+type watcherErrMsg struct{ err error }
+
 // startFileWatcher returns a tea.Cmd that creates an fsnotify watcher on the
 // parent directory of path, waits for a change to the target file, and returns
 // a highlightChangedMsg with the reloaded dates.
@@ -25,12 +28,12 @@ func startFileWatcher(path string) tea.Cmd {
 	return func() tea.Msg {
 		watcher, err := fsnotify.NewWatcher()
 		if err != nil {
-			return nil
+			return watcherErrMsg{err: err}
 		}
 		dir := filepath.Dir(path)
 		if err := watcher.Add(dir); err != nil {
 			_ = watcher.Close()
-			return nil
+			return watcherErrMsg{err: err}
 		}
 		return watchLoop(watcher, path)
 	}
@@ -48,10 +51,8 @@ func waitForNextChange(watcher *fsnotify.Watcher, path string) tea.Cmd {
 // and returns a highlightChangedMsg when the target file changes.
 func watchLoop(watcher *fsnotify.Watcher, path string) tea.Msg {
 	target := filepath.Base(path)
-	debounce := time.NewTimer(0)
-	if !debounce.Stop() {
-		<-debounce.C
-	}
+	debounce := time.NewTimer(time.Hour)
+	debounce.Stop()
 	triggered := false
 
 	for {

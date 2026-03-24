@@ -105,10 +105,10 @@ func TestStartFileWatcherMissingParentDir(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd")
 	}
-	// The cmd should return nil when it can't watch
+	// The cmd should return a watcherErrMsg when it can't watch
 	msg := cmd()
-	if msg != nil {
-		t.Errorf("expected nil msg for missing parent dir, got %T", msg)
+	if _, ok := msg.(watcherErrMsg); !ok {
+		t.Errorf("expected watcherErrMsg for missing parent dir, got %T", msg)
 	}
 }
 
