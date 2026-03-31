@@ -44,6 +44,13 @@ func stripWindow(year int, month time.Month, weekStartDay int, loc *time.Locatio
 	return start, end
 }
 
+// dayCount returns the number of days from a to b, inclusive.
+func dayCount(a, b time.Time) int {
+	aUTC := dateKey(a)
+	bUTC := dateKey(b)
+	return int(bUTC.Sub(aUTC).Hours()/24) + 1
+}
+
 // renderStripDayHeaders produces the first row of the strip: a 3-character
 // leading space followed by repeating day-of-week abbreviations for each day
 // from start to end (inclusive).

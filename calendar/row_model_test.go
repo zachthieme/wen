@@ -143,6 +143,46 @@ func TestRowViewHelpBar(t *testing.T) {
 	}
 }
 
+func TestRowVisibleWindowFitsFullStrip(t *testing.T) {
+	t.Parallel()
+	m := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig())
+	m.termWidth = 200 // wider than any strip
+	output := m.View()
+	// Full March strip should have all 31 days
+	if !strings.Contains(output, "31") {
+		t.Error("expected full strip with day 31")
+	}
+}
+
+func TestRowVisibleWindowTrimmed(t *testing.T) {
+	t.Parallel()
+	m := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig())
+	m.termWidth = 50 // narrow: fits (50-2)/3 = 16 days
+	output := m.View()
+	// Cursor (15) should be visible
+	if !strings.Contains(output, "15") {
+		t.Error("expected cursor day 15 in narrow view")
+	}
+	// Day 1 might not be visible (cursor centered)
+	// Strip should be narrower than 50
+	lines := strings.Split(output, "\n")
+	// Should have fewer columns than full strip (107 chars)
+	if len(lines[0]) > 0 && len(lines[0]) > 60 {
+		t.Errorf("trimmed strip should be narrower, got %d chars", len(lines[0]))
+	}
+}
+
+func TestRowVisibleWindowResize(t *testing.T) {
+	t.Parallel()
+	m := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig())
+	// Simulate resize
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 60, Height: 24})
+	m = updated.(RowModel)
+	if m.termWidth != 60 {
+		t.Errorf("termWidth = %d, want 60", m.termWidth)
+	}
+}
+
 func TestRowViewNoHelpByDefault(t *testing.T) {
 	t.Parallel()
 	cursor := date(2026, time.March, 15)

@@ -28,6 +28,7 @@ type RowModel struct {
 	help             help.Model
 	styles           resolvedStyles
 	showHelp         bool
+	termWidth        int
 }
 
 // RowModelOption configures optional RowModel properties.
@@ -130,6 +131,7 @@ func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
+		m.termWidth = msg.Width
 		return m, nil
 	case watcherErrMsg:
 		return m, nil
@@ -199,11 +201,40 @@ func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// visibleWindow trims the full strip window to fit within the terminal width,
+// centering on the cursor. If the full window fits, it is returned unchanged.
+func (m RowModel) visibleWindow(fullStart, fullEnd time.Time) (time.Time, time.Time) {
+	availWidth := m.termWidth - m.config.PaddingLeft - m.config.PaddingRight
+	if availWidth <= 0 {
+		return fullStart, fullEnd
+	}
+
+	totalDays := dayCount(fullStart, fullEnd)
+	// Each day is 3 chars (2-char name/number + 1 space) except the last (2 chars).
+	// Plus 3-char prefix. Total for N days: 3*N + 2.
+	maxDays := (availWidth - 2) / 3
+	if maxDays <= 0 {
+		maxDays = 1
+	}
+	if totalDays <= maxDays {
+		return fullStart, fullEnd
+	}
+
+	cursorOffset := dayCount(fullStart, m.cursor) - 1 // 0-indexed
+	startOffset := max(cursorOffset-maxDays/2, 0)
+	if startOffset+maxDays > totalDays {
+		startOffset = totalDays - maxDays
+	}
+
+	return fullStart.AddDate(0, 0, startOffset), fullStart.AddDate(0, 0, startOffset+maxDays-1)
+}
+
 // View produces the strip calendar view string for the model state.
 func (m RowModel) View() string {
 	year, month, _ := m.cursor.Date()
 	loc := m.cursor.Location()
-	start, end := stripWindow(year, month, m.config.WeekStartDay, loc)
+	fullStart, fullEnd := stripWindow(year, month, m.config.WeekStartDay, loc)
+	start, end := m.visibleWindow(fullStart, fullEnd)
 
 	var b strings.Builder
 	b.WriteString(m.renderStripDayHeaders(start, end))
