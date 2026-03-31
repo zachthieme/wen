@@ -1,6 +1,7 @@
 package calendar
 
 import (
+	"strings"
 	"time"
 
 	"github.com/zachthieme/wen"
@@ -76,31 +77,137 @@ func (m RowModel) Selected() bool { return m.selected }
 // Cursor returns the currently selected date.
 func (m RowModel) Cursor() time.Time { return m.cursor }
 
-// Init is a stub that satisfies the tea.Model interface.
-// Will be fully implemented in a later task.
-func (m RowModel) Init() tea.Cmd {
-	if m.activeWatcher != nil {
-		// Placeholder: watcher integration comes in a later task.
-		_ = m.activeWatcher
-	}
-	return nil
+// InRange reports whether the user confirmed a multi-day range selection.
+func (m RowModel) InRange() bool {
+	return m.selected && m.rangeAnchor != nil && !m.rangeAnchor.Equal(m.cursor)
 }
 
-// Update is a stub that satisfies the tea.Model interface.
-// Will be fully implemented in a later task.
+// RangeStart returns the earlier date of the confirmed range, or zero if no range.
+func (m RowModel) RangeStart() time.Time {
+	if !m.InRange() {
+		return time.Time{}
+	}
+	if m.rangeAnchor.Before(m.cursor) {
+		return *m.rangeAnchor
+	}
+	return m.cursor
+}
+
+// RangeEnd returns the later date of the confirmed range, or zero if no range.
+func (m RowModel) RangeEnd() time.Time {
+	if !m.InRange() {
+		return time.Time{}
+	}
+	if m.rangeAnchor.After(m.cursor) {
+		return *m.rangeAnchor
+	}
+	return m.cursor
+}
+
+// Init schedules the midnight tick and, if a highlight source path is configured,
+// starts an fsnotify file watcher.
+func (m RowModel) Init() tea.Cmd {
+	var cmds []tea.Cmd
+	cmds = append(cmds, scheduleMidnightTick(m.today))
+	if m.highlightPath != "" {
+		cmds = append(cmds, startFileWatcher(m.highlightPath))
+	}
+	return tea.Batch(cmds...)
+}
+
+// Update handles input messages and updates model state.
 func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	_ = msg
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.help.Width = msg.Width
+		return m, nil
+	case watcherErrMsg:
+		return m, nil
+	case midnightTickMsg:
+		now := time.Now()
+		m.today = wen.TruncateDay(now)
+		return m, scheduleMidnightTick(now)
+	case highlightChangedMsg:
+		m.highlightedDates = msg.dates
+		m.activeWatcher = msg.watcher
+		return m, waitForNextChange(msg.watcher, msg.path)
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, m.keys.ForceQuit):
+			m.quit = true
+			if m.activeWatcher != nil {
+				_ = m.activeWatcher.Close()
+				m.activeWatcher = nil
+			}
+			return m, tea.Quit
+		case key.Matches(msg, m.keys.VisualSelect):
+			anchor := m.cursor
+			m.rangeAnchor = &anchor
+			return m, nil
+		case key.Matches(msg, m.keys.Select):
+			m.selected = true
+			if m.activeWatcher != nil {
+				_ = m.activeWatcher.Close()
+				m.activeWatcher = nil
+			}
+			return m, tea.Quit
+		case key.Matches(msg, m.keys.Quit):
+			if m.rangeAnchor != nil {
+				m.rangeAnchor = nil
+				return m, nil
+			}
+			m.quit = true
+			if m.activeWatcher != nil {
+				_ = m.activeWatcher.Close()
+				m.activeWatcher = nil
+			}
+			return m, tea.Quit
+		case key.Matches(msg, m.keys.Left):
+			m.cursor = m.cursor.AddDate(0, 0, -1)
+		case key.Matches(msg, m.keys.Right):
+			m.cursor = m.cursor.AddDate(0, 0, 1)
+		case key.Matches(msg, m.keys.PrevMonth):
+			m.cursor = shiftDate(m.cursor, 0, -1)
+		case key.Matches(msg, m.keys.NextMonth):
+			m.cursor = shiftDate(m.cursor, 0, 1)
+		case key.Matches(msg, m.keys.Today):
+			m.cursor = m.today
+		case key.Matches(msg, m.keys.WeekStart):
+			m.cursor = weekStartDate(m.cursor, m.config.WeekStartDay)
+		case key.Matches(msg, m.keys.WeekEnd):
+			m.cursor = weekEndDate(m.cursor, m.config.WeekStartDay)
+		case key.Matches(msg, m.keys.MonthStart):
+			y, mo, _ := m.cursor.Date()
+			m.cursor = time.Date(y, mo, 1, 0, 0, 0, 0, m.cursor.Location())
+		case key.Matches(msg, m.keys.MonthEnd):
+			y, mo, _ := m.cursor.Date()
+			m.cursor = time.Date(y, mo+1, 0, 0, 0, 0, 0, m.cursor.Location())
+		case key.Matches(msg, m.keys.ToggleHelp):
+			m.showHelp = !m.showHelp
+		}
+	}
 	return m, nil
 }
 
-// View is a stub that satisfies the tea.Model interface.
-// Will be fully implemented in a later task.
+// View produces the strip calendar view string for the model state.
 func (m RowModel) View() string {
+	year, month, _ := m.cursor.Date()
+	loc := m.cursor.Location()
+	start, end := stripWindow(year, month, m.config.WeekStartDay, loc)
+
+	var b strings.Builder
+	b.WriteString(m.renderStripDayHeaders(start, end))
+	b.WriteString("\n")
+	b.WriteString(m.renderStripDays(start, end))
+	b.WriteString("\n")
+
 	if m.showHelp {
-		// Placeholder: help rendering comes in a later task.
-		_ = m.help.View(m.keys)
+		b.WriteString("\n")
+		b.WriteString(m.help.View(m.keys))
+		b.WriteString("\n")
 	}
-	return ""
+
+	return m.styles.padding.Render(b.String())
 }
 
 type rowKeyMap struct {

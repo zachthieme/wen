@@ -9,6 +9,27 @@ import (
 // monthAbbrevs provides 2-character month abbreviations for the strip row view.
 var monthAbbrevs = [12]string{"Ja", "Fe", "Mr", "Ap", "My", "Jn", "Jl", "Au", "Se", "Oc", "No", "De"}
 
+// weekStartDate returns the configured week-start-day on or before t.
+// If t is already on the week-start-day, returns the previous week's start.
+func weekStartDate(t time.Time, weekStartDay int) time.Time {
+	offset := (int(t.Weekday()) - weekStartDay + 7) % 7
+	if offset == 0 {
+		offset = 7
+	}
+	return t.AddDate(0, 0, -offset)
+}
+
+// weekEndDate returns the configured week-end-day on or after t.
+// If t is already on the week-end-day, returns the next week's end.
+func weekEndDate(t time.Time, weekStartDay int) time.Time {
+	weekEndDay := (weekStartDay + 6) % 7
+	offset := (weekEndDay - int(t.Weekday()) + 7) % 7
+	if offset == 0 {
+		offset = 7
+	}
+	return t.AddDate(0, 0, offset)
+}
+
 // stripWindow computes the week-aligned start and end dates for a strip view
 // of the given month. The window starts on weekStartDay on or before the 1st,
 // and ends the day before the next weekStartDay on or after the last day.
