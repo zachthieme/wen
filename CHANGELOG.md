@@ -1,5 +1,37 @@
 # Changelog
 
+### v1.7.0 — March 31, 2026
+
+**New features:**
+- `wen row` subcommand: interactive strip calendar — a compact, horizontal single-month view
+- Vim-style navigation: `h`/`l` (day), `j`/`k` (month), `b`/`e` (week start/end), `0`/`$` (month start/end), `t` (today)
+- Visual range selection (`v` to anchor, navigate, `Enter` to confirm) outputs one or two dates
+- Responsive width: strip auto-trims and centers on cursor when terminal is narrow
+- Highlighted dates and live file watching (`--highlight-file`) supported in strip view
+- Midnight tick keeps "today" indicator accurate across day boundaries
+
+**Bug fixes:**
+- Strip Underline from row styles to fix mosh terminal cursor alignment caused by per-character ANSI wrapping
+
+**Improvements:**
+- Comprehensive test coverage for strip model (navigation, vim motions, range selection, quit/select behavior) and rendering (window calculation, day headers, month abbreviations)
+- CLI integration tests for `wen row` subcommand
+
+---
+
+### v1.6.0 — March 26, 2026
+
+**Improvements:**
+- Informal BNF grammar comment in `parser.go` documenting all productions
+- `shiftMonth()` and `modifierDelta()` helpers eliminate duplicated month overflow/underflow logic
+- Documented `isLetter()` English-only design constraint in lexer
+- `t.Parallel()` added to all eligible tests
+- Coverage CI job, `make cover`/`make bench` targets
+- Hardened watcher tests with longer timeout and `-short` skip
+- Bumped CI actions to Node.js 24
+
+---
+
 ### v1.5.1 — March 24, 2026
 
 **New features:**
