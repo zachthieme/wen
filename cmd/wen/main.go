@@ -55,7 +55,7 @@ func newAppContext(w io.Writer) appContext {
 // isSubcommand reports whether s is a recognized subcommand or flag.
 func isSubcommand(s string) bool {
 	switch s {
-	case "cal", "calendar", "diff", "rel", "relative",
+	case "cal", "calendar", "diff", "rel", "relative", "row",
 		"-h", "--help", "-v", "--version":
 		return true
 	}
@@ -96,6 +96,8 @@ func run(w io.Writer, args []string) error {
 			return nil
 		case "cal", "calendar":
 			return runCalendar(ctx, args[1:])
+		case "row":
+			return runRow(ctx, args[1:])
 		case "diff":
 			return runDiff(ctx, args[1:])
 		case "rel", "relative":
@@ -144,6 +146,7 @@ Usage:
 
 Subcommands:
   wen cal, calendar [month]      Interactive calendar (e.g., wen cal march)
+  wen row [month]               Interactive strip calendar (e.g., wen row march)
   wen diff <date1> <date2>       Show days between two dates
   wen rel, relative <date>       Show human-readable relative distance
 
@@ -161,6 +164,13 @@ Calendar flags:
   -N                   Shorthand for --months N (e.g., -3 for three months)
   --highlight-file P   Path to JSON file with dates to highlight
 
+Strip calendar flags (wen row):
+  --padding-top N      Top padding in lines (default: from config or 0)
+  --padding-right N    Right padding in characters (default: from config or 0)
+  --padding-bottom N   Bottom padding in lines (default: from config or 0)
+  --padding-left N     Left padding in characters (default: from config or 0)
+  --highlight-file P   Path to JSON file with dates to highlight
+
 Diff flags:
   --weeks              Output in weeks instead of days
   --workdays           Output in workdays instead of days
@@ -172,6 +182,17 @@ Calendar keybindings:
   J/K              Next / previous year
   t                Jump to today
   w                Toggle week numbers
+  ?                Toggle help bar
+  Enter            Select date and print to stdout
+  q, Esc, ctrl+c   Quit
+
+Strip calendar keybindings (wen row):
+  h/l, ←/→         Previous / next day
+  b/e               Start / end of week
+  0/$               Start / end of month
+  j/k, ↓/↑         Next / previous month
+  t                Jump to today
+  v                Start range selection
   ?                Toggle help bar
   Enter            Select date and print to stdout
   q, Esc, ctrl+c   Quit
