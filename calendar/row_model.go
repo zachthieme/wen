@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -62,6 +63,9 @@ func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowMode
 		help:   newHelpModel(colors),
 		styles: buildStyles(colors),
 	}
+	m.styles.padding = lipgloss.NewStyle().Padding(
+		cfg.PaddingTop, cfg.PaddingRight, cfg.PaddingBottom, cfg.PaddingLeft,
+	)
 	for _, opt := range opts {
 		opt(&m)
 	}

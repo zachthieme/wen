@@ -32,6 +32,10 @@ func runRow(ctx appContext, args []string) error {
 	}
 
 	cfg := ctx.cfg
+
+	// Print config warnings to stderr.
+	// Note: cfg was already normalized during newAppContext, but we re-normalize
+	// here because runRow needs to apply CLI padding overrides and re-normalize.
 	for _, w := range cfg.Normalize() {
 		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}
