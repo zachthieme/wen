@@ -726,7 +726,7 @@ func TestDiffSameDateFlags(t *testing.T) {
 func TestFormatFlagGuardsAllSubcommands(t *testing.T) {
 	t.Parallel()
 	// Verify all subcommand names are rejected as --format values.
-	subcmds := []string{"cal", "calendar", "diff", "rel", "relative", "--help", "-h", "--version", "-v"}
+	subcmds := []string{"cal", "calendar", "diff", "rel", "relative", "row", "--help", "-h", "--version", "-v"}
 	for _, sub := range subcmds {
 		t.Run(sub, func(t *testing.T) {
 			t.Parallel()
@@ -767,5 +767,27 @@ func TestPlural(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("plural(%d, %q) = %q, want %q", tt.n, tt.word, got, tt.want)
 		}
+	}
+}
+
+func TestRowSubcommandHelp(t *testing.T) {
+	t.Parallel()
+	var buf strings.Builder
+	err := run(&buf, []string{"--help"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := buf.String()
+	if !strings.Contains(got, "wen row") {
+		t.Error("help should mention 'wen row'")
+	}
+}
+
+func TestFormatGuardsRow(t *testing.T) {
+	t.Parallel()
+	var buf strings.Builder
+	err := run(&buf, []string{"--format", "row"})
+	if err == nil {
+		t.Error("expected error when --format value is 'row'")
 	}
 }
