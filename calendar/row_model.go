@@ -22,7 +22,7 @@ type RowModel struct {
 	rangeAnchor      *time.Time
 	highlightedDates map[time.Time]bool
 	highlightPath    string
-	activeWatcher    *fsnotify.Watcher
+	activeWatcher    *fsnotify.Watcher // closed on quit to unblock watcher goroutine
 	config           Config
 	keys             rowKeyMap
 	help             help.Model
@@ -134,6 +134,7 @@ func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.termWidth = msg.Width
 		return m, nil
 	case watcherErrMsg:
+		// File watching failed silently — degrade gracefully.
 		return m, nil
 	case midnightTickMsg:
 		now := time.Now()

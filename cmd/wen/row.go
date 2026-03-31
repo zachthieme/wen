@@ -34,12 +34,14 @@ func runRow(ctx appContext, args []string) error {
 	cfg := ctx.cfg
 
 	// Print config warnings to stderr.
-	// Note: cfg was already normalized during newAppContext, but we re-normalize
-	// here because runRow needs to apply CLI padding overrides and re-normalize.
+	// Note: cfg was already normalized during newAppContext, but we re-load
+	// here because runRow needs to apply CLI padding overrides and
+	// re-normalize. We use the already-loaded cfg to avoid a second disk read.
 	for _, w := range cfg.Normalize() {
 		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}
 
+	// Override config padding with explicitly-set CLI flags.
 	fs.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "padding-top":
@@ -53,6 +55,7 @@ func runRow(ctx appContext, args []string) error {
 		}
 	})
 
+	// Re-normalize after CLI overrides to clamp padding values.
 	for _, w := range cfg.Normalize() {
 		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}

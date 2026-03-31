@@ -146,7 +146,7 @@ Usage:
 
 Subcommands:
   wen cal, calendar [month]      Interactive calendar (e.g., wen cal march)
-  wen row [month]               Interactive strip calendar (e.g., wen row march)
+  wen row [month]                Interactive strip calendar (e.g., wen row march)
   wen diff <date1> <date2>       Show days between two dates
   wen rel, relative <date>       Show human-readable relative distance
 
