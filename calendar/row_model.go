@@ -66,6 +66,12 @@ func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowMode
 	m.styles.padding = lipgloss.NewStyle().Padding(
 		cfg.PaddingTop, cfg.PaddingRight, cfg.PaddingBottom, cfg.PaddingLeft,
 	)
+	// Strip Underline from row styles. lipgloss renders Underline per-character
+	// (each char gets its own ANSI open/close), which causes terminals like mosh
+	// to miscalculate cursor positions and misalign the strip columns.
+	m.styles.today = m.styles.today.Underline(false)
+	m.styles.cursorToday = m.styles.cursorToday.Underline(false)
+	m.styles.highlight = m.styles.highlight.Underline(false)
 	for _, opt := range opts {
 		opt(&m)
 	}
