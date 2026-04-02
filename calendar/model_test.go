@@ -386,6 +386,20 @@ func TestUpdateHighlightChangedMsgNilDates(t *testing.T) {
 	}
 }
 
+func TestWithJulian(t *testing.T) {
+	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithJulian(true))
+	if !m.julian {
+		t.Error("expected julian to be true")
+	}
+}
+
+func TestWithPrintMode(t *testing.T) {
+	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithPrintMode(true))
+	if !m.printMode {
+		t.Error("expected printMode to be true")
+	}
+}
+
 func TestInitWithHighlightSource(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "dates.json")

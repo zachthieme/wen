@@ -23,6 +23,8 @@ type Model struct {
 	weekNumPos       WeekNumPos
 	showHelp         bool
 	months           int
+	julian           bool
+	printMode        bool
 	highlightedDates map[time.Time]bool
 	highlightPath    string
 	activeWatcher    *fsnotify.Watcher // closed on quit to unblock watcher goroutine
@@ -100,6 +102,20 @@ func WithMonths(n int) ModelOption {
 			n = 1
 		}
 		m.months = n
+	}
+}
+
+// WithJulian enables Julian day-of-year numbering.
+func WithJulian(on bool) ModelOption {
+	return func(m *Model) {
+		m.julian = on
+	}
+}
+
+// WithPrintMode enables non-interactive print mode (suppresses cursor styling).
+func WithPrintMode(on bool) ModelOption {
+	return func(m *Model) {
+		m.printMode = on
 	}
 }
 
