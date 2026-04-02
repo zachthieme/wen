@@ -240,6 +240,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case WeekNumRight:
 				m.weekNumPos = WeekNumOff
 			}
+		case key.Matches(msg, m.keys.ToggleJulian):
+			m.julian = !m.julian
 		case key.Matches(msg, m.keys.ToggleHelp):
 			m.showHelp = !m.showHelp
 		}
@@ -268,6 +270,7 @@ type keyMap struct {
 	NextYear     key.Binding
 	Today        key.Binding
 	ToggleWeeks  key.Binding
+	ToggleJulian key.Binding
 	ToggleHelp   key.Binding
 	VisualSelect key.Binding
 	Select       key.Binding
@@ -302,12 +305,12 @@ func defaultKeyMap() keyMap {
 			key.WithHelp("L", "next month"),
 		),
 		PrevYear: key.NewBinding(
-			key.WithKeys("K"),
-			key.WithHelp("K", "prev year"),
+			key.WithKeys("P"),
+			key.WithHelp("P", "prev year"),
 		),
 		NextYear: key.NewBinding(
-			key.WithKeys("J"),
-			key.WithHelp("J", "next year"),
+			key.WithKeys("N"),
+			key.WithHelp("N", "next year"),
 		),
 		Today: key.NewBinding(
 			key.WithKeys("t"),
@@ -316,6 +319,10 @@ func defaultKeyMap() keyMap {
 		ToggleWeeks: key.NewBinding(
 			key.WithKeys("w"),
 			key.WithHelp("w", "weeks"),
+		),
+		ToggleJulian: key.NewBinding(
+			key.WithKeys("J"),
+			key.WithHelp("J", "julian"),
 		),
 		ToggleHelp: key.NewBinding(
 			key.WithKeys("?"),
@@ -348,7 +355,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Left, k.Right, k.Up, k.Down},
 		{k.PrevMonth, k.NextMonth, k.PrevYear, k.NextYear},
-		{k.Today, k.ToggleWeeks},
+		{k.Today, k.ToggleWeeks, k.ToggleJulian},
 		{k.VisualSelect, k.Select, k.Quit},
 	}
 }

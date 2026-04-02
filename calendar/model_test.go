@@ -58,9 +58,9 @@ func TestNavigation(t *testing.T) {
 		{"prev month clamps day", runeMsg("H"), date(2026, time.March, 31), date(2026, time.February, 28)},
 
 		// Year navigation
-		{"next year (J)", runeMsg("J"), today, date(2027, time.March, 17)},
-		{"prev year (K)", runeMsg("K"), today, date(2025, time.March, 17)},
-		{"next year leap day clamp", runeMsg("J"), date(2024, time.February, 29), date(2025, time.February, 28)},
+		{"next year (N)", runeMsg("N"), today, date(2027, time.March, 17)},
+		{"prev year (P)", runeMsg("P"), today, date(2025, time.March, 17)},
+		{"next year leap day clamp", runeMsg("N"), date(2024, time.February, 29), date(2025, time.February, 28)},
 
 		// Boundary wrapping
 		{"day wrap forward", runeMsg("l"), date(2026, time.March, 31), date(2026, time.April, 1)},
@@ -413,5 +413,35 @@ func TestInitWithHighlightSource(t *testing.T) {
 	cmd := m.Init()
 	if cmd == nil {
 		t.Error("expected Init() to return a non-nil cmd")
+	}
+}
+
+func TestToggleJulian(t *testing.T) {
+	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
+	if m.julian {
+		t.Error("expected julian false initially")
+	}
+	m = pressKey(m, "J")
+	if !m.julian {
+		t.Error("expected julian true after toggle")
+	}
+	m = pressKey(m, "J")
+	if m.julian {
+		t.Error("expected julian false after second toggle")
+	}
+}
+
+func TestYearNavigationRebound(t *testing.T) {
+	today := date(2026, time.March, 17)
+	m := New(today, today, DefaultConfig())
+	// N = next year
+	m = pressKey(m, "N")
+	if m.cursor != date(2027, time.March, 17) {
+		t.Errorf("N should navigate to next year, got %s", m.cursor.Format("2006-01-02"))
+	}
+	// P = prev year
+	m = pressKey(m, "P")
+	if m.cursor != date(2026, time.March, 17) {
+		t.Errorf("P should navigate to prev year, got %s", m.cursor.Format("2006-01-02"))
 	}
 }
