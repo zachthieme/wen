@@ -852,3 +852,18 @@ func TestFormatGuardsRow(t *testing.T) {
 		t.Error("expected error when --format value is 'row'")
 	}
 }
+
+func TestHelpContainsNewFlags(t *testing.T) {
+	t.Parallel()
+	var buf strings.Builder
+	err := run(&buf, []string{"--help"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := buf.String()
+	for _, want := range []string{"--print", "--julian", "J                Toggle Julian", "N/P"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("help should contain %q", want)
+		}
+	}
+}

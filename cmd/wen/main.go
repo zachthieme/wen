@@ -156,20 +156,24 @@ Flags:
   --format <layout>              Output format (Go time layout, default: 2006-01-02)
 
 Calendar flags:
-  --padding-top N      Top padding in lines (default: from config or 0)
-  --padding-right N    Right padding in characters (default: from config or 0)
-  --padding-bottom N   Bottom padding in lines (default: from config or 0)
-  --padding-left N     Left padding in characters (default: from config or 0)
-  -m, --months N       Number of months to display side by side (default: 1)
-  -N                   Shorthand for --months N (e.g., -3 for three months)
-  --highlight-file P   Path to JSON file with dates to highlight
+  -p, --print            Print calendar and exit (non-interactive)
+  -j, --julian           Show Julian day-of-year numbers
+  --padding-top N        Top padding in lines (default: from config or 0)
+  --padding-right N      Right padding in characters (default: from config or 0)
+  --padding-bottom N     Bottom padding in lines (default: from config or 0)
+  --padding-left N       Left padding in characters (default: from config or 0)
+  -m, --months N         Number of months to display side by side (default: 1)
+  -N                     Shorthand for --months N (e.g., -3 for three months)
+  --highlight-file P     Path to JSON file with dates to highlight
 
 Strip calendar flags (wen row):
-  --padding-top N      Top padding in lines (default: from config or 0)
-  --padding-right N    Right padding in characters (default: from config or 0)
-  --padding-bottom N   Bottom padding in lines (default: from config or 0)
-  --padding-left N     Left padding in characters (default: from config or 0)
-  --highlight-file P   Path to JSON file with dates to highlight
+  -p, --print            Print strip and exit (non-interactive)
+  -j, --julian           Show Julian day-of-year numbers
+  --padding-top N        Top padding in lines (default: from config or 0)
+  --padding-right N      Right padding in characters (default: from config or 0)
+  --padding-bottom N     Bottom padding in lines (default: from config or 0)
+  --padding-left N       Left padding in characters (default: from config or 0)
+  --highlight-file P     Path to JSON file with dates to highlight
 
 Diff flags:
   --weeks              Output in weeks instead of days
@@ -179,10 +183,12 @@ Calendar keybindings:
   h/l, ←/→         Previous / next day
   j/k, ↑/↓         Next / previous week
   H/L              Previous / next month
-  J/K              Next / previous year
+  N/P              Next / previous year
   t                Jump to today
   w                Toggle week numbers
+  J                Toggle Julian day-of-year numbers
   ?                Toggle help bar
+  v                Start range selection
   Enter            Select date and print to stdout
   q, Esc, ctrl+c   Quit
 
@@ -192,10 +198,17 @@ Strip calendar keybindings (wen row):
   0/$               Start / end of month
   j/k, ↓/↑         Next / previous month
   t                Jump to today
+  J                Toggle Julian day-of-year numbers
   v                Start range selection
   ?                Toggle help bar
   Enter            Select date and print to stdout
   q, Esc, ctrl+c   Quit
+
+Non-interactive mode:
+  wen cal --print           Print current month and exit
+  wen cal --print march     Print March of current year
+  wen cal --print -3        Print 3 months centered on current
+  wen cal | cat             Auto-detect: prints without TUI when piped
 
 Exit codes:
   0    Success (date printed)
