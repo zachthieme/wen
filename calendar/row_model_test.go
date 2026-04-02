@@ -564,6 +564,23 @@ func TestRowSameDayRange(t *testing.T) {
 	}
 }
 
+func TestRowToggleJulian(t *testing.T) {
+	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
+	if m.julian {
+		t.Error("expected julian false initially")
+	}
+	updated, _ := m.Update(runeMsg("J"))
+	m = updated.(RowModel)
+	if !m.julian {
+		t.Error("expected julian true after toggle")
+	}
+	updated, _ = m.Update(runeMsg("J"))
+	m = updated.(RowModel)
+	if m.julian {
+		t.Error("expected julian false after second toggle")
+	}
+}
+
 func TestWithRowJulian(t *testing.T) {
 	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithRowJulian(true))
 	if !m.julian {

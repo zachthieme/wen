@@ -201,6 +201,8 @@ func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor = shiftDate(m.cursor, 0, 1)
 		case key.Matches(msg, m.keys.Today):
 			m.cursor = m.today
+		case key.Matches(msg, m.keys.ToggleJulian):
+			m.julian = !m.julian
 		case key.Matches(msg, m.keys.WeekStart):
 			m.cursor = weekStartDate(m.cursor, m.config.WeekStartDay)
 		case key.Matches(msg, m.keys.WeekEnd):
@@ -278,6 +280,7 @@ type rowKeyMap struct {
 	MonthStart   key.Binding
 	MonthEnd     key.Binding
 	Today        key.Binding
+	ToggleJulian key.Binding
 	ToggleHelp   key.Binding
 	VisualSelect key.Binding
 	Select       key.Binding
@@ -323,6 +326,10 @@ func defaultRowKeyMap() rowKeyMap {
 			key.WithKeys("t"),
 			key.WithHelp("t", "today"),
 		),
+		ToggleJulian: key.NewBinding(
+			key.WithKeys("J"),
+			key.WithHelp("J", "julian"),
+		),
 		ToggleHelp: key.NewBinding(
 			key.WithKeys("?"),
 			key.WithHelp("?", "help"),
@@ -356,6 +363,6 @@ func (k rowKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Left, k.Right, k.PrevMonth, k.NextMonth},
 		{k.WeekStart, k.WeekEnd, k.MonthStart, k.MonthEnd},
-		{k.Today, k.VisualSelect, k.Select, k.Quit},
+		{k.Today, k.ToggleJulian, k.VisualSelect, k.Select, k.Quit},
 	}
 }
