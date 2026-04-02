@@ -368,6 +368,27 @@ func TestQuarterBarFiscalQuarter(t *testing.T) {
 	}
 }
 
+func TestRenderJulianSingleMonth(t *testing.T) {
+	m := New(date(2026, time.March, 17), date(2025, time.March, 17), DefaultConfig(), WithJulian(true))
+	output := m.View()
+	// Should contain 3-char day headers
+	if !strings.Contains(output, "Sun Mon Tue Wed Thu Fri Sat") {
+		t.Errorf("expected 3-char julian headers, got:\n%s", output)
+	}
+	// March 1 = yearday 60
+	if !strings.Contains(output, " 60") {
+		t.Errorf("expected yearday 60, got:\n%s", output)
+	}
+}
+
+func TestRenderJulianMultiMonth(t *testing.T) {
+	m := New(date(2026, time.March, 17), date(2025, time.March, 17), DefaultConfig(), WithJulian(true), WithMonths(3))
+	output := m.View()
+	if !strings.Contains(output, "Sun Mon") {
+		t.Errorf("expected julian headers in multi-month, got:\n%s", output)
+	}
+}
+
 func TestQuarterBarProgress(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.ShowQuarterBar = true

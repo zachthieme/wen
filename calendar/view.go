@@ -75,7 +75,7 @@ func (m Model) renderSingleMonth() string {
 	m.renderTitle(&core, month, year)
 	m.renderDayHeaders(&core)
 	gridWNs := m.renderGrid(&core, year, month, cursorDay, loc)
-	m.renderQuarterBar(&core, dayGridWidth)
+	m.renderQuarterBar(&core, m.gridWidth())
 
 	coreLines := strings.Split(strings.TrimRight(core.String(), "\n"), "\n")
 	wnLines := m.buildWeekNumLines(gridWNs, len(coreLines))
@@ -131,7 +131,7 @@ func (m Model) renderMultiMonth() string {
 	}
 
 	// Column width includes week numbers if enabled.
-	colWidth := dayGridWidth
+	colWidth := m.gridWidth()
 	if m.weekNumPos != WeekNumOff {
 		colWidth += 3 // " Wk" or "Wk " = 2 chars + 1 space
 	}
