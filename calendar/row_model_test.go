@@ -564,6 +564,20 @@ func TestRowSameDayRange(t *testing.T) {
 	}
 }
 
+func TestWithRowJulian(t *testing.T) {
+	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithRowJulian(true))
+	if !m.julian {
+		t.Error("expected julian to be true")
+	}
+}
+
+func TestWithRowPrintMode(t *testing.T) {
+	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithRowPrintMode(true))
+	if !m.printMode {
+		t.Error("expected printMode to be true")
+	}
+}
+
 func TestRowRangeReverseOrder(t *testing.T) {
 	t.Parallel()
 	start := date(2026, time.March, 20)

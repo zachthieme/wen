@@ -28,6 +28,8 @@ type RowModel struct {
 	help             help.Model
 	styles           resolvedStyles
 	showHelp         bool
+	julian           bool
+	printMode        bool
 	termWidth        int
 }
 
@@ -50,6 +52,20 @@ func WithRowHighlightSource(path string) RowModelOption {
 	return func(m *RowModel) {
 		m.highlightPath = expandTilde(path)
 		m.highlightedDates = LoadHighlightedDates(m.highlightPath)
+	}
+}
+
+// WithRowJulian enables Julian day-of-year numbering in the row calendar.
+func WithRowJulian(on bool) RowModelOption {
+	return func(m *RowModel) {
+		m.julian = on
+	}
+}
+
+// WithRowPrintMode enables non-interactive print mode (suppresses cursor styling).
+func WithRowPrintMode(on bool) RowModelOption {
+	return func(m *RowModel) {
+		m.printMode = on
 	}
 }
 
