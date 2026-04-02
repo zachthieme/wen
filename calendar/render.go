@@ -2,7 +2,6 @@ package calendar
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -90,18 +89,28 @@ func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursor
 	var weekNums []int
 	weekNums = append(weekNums, wn)
 
+	// Cell width: 3 for julian (e.g., " 60"), 2 for normal (e.g., " 5")
+	cellWidth := 2
+	if m.julian {
+		cellWidth = 3
+	}
+
 	// Leading spaces for first partial week
-	b.WriteString(strings.Repeat("   ", weekday))
+	blankCell := strings.Repeat(" ", cellWidth+1) // cell + separator
+	b.WriteString(strings.Repeat(blankCell, weekday))
 
 	todayYear, todayMonth, todayDay := m.today.Date()
 
 	for day := 1; day <= days; day++ {
-		dayStr := strconv.Itoa(day)
-		if day < 10 {
-			dayStr = " " + dayStr
+		var dayStr string
+		if m.julian {
+			yd := time.Date(year, month, day, 0, 0, 0, 0, loc).YearDay()
+			dayStr = fmt.Sprintf("%3d", yd)
+		} else {
+			dayStr = fmt.Sprintf("%2d", day)
 		}
 
-		isCursor := day == cursorDay
+		isCursor := day == cursorDay && !m.printMode
 		isToday := year == todayYear && month == todayMonth && day == todayDay
 		isHighlighted := m.highlightedDates[dateKey(time.Date(year, month, day, 0, 0, 0, 0, loc))]
 
@@ -138,10 +147,10 @@ func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursor
 			b.WriteString(" ")
 		}
 	}
-	// Pad the last row to dayGridWidth so week numbers align.
+	// Pad the last row to grid width so week numbers align.
 	lastCol := (weekday + days) % 7
 	if lastCol != 0 {
-		b.WriteString(strings.Repeat("   ", 7-lastCol))
+		b.WriteString(strings.Repeat(blankCell, 7-lastCol))
 	}
 	b.WriteString("\n")
 	return weekNums

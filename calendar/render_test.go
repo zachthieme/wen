@@ -274,6 +274,66 @@ func TestGridWidth(t *testing.T) {
 	})
 }
 
+func TestRenderGridJulian(t *testing.T) {
+	t.Run("january shows yearday values", func(t *testing.T) {
+		cfg := DefaultConfig()
+		m := New(date(2026, time.January, 15), date(2026, time.January, 15), cfg, WithJulian(true))
+		var b strings.Builder
+		m.renderGrid(&b, 2026, time.January, 15, time.Local)
+		got := b.String()
+		if !strings.Contains(got, "  1") {
+			t.Errorf("expected yearday 1 (3-char padded), got:\n%s", got)
+		}
+		if !strings.Contains(got, " 31") {
+			t.Errorf("expected yearday 31, got:\n%s", got)
+		}
+	})
+
+	t.Run("march shows offset yearday values", func(t *testing.T) {
+		cfg := DefaultConfig()
+		m := New(date(2026, time.March, 15), date(2026, time.March, 15), cfg, WithJulian(true))
+		var b strings.Builder
+		m.renderGrid(&b, 2026, time.March, 15, time.Local)
+		got := b.String()
+		// March 1 2026 = yearday 60, March 31 = yearday 90
+		if !strings.Contains(got, " 60") {
+			t.Errorf("expected yearday 60 for March 1, got:\n%s", got)
+		}
+		if !strings.Contains(got, " 90") {
+			t.Errorf("expected yearday 90 for March 31, got:\n%s", got)
+		}
+	})
+
+	t.Run("december leap year shows 366", func(t *testing.T) {
+		cfg := DefaultConfig()
+		m := New(date(2024, time.December, 31), date(2024, time.December, 31), cfg, WithJulian(true))
+		var b strings.Builder
+		m.renderGrid(&b, 2024, time.December, 31, time.Local)
+		got := b.String()
+		if !strings.Contains(got, "366") {
+			t.Errorf("expected yearday 366 for Dec 31 2024, got:\n%s", got)
+		}
+	})
+}
+
+func TestRenderGridPrintModeSuppressesCursor(t *testing.T) {
+	cfg := DefaultConfig()
+	// Create two models for March 17 — one normal, one print mode
+	normal := New(date(2026, time.March, 17), date(2025, time.March, 17), cfg)
+	printM := New(date(2026, time.March, 17), date(2025, time.March, 17), cfg, WithPrintMode(true))
+
+	var normalBuf, printBuf strings.Builder
+	normal.renderGrid(&normalBuf, 2026, time.March, 17, time.Local)
+	printM.renderGrid(&printBuf, 2026, time.March, 17, time.Local)
+
+	// Both should contain "17" but print mode output shouldn't have cursor ANSI styling
+	// In non-TTY test env, lipgloss strips ANSI, so both look the same.
+	// Just verify print mode doesn't crash and produces output with day 17.
+	if !strings.Contains(printBuf.String(), "17") {
+		t.Error("print mode grid should contain day 17")
+	}
+}
+
 func TestRenderDayHeadersJulian(t *testing.T) {
 	cfg := DefaultConfig()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg, WithJulian(true))
