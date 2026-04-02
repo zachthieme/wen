@@ -236,9 +236,15 @@ func (m RowModel) visibleWindow(fullStart, fullEnd time.Time) (time.Time, time.T
 	}
 
 	totalDays := dayCount(fullStart, fullEnd)
-	// Each day is 3 chars (2-char name/number + 1 space) except the last (2 chars).
-	// Plus 3-char prefix. Total for N days: 3*N + 2.
-	maxDays := (availWidth - 2) / 3
+	// Normal: each day is 3 chars (2-char number + 1 space), prefix is 2 chars.
+	// Julian: each day is 4 chars (3-char number + 1 space), prefix is 3 chars.
+	cellW := 3
+	prefixW := 2
+	if m.julian {
+		cellW = 4
+		prefixW = 3
+	}
+	maxDays := (availWidth - prefixW) / cellW
 	if maxDays <= 0 {
 		maxDays = 1
 	}

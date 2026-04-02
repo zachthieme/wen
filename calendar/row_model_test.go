@@ -183,6 +183,31 @@ func TestRowVisibleWindowResize(t *testing.T) {
 	}
 }
 
+func TestRowVisibleWindowJulianNarrower(t *testing.T) {
+	t.Parallel()
+	// Julian cells are 4 chars wide vs 3 for normal, so fewer days should fit.
+	normal := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig())
+	normal.termWidth = 80
+
+	julian := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig(), WithRowJulian(true))
+	julian.termWidth = 80
+
+	// Normal: maxDays = (80-2)/3 = 26
+	// Julian: maxDays = (80-3)/4 = 19
+	normalStart, normalEnd := stripWindow(2026, time.March, 0, time.Local)
+	julianStart, julianEnd := stripWindow(2026, time.March, 0, time.Local)
+
+	ns, ne := normal.visibleWindow(normalStart, normalEnd)
+	js, je := julian.visibleWindow(julianStart, julianEnd)
+
+	normalDays := dayCount(ns, ne)
+	julianDays := dayCount(js, je)
+
+	if julianDays >= normalDays {
+		t.Errorf("julian should show fewer days than normal at same width: julian=%d, normal=%d", julianDays, normalDays)
+	}
+}
+
 func TestRowViewNoHelpByDefault(t *testing.T) {
 	t.Parallel()
 	cursor := date(2026, time.March, 15)
@@ -565,6 +590,7 @@ func TestRowSameDayRange(t *testing.T) {
 }
 
 func TestRowToggleJulian(t *testing.T) {
+	t.Parallel()
 	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	if m.julian {
 		t.Error("expected julian false initially")
@@ -582,6 +608,7 @@ func TestRowToggleJulian(t *testing.T) {
 }
 
 func TestWithRowJulian(t *testing.T) {
+	t.Parallel()
 	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithRowJulian(true))
 	if !m.julian {
 		t.Error("expected julian to be true")
@@ -589,6 +616,7 @@ func TestWithRowJulian(t *testing.T) {
 }
 
 func TestWithRowPrintMode(t *testing.T) {
+	t.Parallel()
 	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithRowPrintMode(true))
 	if !m.printMode {
 		t.Error("expected printMode to be true")
