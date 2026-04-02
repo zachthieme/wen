@@ -259,6 +259,32 @@ func TestCountQuarterWorkdaysLeft(t *testing.T) {
 	}
 }
 
+func TestGridWidth(t *testing.T) {
+	t.Run("normal mode", func(t *testing.T) {
+		m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
+		if m.gridWidth() != 20 {
+			t.Errorf("expected gridWidth 20, got %d", m.gridWidth())
+		}
+	})
+	t.Run("julian mode", func(t *testing.T) {
+		m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithJulian(true))
+		if m.gridWidth() != 27 {
+			t.Errorf("expected gridWidth 27, got %d", m.gridWidth())
+		}
+	})
+}
+
+func TestRenderDayHeadersJulian(t *testing.T) {
+	cfg := DefaultConfig()
+	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg, WithJulian(true))
+	var b strings.Builder
+	m.renderDayHeaders(&b)
+	got := b.String()
+	if !strings.Contains(got, "Sun Mon Tue Wed Thu Fri Sat") {
+		t.Errorf("julian headers should use 3-char names, got: %q", got)
+	}
+}
+
 func TestRenderQuarterBar(t *testing.T) {
 	t.Run("hidden by default", func(t *testing.T) {
 		cfg := DefaultConfig()

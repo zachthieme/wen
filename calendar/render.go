@@ -13,8 +13,13 @@ import (
 
 var dayNames = [7]string{"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"}
 
+var dayNamesLong = [7]string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
+
 // dayGridWidth is the character width of the 7-column day grid.
 const dayGridWidth = 20
+
+// julianGridWidth is the character width of the 7-column day grid with 3-char days.
+const julianGridWidth = 27
 
 func (m Model) renderTitle(b *strings.Builder, month time.Month, year int) {
 	hasFQ := m.config.ShowFiscalQuarter && m.config.FiscalYearStart > 1
@@ -33,16 +38,29 @@ func (m Model) renderTitle(b *strings.Builder, month time.Month, year int) {
 		q, fy := wen.FiscalQuarter(int(month), year, m.config.FiscalYearStart)
 		title += fmt.Sprintf(" · Q%d FY%02d", q, fy%100)
 	}
-	titleStyle := m.styles.title.Width(dayGridWidth).Align(lipgloss.Center)
+	titleStyle := m.styles.title.Width(m.gridWidth()).Align(lipgloss.Center)
 	b.WriteString(titleStyle.Render(title))
 	b.WriteString("\n")
+}
+
+// gridWidth returns the character width of the day grid based on julian mode.
+func (m Model) gridWidth() int {
+	if m.julian {
+		return julianGridWidth
+	}
+	return dayGridWidth
 }
 
 func (m Model) renderDayHeaders(b *strings.Builder) {
 	startDay := m.config.WeekStartDay
 	headers := make([]string, 7)
 	for i := range 7 {
-		headers[i] = dayNames[(startDay+i)%7]
+		idx := (startDay + i) % 7
+		if m.julian {
+			headers[i] = dayNamesLong[idx]
+		} else {
+			headers[i] = dayNames[idx]
+		}
 	}
 	b.WriteString(m.styles.dayHeader.Render(strings.Join(headers, " ")))
 	b.WriteString("\n")
