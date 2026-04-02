@@ -203,3 +203,32 @@ func TestRenderStripDays(t *testing.T) {
 		}
 	})
 }
+
+func TestRenderStripDayHeadersJulian(t *testing.T) {
+	t.Parallel()
+	m := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig(), WithRowJulian(true))
+	start, end := stripWindow(2026, time.March, 0, time.Local)
+	got := m.renderStripDayHeaders(start, end)
+	if !strings.Contains(got, "Sun") {
+		t.Errorf("julian strip headers should use 3-char names, got: %q", got)
+	}
+	if !strings.Contains(got, "Mon") {
+		t.Errorf("julian strip headers should contain Mon, got: %q", got)
+	}
+}
+
+func TestRenderStripDaysJulian(t *testing.T) {
+	t.Parallel()
+	cursor := date(2026, time.March, 15)
+	m := NewRow(cursor, date(2026, time.March, 15), DefaultConfig(), WithRowJulian(true))
+	start, end := stripWindow(2026, time.March, 0, time.Local)
+	got := m.renderStripDays(start, end)
+	// March 1 2026 = yearday 60
+	if !strings.Contains(got, " 60") {
+		t.Errorf("expected yearday 60 for March 1, got: %q", got)
+	}
+	// March 31 = yearday 90
+	if !strings.Contains(got, " 90") {
+		t.Errorf("expected yearday 90 for March 31, got: %q", got)
+	}
+}
