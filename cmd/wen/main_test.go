@@ -815,6 +815,35 @@ func TestCalPrint(t *testing.T) {
 	}
 }
 
+func TestRowPrint(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"basic strip", []string{"row", "--print", "march", "2026"}, "Mr"},
+		{"contains day headers", []string{"row", "--print", "march", "2026"}, "Su"},
+		{"julian mode", []string{"row", "--print", "--julian", "march", "2026"}, "Sun"},
+		{"julian yearday", []string{"row", "--print", "--julian", "march", "2026"}, " 60"},
+		{"short flags", []string{"row", "-p", "-j", "march", "2026"}, "Sun"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var buf strings.Builder
+			err := run(&buf, tt.args)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got := buf.String()
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("got:\n%s\nwant substring %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFormatGuardsRow(t *testing.T) {
 	t.Parallel()
 	var buf strings.Builder

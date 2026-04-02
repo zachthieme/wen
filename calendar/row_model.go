@@ -69,6 +69,13 @@ func WithRowPrintMode(on bool) RowModelOption {
 	}
 }
 
+// WithTermWidth returns a copy of the model with the terminal width set.
+// Used in print mode where no WindowSizeMsg is received.
+func (m RowModel) WithTermWidth(w int) RowModel {
+	m.termWidth = w
+	return m
+}
+
 // NewRow creates a RowModel with the given cursor position, today's date, and configuration.
 func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowModel {
 	colors := cfg.ResolvedColors()
