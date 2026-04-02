@@ -783,6 +783,38 @@ func TestRowSubcommandHelp(t *testing.T) {
 	}
 }
 
+func TestCalPrint(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"basic month", []string{"cal", "--print", "march", "2027"}, "March 2027"},
+		{"contains day headers", []string{"cal", "--print", "march", "2026"}, "Su Mo Tu We Th Fr Sa"},
+		{"contains days", []string{"cal", "--print", "march", "2026"}, "31"},
+		{"multi month", []string{"cal", "--print", "-3", "march", "2027"}, "February 2027"},
+		{"multi month has april", []string{"cal", "--print", "-3", "march", "2027"}, "April 2027"},
+		{"julian mode", []string{"cal", "--print", "--julian", "march", "2026"}, " 60"},
+		{"julian 3-char headers", []string{"cal", "--print", "--julian", "march", "2026"}, "Sun Mon Tue"},
+		{"short flags", []string{"cal", "-p", "-j", "march", "2026"}, " 60"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var buf strings.Builder
+			err := run(&buf, tt.args)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got := buf.String()
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("got:\n%s\nwant substring %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFormatGuardsRow(t *testing.T) {
 	t.Parallel()
 	var buf strings.Builder
