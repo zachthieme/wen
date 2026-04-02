@@ -14,11 +14,46 @@ var dayNames = [7]string{"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"}
 
 var dayNamesLong = [7]string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
 
-// dayGridWidth is the character width of the 7-column day grid.
-const dayGridWidth = 20
+// dayFormat captures rendering dimensions that vary between normal and julian mode.
+type dayFormat struct {
+	cellWidth   int                                                                    // character width of a day number (2 or 3)
+	gridWidth   int                                                                    // character width of the 7-column day grid
+	prefixWidth int                                                                    // total width of the strip's leading prefix column
+	names       [7]string                                                              // day-of-week abbreviations
+	formatDay   func(year int, month time.Month, day int, loc *time.Location) string  // formats a day number
+}
 
-// julianGridWidth is the character width of the 7-column day grid with 3-char days.
-const julianGridWidth = 27
+func normalDayFormat() dayFormat {
+	return dayFormat{
+		cellWidth:   2,
+		gridWidth:   20,
+		prefixWidth: 3,
+		names:       dayNames,
+		formatDay: func(_ int, _ time.Month, day int, _ *time.Location) string {
+			return fmt.Sprintf("%2d", day)
+		},
+	}
+}
+
+func julianDayFormat() dayFormat {
+	return dayFormat{
+		cellWidth:   3,
+		gridWidth:   27,
+		prefixWidth: 4,
+		names:       dayNamesLong,
+		formatDay: func(year int, month time.Month, day int, loc *time.Location) string {
+			yd := time.Date(year, month, day, 0, 0, 0, 0, loc).YearDay()
+			return fmt.Sprintf("%3d", yd)
+		},
+	}
+}
+
+func dayFormatFor(julian bool) dayFormat {
+	if julian {
+		return julianDayFormat()
+	}
+	return normalDayFormat()
+}
 
 func (m Model) renderTitle(b *strings.Builder, month time.Month, year int) {
 	hasFQ := m.config.ShowFiscalQuarter && m.config.FiscalYearStart > 1
@@ -44,10 +79,7 @@ func (m Model) renderTitle(b *strings.Builder, month time.Month, year int) {
 
 // gridWidth returns the character width of the day grid based on julian mode.
 func (m Model) gridWidth() int {
-	if m.julian {
-		return julianGridWidth
-	}
-	return dayGridWidth
+	return dayFormatFor(m.julian).gridWidth
 }
 
 func (m Model) renderDayHeaders(b *strings.Builder) {

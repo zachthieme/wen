@@ -259,17 +259,56 @@ func TestCountQuarterWorkdaysLeft(t *testing.T) {
 	}
 }
 
-func TestGridWidth(t *testing.T) {
-	t.Run("normal mode", func(t *testing.T) {
-		m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
-		if m.gridWidth() != 20 {
-			t.Errorf("expected gridWidth 20, got %d", m.gridWidth())
+func TestDayFormat(t *testing.T) {
+	t.Run("normal", func(t *testing.T) {
+		df := normalDayFormat()
+		if df.cellWidth != 2 {
+			t.Errorf("cellWidth = %d, want 2", df.cellWidth)
+		}
+		if df.gridWidth != 20 {
+			t.Errorf("gridWidth = %d, want 20", df.gridWidth)
+		}
+		if df.prefixWidth != 3 {
+			t.Errorf("prefixWidth = %d, want 3", df.prefixWidth)
+		}
+		if df.names != dayNames {
+			t.Errorf("names = %v, want dayNames", df.names)
+		}
+		got := df.formatDay(2026, time.March, 5, time.Local)
+		if got != " 5" {
+			t.Errorf("formatDay = %q, want %q", got, " 5")
 		}
 	})
-	t.Run("julian mode", func(t *testing.T) {
-		m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithJulian(true))
-		if m.gridWidth() != 27 {
-			t.Errorf("expected gridWidth 27, got %d", m.gridWidth())
+	t.Run("julian", func(t *testing.T) {
+		df := julianDayFormat()
+		if df.cellWidth != 3 {
+			t.Errorf("cellWidth = %d, want 3", df.cellWidth)
+		}
+		if df.gridWidth != 27 {
+			t.Errorf("gridWidth = %d, want 27", df.gridWidth)
+		}
+		if df.prefixWidth != 4 {
+			t.Errorf("prefixWidth = %d, want 4", df.prefixWidth)
+		}
+		if df.names != dayNamesLong {
+			t.Errorf("names = %v, want dayNamesLong", df.names)
+		}
+		// March 5 2026 = yearday 64
+		got := df.formatDay(2026, time.March, 5, time.Local)
+		if got != " 64" {
+			t.Errorf("formatDay = %q, want %q", got, " 64")
+		}
+	})
+	t.Run("dayFormatFor false", func(t *testing.T) {
+		df := dayFormatFor(false)
+		if df.cellWidth != 2 {
+			t.Errorf("dayFormatFor(false) cellWidth = %d, want 2", df.cellWidth)
+		}
+	})
+	t.Run("dayFormatFor true", func(t *testing.T) {
+		df := dayFormatFor(true)
+		if df.cellWidth != 3 {
+			t.Errorf("dayFormatFor(true) cellWidth = %d, want 3", df.cellWidth)
 		}
 	})
 }
@@ -350,7 +389,7 @@ func TestRenderQuarterBar(t *testing.T) {
 		cfg := DefaultConfig()
 		m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
 		var b strings.Builder
-		m.renderQuarterBar(&b, dayGridWidth)
+		m.renderQuarterBar(&b, 20)
 		if b.Len() != 0 {
 			t.Error("quarter bar should produce no output when ShowQuarterBar is false")
 		}
@@ -361,7 +400,7 @@ func TestRenderQuarterBar(t *testing.T) {
 		cfg.ShowQuarterBar = true
 		m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
 		var b strings.Builder
-		m.renderQuarterBar(&b, dayGridWidth)
+		m.renderQuarterBar(&b, 20)
 		got := b.String()
 		if !strings.Contains(got, "Q1") {
 			t.Errorf("expected Q1 in quarter bar, got: %q", got)
@@ -377,7 +416,7 @@ func TestRenderQuarterBar(t *testing.T) {
 		cfg.FiscalYearStart = 10
 		m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
 		var b strings.Builder
-		m.renderQuarterBar(&b, dayGridWidth)
+		m.renderQuarterBar(&b, 20)
 		got := b.String()
 		if !strings.Contains(got, "Q2") {
 			t.Errorf("expected Q2 for fiscal Oct start in March, got: %q", got)
