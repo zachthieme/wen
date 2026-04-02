@@ -595,15 +595,24 @@ func TestRowToggleJulian(t *testing.T) {
 	if m.julian {
 		t.Error("expected julian false initially")
 	}
+	if m.dayFmt.cellWidth != 2 {
+		t.Errorf("expected cellWidth 2 initially, got %d", m.dayFmt.cellWidth)
+	}
 	updated, _ := m.Update(runeMsg("J"))
 	m = updated.(RowModel)
 	if !m.julian {
 		t.Error("expected julian true after toggle")
 	}
+	if m.dayFmt.cellWidth != 3 {
+		t.Errorf("expected cellWidth 3 after julian toggle, got %d", m.dayFmt.cellWidth)
+	}
 	updated, _ = m.Update(runeMsg("J"))
 	m = updated.(RowModel)
 	if m.julian {
 		t.Error("expected julian false after second toggle")
+	}
+	if m.dayFmt.cellWidth != 2 {
+		t.Errorf("expected cellWidth 2 after second toggle, got %d", m.dayFmt.cellWidth)
 	}
 }
 

@@ -421,13 +421,22 @@ func TestToggleJulian(t *testing.T) {
 	if m.julian {
 		t.Error("expected julian false initially")
 	}
+	if m.dayFmt.gridWidth != 20 {
+		t.Errorf("expected gridWidth 20 initially, got %d", m.dayFmt.gridWidth)
+	}
 	m = pressKey(m, "J")
 	if !m.julian {
 		t.Error("expected julian true after toggle")
 	}
+	if m.dayFmt.gridWidth != 27 {
+		t.Errorf("expected gridWidth 27 after julian toggle, got %d", m.dayFmt.gridWidth)
+	}
 	m = pressKey(m, "J")
 	if m.julian {
 		t.Error("expected julian false after second toggle")
+	}
+	if m.dayFmt.gridWidth != 20 {
+		t.Errorf("expected gridWidth 20 after second toggle, got %d", m.dayFmt.gridWidth)
 	}
 }
 
