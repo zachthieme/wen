@@ -22,7 +22,7 @@ const julianGridWidth = 27
 
 func (m Model) renderTitle(b *strings.Builder, month time.Month, year int) {
 	hasFQ := m.config.ShowFiscalQuarter && m.config.FiscalYearStart > 1
-	// Use 3-letter month abbreviation when fiscal quarter is shown to fit within dayGridWidth.
+	// Use 3-letter month abbreviation when fiscal quarter is shown to fit within the grid width.
 	monthName := month.String()
 	if hasFQ {
 		monthName = monthName[:3]
@@ -77,7 +77,7 @@ func isInRange(d, a, b time.Time) bool {
 	return !d.Before(a) && !d.After(b)
 }
 
-// renderGrid renders the day grid to b at dayGridWidth, returning per-row week numbers.
+// renderGrid renders the day grid to b at the current grid width, returning per-row week numbers.
 func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursorDay int, loc *time.Location) []int {
 	st := m.styles
 	startDay := m.config.WeekStartDay

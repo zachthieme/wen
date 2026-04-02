@@ -19,7 +19,7 @@ func (m Model) View() string {
 	return m.renderMultiMonth()
 }
 
-// wrapWithWeekNums takes lines rendered at dayGridWidth and prepends/appends
+// wrapWithWeekNums takes lines rendered at the current grid width and prepends/appends
 // week number columns. Lines without a corresponding week number get blank padding.
 func (m Model) wrapWithWeekNums(lines []string, weekNums []string) []string {
 	if m.weekNumPos == WeekNumOff {
