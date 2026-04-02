@@ -867,3 +867,57 @@ func TestHelpContainsNewFlags(t *testing.T) {
 		}
 	}
 }
+
+func TestCalPrintBinary(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"print flag", []string{"cal", "--print", "march", "2027"}, "March 2027"},
+		{"piped stdout", []string{"cal", "march", "2027"}, "March 2027"},
+		{"julian flag", []string{"cal", "--print", "--julian", "march", "2027"}, " 60"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command(testBinary, tt.args...)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("unexpected error: %s\n%s", err, out)
+			}
+			got := string(out)
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("got:\n%s\nwant substring %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRowPrintBinary(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"print flag", []string{"row", "--print", "march", "2026"}, "Mr"},
+		{"piped stdout", []string{"row", "march", "2026"}, "Mr"},
+		{"julian flag", []string{"row", "--print", "--julian", "march", "2026"}, "Sun"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command(testBinary, tt.args...)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("unexpected error: %s\n%s", err, out)
+			}
+			got := string(out)
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("got:\n%s\nwant substring %q", got, tt.want)
+			}
+		})
+	}
+}
