@@ -25,6 +25,7 @@ type Model struct {
 	months           int
 	julian           bool
 	printMode        bool
+	dayFmt           dayFormat
 	highlightedDates map[time.Time]bool
 	highlightPath    string
 	activeWatcher    *fsnotify.Watcher // closed on quit to unblock watcher goroutine
@@ -138,6 +139,7 @@ func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 	for _, opt := range opts {
 		opt(&m)
 	}
+	m.dayFmt = dayFormatFor(m.julian)
 	return m
 }
 
@@ -242,6 +244,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case key.Matches(msg, m.keys.ToggleJulian):
 			m.julian = !m.julian
+			m.dayFmt = dayFormatFor(m.julian)
 		case key.Matches(msg, m.keys.ToggleHelp):
 			m.showHelp = !m.showHelp
 		}

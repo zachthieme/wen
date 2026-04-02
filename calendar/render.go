@@ -72,26 +72,16 @@ func (m Model) renderTitle(b *strings.Builder, month time.Month, year int) {
 		q, fy := wen.FiscalQuarter(int(month), year, m.config.FiscalYearStart)
 		title += fmt.Sprintf(" · Q%d FY%02d", q, fy%100)
 	}
-	titleStyle := m.styles.title.Width(m.gridWidth()).Align(lipgloss.Center)
+	titleStyle := m.styles.title.Width(m.dayFmt.gridWidth).Align(lipgloss.Center)
 	b.WriteString(titleStyle.Render(title))
 	b.WriteString("\n")
-}
-
-// gridWidth returns the character width of the day grid based on julian mode.
-func (m Model) gridWidth() int {
-	return dayFormatFor(m.julian).gridWidth
 }
 
 func (m Model) renderDayHeaders(b *strings.Builder) {
 	startDay := m.config.WeekStartDay
 	headers := make([]string, 7)
 	for i := range 7 {
-		idx := (startDay + i) % 7
-		if m.julian {
-			headers[i] = dayNamesLong[idx]
-		} else {
-			headers[i] = dayNames[idx]
-		}
+		headers[i] = m.dayFmt.names[(startDay+i)%7]
 	}
 	b.WriteString(m.styles.dayHeader.Render(strings.Join(headers, " ")))
 	b.WriteString("\n")
@@ -121,11 +111,7 @@ func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursor
 	var weekNums []int
 	weekNums = append(weekNums, wn)
 
-	// Cell width: 3 for julian (e.g., " 60"), 2 for normal (e.g., " 5")
-	cellWidth := 2
-	if m.julian {
-		cellWidth = 3
-	}
+	cellWidth := m.dayFmt.cellWidth
 
 	// Leading spaces for first partial week
 	blankCell := strings.Repeat(" ", cellWidth+1) // cell + separator
@@ -134,13 +120,7 @@ func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursor
 	todayYear, todayMonth, todayDay := m.today.Date()
 
 	for day := 1; day <= days; day++ {
-		var dayStr string
-		if m.julian {
-			yd := time.Date(year, month, day, 0, 0, 0, 0, loc).YearDay()
-			dayStr = fmt.Sprintf("%3d", yd)
-		} else {
-			dayStr = fmt.Sprintf("%2d", day)
-		}
+		dayStr := m.dayFmt.formatDay(year, month, day, loc)
 
 		isCursor := day == cursorDay && !m.printMode
 		isToday := year == todayYear && month == todayMonth && day == todayDay

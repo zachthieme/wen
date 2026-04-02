@@ -1,7 +1,6 @@
 package calendar
 
 import (
-	"fmt"
 	"strings"
 	"time"
 )
@@ -56,22 +55,13 @@ func dayCount(a, b time.Time) int {
 // end (inclusive). In julian mode, 3-char names are used with a wider prefix.
 func (m RowModel) renderStripDayHeaders(start, end time.Time) string {
 	var b strings.Builder
-	// Leading space to align with month abbreviation prefix
-	if m.julian {
-		b.WriteString("    ") // 4 chars to align with 3-char day cells + separator
-	} else {
-		b.WriteString("   ") // 3 chars for 2-char day cells
-	}
+	b.WriteString(strings.Repeat(" ", m.dayFmt.prefixWidth))
 	first := true
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
 		if !first {
 			b.WriteString(" ")
 		}
-		if m.julian {
-			b.WriteString(dayNamesLong[d.Weekday()])
-		} else {
-			b.WriteString(dayNames[d.Weekday()])
-		}
+		b.WriteString(m.dayFmt.names[d.Weekday()])
 		first = false
 	}
 	return m.styles.dayHeader.Render(b.String())
@@ -91,11 +81,7 @@ func (m RowModel) renderStripDays(start, end time.Time) string {
 
 	var b strings.Builder
 	b.WriteString(m.styles.title.Render(abbrev))
-	if m.julian {
-		b.WriteString("  ") // 2 spaces to align with 4-char header prefix
-	} else {
-		b.WriteString(" ")
-	}
+	b.WriteString(strings.Repeat(" ", m.dayFmt.prefixWidth-2))
 
 	todayKey := dateKey(m.today)
 	cursorKey := dateKey(m.cursor)
@@ -111,12 +97,7 @@ func (m RowModel) renderStripDays(start, end time.Time) string {
 			b.WriteString(" ")
 		}
 
-		var dayStr string
-		if m.julian {
-			dayStr = fmt.Sprintf("%3d", d.YearDay())
-		} else {
-			dayStr = fmt.Sprintf("%2d", d.Day())
-		}
+		dayStr := m.dayFmt.formatDay(d.Year(), d.Month(), d.Day(), d.Location())
 		dk := dateKey(d)
 		inMonth := !d.Before(first) && !d.After(last)
 

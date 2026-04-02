@@ -30,6 +30,7 @@ type RowModel struct {
 	showHelp         bool
 	julian           bool
 	printMode        bool
+	dayFmt           dayFormat
 	termWidth        int
 }
 
@@ -99,6 +100,7 @@ func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowMode
 	for _, opt := range opts {
 		opt(&m)
 	}
+	m.dayFmt = dayFormatFor(m.julian)
 	return m
 }
 
@@ -210,6 +212,7 @@ func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor = m.today
 		case key.Matches(msg, m.keys.ToggleJulian):
 			m.julian = !m.julian
+			m.dayFmt = dayFormatFor(m.julian)
 		case key.Matches(msg, m.keys.WeekStart):
 			m.cursor = weekStartDate(m.cursor, m.config.WeekStartDay)
 		case key.Matches(msg, m.keys.WeekEnd):
@@ -236,15 +239,12 @@ func (m RowModel) visibleWindow(fullStart, fullEnd time.Time) (time.Time, time.T
 	}
 
 	totalDays := dayCount(fullStart, fullEnd)
-	// Normal: each day is 3 chars (2-char number + 1 space), prefix is 2 chars.
-	// Julian: each day is 4 chars (3-char number + 1 space), prefix is 3 chars.
-	cellW := 3
-	prefixW := 2
-	if m.julian {
-		cellW = 4
-		prefixW = 3
-	}
-	maxDays := (availWidth - prefixW) / cellW
+	// Each day cell is cellWidth+1 chars (number + space separator).
+	// The prefix occupies prefixWidth chars before the first cell.
+	// Total for N days: prefixWidth + N*(cellWidth+1) - 1 (no trailing space).
+	// Solving for N: (availWidth - prefixWidth + 1) / (cellWidth + 1)
+	cellW := m.dayFmt.cellWidth + 1
+	maxDays := (availWidth - m.dayFmt.prefixWidth + 1) / cellW
 	if maxDays <= 0 {
 		maxDays = 1
 	}
