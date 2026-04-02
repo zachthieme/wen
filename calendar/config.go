@@ -66,6 +66,7 @@ type Config struct {
 	FiscalYearStart   int         `yaml:"fiscal_year_start"`
 	ShowFiscalQuarter bool        `yaml:"show_fiscal_quarter"`
 	ShowQuarterBar    bool        `yaml:"show_quarter_bar"`
+	Julian            bool        `yaml:"julian"`
 	Theme             string      `yaml:"theme"`
 	Colors            ThemeColors `yaml:"colors"`
 	HighlightSource   string      `yaml:"highlight_source"`
@@ -252,6 +253,9 @@ week_start_day: 0     # 0=Sunday, 1=Monday
 
 # Show quarter progress bar below the calendar grid
 # show_quarter_bar: false
+
+# Julian day-of-year numbering (shows day 1-366 instead of day of month)
+# julian: false
 
 # Theme (built-in: "default", "catppuccin-mocha", "dracula", "nord")
 theme: default
