@@ -1,7 +1,6 @@
 package calendar
 
 import (
-	"fmt"
 	"strings"
 	"time"
 )
@@ -51,18 +50,18 @@ func dayCount(a, b time.Time) int {
 	return int(bUTC.Sub(aUTC).Hours()/24) + 1
 }
 
-// renderStripDayHeaders produces the first row of the strip: a 3-character
-// leading space followed by repeating day-of-week abbreviations for each day
-// from start to end (inclusive).
+// renderStripDayHeaders produces the first row of the strip: a leading space
+// followed by repeating day-of-week abbreviations for each day from start to
+// end (inclusive). In julian mode, 3-char names are used with a wider prefix.
 func (m RowModel) renderStripDayHeaders(start, end time.Time) string {
 	var b strings.Builder
-	b.WriteString("   ") // 3-char leading space for month abbreviation column
+	b.WriteString(strings.Repeat(" ", m.dayFmt.prefixWidth))
 	first := true
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
 		if !first {
 			b.WriteString(" ")
 		}
-		b.WriteString(dayNames[d.Weekday()])
+		b.WriteString(m.dayFmt.names[d.Weekday()])
 		first = false
 	}
 	return m.styles.dayHeader.Render(b.String())
@@ -70,7 +69,8 @@ func (m RowModel) renderStripDayHeaders(start, end time.Time) string {
 
 // renderStripDays produces the second row of the strip: a 2-character month
 // abbreviation followed by a space, then day numbers with cursor/today/
-// highlight/range/padding styling.
+// highlight/range/padding styling. In julian mode, 3-char year-day numbers
+// are used. Cursor styling is suppressed when printMode is true.
 func (m RowModel) renderStripDays(start, end time.Time) string {
 	year, month, _ := m.cursor.Date()
 	loc := m.cursor.Location()
@@ -81,7 +81,7 @@ func (m RowModel) renderStripDays(start, end time.Time) string {
 
 	var b strings.Builder
 	b.WriteString(m.styles.title.Render(abbrev))
-	b.WriteString(" ")
+	b.WriteString(strings.Repeat(" ", m.dayFmt.prefixWidth-2))
 
 	todayKey := dateKey(m.today)
 	cursorKey := dateKey(m.cursor)
@@ -97,11 +97,11 @@ func (m RowModel) renderStripDays(start, end time.Time) string {
 			b.WriteString(" ")
 		}
 
-		dayStr := fmt.Sprintf("%2d", d.Day())
+		dayStr := m.dayFmt.formatDay(d.Year(), d.Month(), d.Day(), d.Location())
 		dk := dateKey(d)
 		inMonth := !d.Before(first) && !d.After(last)
 
-		isCursor := dk.Equal(cursorKey)
+		isCursor := dk.Equal(cursorKey) && !m.printMode
 		isToday := dk.Equal(todayKey)
 		isHighlighted := m.highlightedDates[dk]
 		isRangeDay := false

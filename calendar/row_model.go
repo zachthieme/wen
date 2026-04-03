@@ -28,6 +28,9 @@ type RowModel struct {
 	help             help.Model
 	styles           resolvedStyles
 	showHelp         bool
+	julian           bool
+	printMode        bool
+	dayFmt           dayFormat
 	termWidth        int
 }
 
@@ -53,6 +56,27 @@ func WithRowHighlightSource(path string) RowModelOption {
 	}
 }
 
+// WithRowJulian enables Julian day-of-year numbering in the row calendar.
+func WithRowJulian(on bool) RowModelOption {
+	return func(m *RowModel) {
+		m.julian = on
+	}
+}
+
+// WithRowPrintMode enables non-interactive print mode (suppresses cursor styling).
+func WithRowPrintMode(on bool) RowModelOption {
+	return func(m *RowModel) {
+		m.printMode = on
+	}
+}
+
+// WithTermWidth returns a copy of the model with the terminal width set.
+// Used in print mode where no WindowSizeMsg is received.
+func (m RowModel) WithTermWidth(w int) RowModel {
+	m.termWidth = w
+	return m
+}
+
 // NewRow creates a RowModel with the given cursor position, today's date, and configuration.
 func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowModel {
 	colors := cfg.ResolvedColors()
@@ -76,6 +100,7 @@ func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowMode
 	for _, opt := range opts {
 		opt(&m)
 	}
+	m.dayFmt = dayFormatFor(m.julian)
 	return m
 }
 
@@ -185,6 +210,9 @@ func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor = shiftDate(m.cursor, 0, 1)
 		case key.Matches(msg, m.keys.Today):
 			m.cursor = m.today
+		case key.Matches(msg, m.keys.ToggleJulian):
+			m.julian = !m.julian
+			m.dayFmt = dayFormatFor(m.julian)
 		case key.Matches(msg, m.keys.WeekStart):
 			m.cursor = weekStartDate(m.cursor, m.config.WeekStartDay)
 		case key.Matches(msg, m.keys.WeekEnd):
@@ -211,9 +239,12 @@ func (m RowModel) visibleWindow(fullStart, fullEnd time.Time) (time.Time, time.T
 	}
 
 	totalDays := dayCount(fullStart, fullEnd)
-	// Each day is 3 chars (2-char name/number + 1 space) except the last (2 chars).
-	// Plus 3-char prefix. Total for N days: 3*N + 2.
-	maxDays := (availWidth - 2) / 3
+	// Each day cell is cellWidth+1 chars (number + space separator).
+	// The prefix occupies prefixWidth chars before the first cell.
+	// Total for N days: prefixWidth + N*(cellWidth+1) - 1 (no trailing space).
+	// Solving for N: (availWidth - prefixWidth + 1) / (cellWidth + 1)
+	cellW := m.dayFmt.cellWidth + 1
+	maxDays := (availWidth - m.dayFmt.prefixWidth + 1) / cellW
 	if maxDays <= 0 {
 		maxDays = 1
 	}
@@ -262,6 +293,7 @@ type rowKeyMap struct {
 	MonthStart   key.Binding
 	MonthEnd     key.Binding
 	Today        key.Binding
+	ToggleJulian key.Binding
 	ToggleHelp   key.Binding
 	VisualSelect key.Binding
 	Select       key.Binding
@@ -307,6 +339,10 @@ func defaultRowKeyMap() rowKeyMap {
 			key.WithKeys("t"),
 			key.WithHelp("t", "today"),
 		),
+		ToggleJulian: key.NewBinding(
+			key.WithKeys("J"),
+			key.WithHelp("J", "julian"),
+		),
 		ToggleHelp: key.NewBinding(
 			key.WithKeys("?"),
 			key.WithHelp("?", "help"),
@@ -340,6 +376,6 @@ func (k rowKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Left, k.Right, k.PrevMonth, k.NextMonth},
 		{k.WeekStart, k.WeekEnd, k.MonthStart, k.MonthEnd},
-		{k.Today, k.VisualSelect, k.Select, k.Quit},
+		{k.Today, k.ToggleJulian, k.VisualSelect, k.Select, k.Quit},
 	}
 }

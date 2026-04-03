@@ -2,7 +2,6 @@ package calendar
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -13,12 +12,52 @@ import (
 
 var dayNames = [7]string{"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"}
 
-// dayGridWidth is the character width of the 7-column day grid.
-const dayGridWidth = 20
+var dayNamesLong = [7]string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
+
+// dayFormat captures rendering dimensions that vary between normal and julian mode.
+type dayFormat struct {
+	cellWidth   int                                                                    // character width of a day number (2 or 3)
+	gridWidth   int                                                                    // character width of the 7-column day grid
+	prefixWidth int                                                                    // total width of the strip's leading prefix column
+	names       [7]string                                                              // day-of-week abbreviations
+	formatDay   func(year int, month time.Month, day int, loc *time.Location) string  // formats a day number
+}
+
+func normalDayFormat() dayFormat {
+	return dayFormat{
+		cellWidth:   2,
+		gridWidth:   20,
+		prefixWidth: 3,
+		names:       dayNames,
+		formatDay: func(_ int, _ time.Month, day int, _ *time.Location) string {
+			return fmt.Sprintf("%2d", day)
+		},
+	}
+}
+
+func julianDayFormat() dayFormat {
+	return dayFormat{
+		cellWidth:   3,
+		gridWidth:   27,
+		prefixWidth: 4,
+		names:       dayNamesLong,
+		formatDay: func(year int, month time.Month, day int, loc *time.Location) string {
+			yd := time.Date(year, month, day, 0, 0, 0, 0, loc).YearDay()
+			return fmt.Sprintf("%3d", yd)
+		},
+	}
+}
+
+func dayFormatFor(julian bool) dayFormat {
+	if julian {
+		return julianDayFormat()
+	}
+	return normalDayFormat()
+}
 
 func (m Model) renderTitle(b *strings.Builder, month time.Month, year int) {
 	hasFQ := m.config.ShowFiscalQuarter && m.config.FiscalYearStart > 1
-	// Use 3-letter month abbreviation when fiscal quarter is shown to fit within dayGridWidth.
+	// Use 3-letter month abbreviation when fiscal quarter is shown to fit within the grid width.
 	monthName := month.String()
 	if hasFQ {
 		monthName = monthName[:3]
@@ -33,7 +72,7 @@ func (m Model) renderTitle(b *strings.Builder, month time.Month, year int) {
 		q, fy := wen.FiscalQuarter(int(month), year, m.config.FiscalYearStart)
 		title += fmt.Sprintf(" · Q%d FY%02d", q, fy%100)
 	}
-	titleStyle := m.styles.title.Width(dayGridWidth).Align(lipgloss.Center)
+	titleStyle := m.styles.title.Width(m.dayFmt.gridWidth).Align(lipgloss.Center)
 	b.WriteString(titleStyle.Render(title))
 	b.WriteString("\n")
 }
@@ -42,7 +81,7 @@ func (m Model) renderDayHeaders(b *strings.Builder) {
 	startDay := m.config.WeekStartDay
 	headers := make([]string, 7)
 	for i := range 7 {
-		headers[i] = dayNames[(startDay+i)%7]
+		headers[i] = m.dayFmt.names[(startDay+i)%7]
 	}
 	b.WriteString(m.styles.dayHeader.Render(strings.Join(headers, " ")))
 	b.WriteString("\n")
@@ -60,7 +99,7 @@ func isInRange(d, a, b time.Time) bool {
 	return !d.Before(a) && !d.After(b)
 }
 
-// renderGrid renders the day grid to b at dayGridWidth, returning per-row week numbers.
+// renderGrid renders the day grid to b at the current grid width, returning per-row week numbers.
 func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursorDay int, loc *time.Location) []int {
 	st := m.styles
 	startDay := m.config.WeekStartDay
@@ -72,18 +111,18 @@ func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursor
 	var weekNums []int
 	weekNums = append(weekNums, wn)
 
+	cellWidth := m.dayFmt.cellWidth
+
 	// Leading spaces for first partial week
-	b.WriteString(strings.Repeat("   ", weekday))
+	blankCell := strings.Repeat(" ", cellWidth+1) // cell + separator
+	b.WriteString(strings.Repeat(blankCell, weekday))
 
 	todayYear, todayMonth, todayDay := m.today.Date()
 
 	for day := 1; day <= days; day++ {
-		dayStr := strconv.Itoa(day)
-		if day < 10 {
-			dayStr = " " + dayStr
-		}
+		dayStr := m.dayFmt.formatDay(year, month, day, loc)
 
-		isCursor := day == cursorDay
+		isCursor := day == cursorDay && !m.printMode
 		isToday := year == todayYear && month == todayMonth && day == todayDay
 		isHighlighted := m.highlightedDates[dateKey(time.Date(year, month, day, 0, 0, 0, 0, loc))]
 
@@ -120,10 +159,10 @@ func (m Model) renderGrid(b *strings.Builder, year int, month time.Month, cursor
 			b.WriteString(" ")
 		}
 	}
-	// Pad the last row to dayGridWidth so week numbers align.
+	// Pad the last row to grid width so week numbers align.
 	lastCol := (weekday + days) % 7
 	if lastCol != 0 {
-		b.WriteString(strings.Repeat("   ", 7-lastCol))
+		b.WriteString(strings.Repeat(blankCell, 7-lastCol))
 	}
 	b.WriteString("\n")
 	return weekNums

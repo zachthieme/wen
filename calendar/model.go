@@ -23,6 +23,9 @@ type Model struct {
 	weekNumPos       WeekNumPos
 	showHelp         bool
 	months           int
+	julian           bool
+	printMode        bool
+	dayFmt           dayFormat
 	highlightedDates map[time.Time]bool
 	highlightPath    string
 	activeWatcher    *fsnotify.Watcher // closed on quit to unblock watcher goroutine
@@ -103,6 +106,20 @@ func WithMonths(n int) ModelOption {
 	}
 }
 
+// WithJulian enables Julian day-of-year numbering.
+func WithJulian(on bool) ModelOption {
+	return func(m *Model) {
+		m.julian = on
+	}
+}
+
+// WithPrintMode enables non-interactive print mode (suppresses cursor styling).
+func WithPrintMode(on bool) ModelOption {
+	return func(m *Model) {
+		m.printMode = on
+	}
+}
+
 // New creates a calendar Model with the given cursor position, today's date, and configuration.
 func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 	colors := cfg.ResolvedColors()
@@ -122,6 +139,7 @@ func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 	for _, opt := range opts {
 		opt(&m)
 	}
+	m.dayFmt = dayFormatFor(m.julian)
 	return m
 }
 
@@ -224,6 +242,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case WeekNumRight:
 				m.weekNumPos = WeekNumOff
 			}
+		case key.Matches(msg, m.keys.ToggleJulian):
+			m.julian = !m.julian
+			m.dayFmt = dayFormatFor(m.julian)
 		case key.Matches(msg, m.keys.ToggleHelp):
 			m.showHelp = !m.showHelp
 		}
@@ -252,6 +273,7 @@ type keyMap struct {
 	NextYear     key.Binding
 	Today        key.Binding
 	ToggleWeeks  key.Binding
+	ToggleJulian key.Binding
 	ToggleHelp   key.Binding
 	VisualSelect key.Binding
 	Select       key.Binding
@@ -286,12 +308,12 @@ func defaultKeyMap() keyMap {
 			key.WithHelp("L", "next month"),
 		),
 		PrevYear: key.NewBinding(
-			key.WithKeys("K"),
-			key.WithHelp("K", "prev year"),
+			key.WithKeys("P"),
+			key.WithHelp("P", "prev year"),
 		),
 		NextYear: key.NewBinding(
-			key.WithKeys("J"),
-			key.WithHelp("J", "next year"),
+			key.WithKeys("N"),
+			key.WithHelp("N", "next year"),
 		),
 		Today: key.NewBinding(
 			key.WithKeys("t"),
@@ -300,6 +322,10 @@ func defaultKeyMap() keyMap {
 		ToggleWeeks: key.NewBinding(
 			key.WithKeys("w"),
 			key.WithHelp("w", "weeks"),
+		),
+		ToggleJulian: key.NewBinding(
+			key.WithKeys("J"),
+			key.WithHelp("J", "julian"),
 		),
 		ToggleHelp: key.NewBinding(
 			key.WithKeys("?"),
@@ -332,7 +358,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Left, k.Right, k.Up, k.Down},
 		{k.PrevMonth, k.NextMonth, k.PrevYear, k.NextYear},
-		{k.Today, k.ToggleWeeks},
+		{k.Today, k.ToggleWeeks, k.ToggleJulian},
 		{k.VisualSelect, k.Select, k.Quit},
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -254,6 +256,22 @@ func TestLoadConfigMissingFile(t *testing.T) {
 	}
 	if len(warnings) != 0 {
 		t.Errorf("expected no warnings for missing file in writable dir, got %v", warnings)
+	}
+}
+
+func TestJulianConfigField(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.Julian {
+		t.Error("expected Julian to default to false")
+	}
+
+	yamlData := []byte("julian: true\n")
+	var loaded Config
+	if err := yaml.Unmarshal(yamlData, &loaded); err != nil {
+		t.Fatal(err)
+	}
+	if !loaded.Julian {
+		t.Error("expected Julian to be true after loading from YAML")
 	}
 }
 

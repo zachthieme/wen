@@ -10,6 +10,7 @@ import (
 	"github.com/zachthieme/wen/calendar"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"golang.org/x/term"
 )
 
 func runRow(ctx appContext, args []string) error {
@@ -19,6 +20,10 @@ func runRow(ctx appContext, args []string) error {
 	paddingBottom := fs.Int("padding-bottom", 0, "bottom padding (lines)")
 	paddingLeft := fs.Int("padding-left", 0, "left padding (characters)")
 	highlightFile := fs.String("highlight-file", "", "path to JSON file with dates to highlight")
+	printFlag := fs.Bool("print", false, "print strip calendar and exit (non-interactive)")
+	fs.BoolVar(printFlag, "p", false, "shorthand for --print")
+	julianFlag := fs.Bool("julian", false, "show Julian day-of-year numbers")
+	fs.BoolVar(julianFlag, "j", false, "shorthand for --julian")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -62,12 +67,35 @@ func runRow(ctx appContext, args []string) error {
 
 	highlightPath := calendar.ResolveHighlightSource(*highlightFile, cfg.HighlightSource)
 
+	// Resolve julian: CLI flag overrides config
+	julian := cfg.Julian || *julianFlag
+
+	// Determine print mode: explicit flag or non-TTY stdout
+	printMode := *printFlag || !term.IsTerminal(int(os.Stdout.Fd()))
+
 	var modelOpts []calendar.RowModelOption
 	if highlightPath != "" {
 		modelOpts = append(modelOpts, calendar.WithRowHighlightSource(highlightPath))
 	}
+	if julian {
+		modelOpts = append(modelOpts, calendar.WithRowJulian(true))
+	}
+	if printMode {
+		modelOpts = append(modelOpts, calendar.WithRowPrintMode(true))
+	}
 
 	m := calendar.NewRow(cursor, ctx.now, cfg, modelOpts...)
+
+	if printMode {
+		width := 80
+		if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+			width = w
+		}
+		m = m.WithTermWidth(width)
+		fmt.Fprint(ctx.w, m.View())
+		return nil
+	}
+
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
 	finalModel, err := p.Run()

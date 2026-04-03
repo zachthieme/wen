@@ -783,11 +783,141 @@ func TestRowSubcommandHelp(t *testing.T) {
 	}
 }
 
+func TestCalPrint(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"basic month", []string{"cal", "--print", "march", "2027"}, "March 2027"},
+		{"contains day headers", []string{"cal", "--print", "march", "2026"}, "Su Mo Tu We Th Fr Sa"},
+		{"contains days", []string{"cal", "--print", "march", "2026"}, "31"},
+		{"multi month", []string{"cal", "--print", "-3", "march", "2027"}, "February 2027"},
+		{"multi month has april", []string{"cal", "--print", "-3", "march", "2027"}, "April 2027"},
+		{"julian mode", []string{"cal", "--print", "--julian", "march", "2026"}, " 60"},
+		{"julian 3-char headers", []string{"cal", "--print", "--julian", "march", "2026"}, "Sun Mon Tue"},
+		{"short flags", []string{"cal", "-p", "-j", "march", "2026"}, " 60"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var buf strings.Builder
+			err := run(&buf, tt.args)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got := buf.String()
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("got:\n%s\nwant substring %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRowPrint(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"basic strip", []string{"row", "--print", "march", "2026"}, "Mr"},
+		{"contains day headers", []string{"row", "--print", "march", "2026"}, "Su"},
+		{"julian mode", []string{"row", "--print", "--julian", "march", "2026"}, "Sun"},
+		{"julian yearday", []string{"row", "--print", "--julian", "march", "2026"}, " 60"},
+		{"short flags", []string{"row", "-p", "-j", "march", "2026"}, "Sun"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var buf strings.Builder
+			err := run(&buf, tt.args)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got := buf.String()
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("got:\n%s\nwant substring %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFormatGuardsRow(t *testing.T) {
 	t.Parallel()
 	var buf strings.Builder
 	err := run(&buf, []string{"--format", "row"})
 	if err == nil {
 		t.Error("expected error when --format value is 'row'")
+	}
+}
+
+func TestHelpContainsNewFlags(t *testing.T) {
+	t.Parallel()
+	var buf strings.Builder
+	err := run(&buf, []string{"--help"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := buf.String()
+	for _, want := range []string{"--print", "--julian", "J                Toggle Julian", "N/P"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("help should contain %q", want)
+		}
+	}
+}
+
+func TestCalPrintBinary(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"print flag", []string{"cal", "--print", "march", "2027"}, "March 2027"},
+		{"piped stdout", []string{"cal", "march", "2027"}, "March 2027"},
+		{"julian flag", []string{"cal", "--print", "--julian", "march", "2027"}, " 60"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command(testBinary, tt.args...)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("unexpected error: %s\n%s", err, out)
+			}
+			got := string(out)
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("got:\n%s\nwant substring %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRowPrintBinary(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"print flag", []string{"row", "--print", "march", "2026"}, "Mr"},
+		{"piped stdout", []string{"row", "march", "2026"}, "Mr"},
+		{"julian flag", []string{"row", "--print", "--julian", "march", "2026"}, "Sun"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command(testBinary, tt.args...)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("unexpected error: %s\n%s", err, out)
+			}
+			got := string(out)
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("got:\n%s\nwant substring %q", got, tt.want)
+			}
+		})
 	}
 }

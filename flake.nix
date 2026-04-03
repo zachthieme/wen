@@ -11,7 +11,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        wenVersion = "1.7.0";
+        wenVersion = "1.8.0";
 
         hashes = {
           x86_64-linux = "sha256-NLqP7T86BBDJly2S4vhyS+VJ4hVcLgGCUGM7koilCr8=";
