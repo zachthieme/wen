@@ -1,5 +1,18 @@
 # Changelog
 
+### v1.8.0 — April 2, 2026
+
+**New features:**
+- Non-interactive print mode: `wen cal --print` and `wen row --print` render to stdout and exit, no TUI session. Auto-detects piped stdout (e.g., `wen cal | cat`).
+- Julian day-of-year numbering: `--julian` / `-j` flag displays days as their position in the year (1–366). Toggle with `J` in the TUI. Configurable via `julian: true` in config.
+- Short flags: `-p` for `--print`, `-j` for `--julian` on both `cal` and `row` subcommands.
+
+**Improvements:**
+- Extracted `dayFormat` struct to consolidate julian/normal rendering dimensions, eliminating 9 scattered conditionals across rendering code.
+- Year navigation rebound from `J`/`K` to `N`/`P` to free `J` for julian toggle.
+
+---
+
 ### v1.7.0 — March 31, 2026
 
 **New features:**
