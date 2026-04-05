@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -31,6 +32,7 @@ type RowModel struct {
 	printMode        bool
 	dayFmt           dayFormat
 	termWidth        int
+	termHeight       int
 }
 
 // RowModelOption configures optional RowModel properties.
@@ -153,6 +155,7 @@ func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
 		m.termWidth = msg.Width
+		m.termHeight = msg.Height
 		return m, nil
 	case watcherErrMsg:
 		// File watching failed silently — degrade gracefully.
@@ -276,7 +279,11 @@ func (m RowModel) View() string {
 		b.WriteString("\n")
 	}
 
-	return b.String()
+	output := b.String()
+	if m.termWidth > 0 && m.termHeight > 0 {
+		return lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, output)
+	}
+	return output
 }
 
 type rowKeyMap struct {
