@@ -43,9 +43,6 @@ func parseWeekNumPos(s string) WeekNumPos {
 	}
 }
 
-// MaxPadding is the upper bound for padding values.
-const MaxPadding = 20
-
 // ThemeColors defines the color scheme for calendar UI elements.
 type ThemeColors struct {
 	Cursor     string `yaml:"cursor"`
@@ -70,10 +67,6 @@ type Config struct {
 	Theme             string      `yaml:"theme"`
 	Colors            ThemeColors `yaml:"colors"`
 	HighlightSource   string      `yaml:"highlight_source"`
-	PaddingTop        int         `yaml:"padding_top"`
-	PaddingRight      int         `yaml:"padding_right"`
-	PaddingBottom     int         `yaml:"padding_bottom"`
-	PaddingLeft       int         `yaml:"padding_left"`
 }
 
 // DefaultConfig returns a Config with sensible defaults (US week numbering, Sunday start, default theme).
@@ -123,15 +116,6 @@ func (c *Config) Normalize() []string {
 	if _, ok := themePresets[c.Theme]; !ok {
 		warnings = append(warnings, "invalid config value for \"theme\", using default")
 		c.Theme = "default"
-	}
-	for _, p := range []*int{&c.PaddingTop, &c.PaddingRight, &c.PaddingBottom, &c.PaddingLeft} {
-		if *p < 0 {
-			warnings = append(warnings, "negative padding value clamped to 0")
-			*p = 0
-		} else if *p > MaxPadding {
-			warnings = append(warnings, fmt.Sprintf("padding value %d exceeds maximum, clamped to %d", *p, MaxPadding))
-			*p = MaxPadding
-		}
 	}
 	return warnings
 }
@@ -273,12 +257,6 @@ theme: default
 
 # Highlighted dates source (JSON array of yyyy-mm-dd strings):
 # highlight_source: ~/.local/share/pike/due.json
-
-# Padding (0-20, can also be set via --padding-* CLI flags):
-# padding_top: 0
-# padding_right: 0
-# padding_bottom: 0
-# padding_left: 0
 `
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		return fmt.Errorf("could not write default config: %w", err)

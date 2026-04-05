@@ -91,9 +91,7 @@ func (m Model) renderSingleMonth() string {
 		b.WriteString("\n")
 	}
 
-	output := b.String()
-	output = m.styles.padding.Render(output)
-	return output
+	return b.String()
 }
 
 func (m Model) renderMultiMonth() string {
@@ -167,7 +165,5 @@ func (m Model) renderMultiMonth() string {
 		result.WriteString("\n")
 	}
 
-	output := result.String()
-	output = m.styles.padding.Render(output)
-	return output
+	return result.String()
 }

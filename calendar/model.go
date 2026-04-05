@@ -45,7 +45,6 @@ type resolvedStyles struct {
 	weekNum     lipgloss.Style
 	dayHeader   lipgloss.Style
 	helpBar     lipgloss.Style
-	padding     lipgloss.Style
 }
 
 // IsQuit reports whether the user quit without selecting.
@@ -133,9 +132,6 @@ func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 		help:       newHelpModel(colors),
 	}
 	m.styles = buildStyles(colors)
-	m.styles.padding = lipgloss.NewStyle().Padding(
-		cfg.PaddingTop, cfg.PaddingRight, cfg.PaddingBottom, cfg.PaddingLeft,
-	)
 	for _, opt := range opts {
 		opt(&m)
 	}
