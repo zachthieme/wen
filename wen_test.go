@@ -2,6 +2,7 @@ package wen
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -498,8 +499,8 @@ func TestErrors(t *testing.T) {
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
-			pe, ok := err.(*ParseError)
-			if !ok {
+			var pe *ParseError
+			if !errors.As(err, &pe) {
 				t.Fatalf("expected *ParseError, got %T", err)
 			}
 			if pe.Input != tt.input {
@@ -1294,8 +1295,8 @@ func TestModifierErrorContext(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	pe, ok := err.(*ParseError)
-	if !ok {
+	var pe *ParseError
+	if !errors.As(err, &pe) {
 		t.Fatalf("expected *ParseError, got %T", err)
 	}
 	// Error should mention the consumed modifier for context
@@ -1337,8 +1338,8 @@ func TestSemanticErrorOmitsPosition(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for feb 30")
 	}
-	pe, ok := err.(*ParseError)
-	if !ok {
+	var pe *ParseError
+	if !errors.As(err, &pe) {
 		t.Fatalf("expected *ParseError, got %T", err)
 	}
 	if pe.Position >= 0 {

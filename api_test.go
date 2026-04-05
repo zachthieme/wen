@@ -141,8 +141,8 @@ func TestPublicParseError(t *testing.T) {
 		t.Fatal("expected error for invalid input")
 	}
 	// Verify the error is a *wen.ParseError (public type)
-	pe, ok := err.(*wen.ParseError)
-	if !ok {
+	var pe *wen.ParseError
+	if !errors.As(err, &pe) {
 		t.Fatalf("expected *wen.ParseError, got %T", err)
 	}
 	if pe.Input != "not a date" {
@@ -159,8 +159,8 @@ func TestParseErrorUnwrap(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error from cancelled context")
 	}
-	pe, ok := err.(*wen.ParseError)
-	if !ok {
+	var pe *wen.ParseError
+	if !errors.As(err, &pe) {
 		t.Fatalf("expected *wen.ParseError, got %T", err)
 	}
 	if pe.Cause == nil {

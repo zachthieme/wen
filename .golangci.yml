@@ -10,6 +10,10 @@ linters:
     - gocritic
     - revive
     - misspell
+    - nilnil
+    - nilerr
+    - errorlint
+    - durationcheck
   settings:
     errcheck:
       exclude-functions:
