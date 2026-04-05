@@ -8,7 +8,7 @@ import (
 // ParseError is a structured error returned when parsing fails.
 type ParseError struct {
 	Input    string   // the original input string
-	Position int      // byte offset where parsing failed
+	Position int      // byte offset where parsing failed; -1 for semantic errors where position is not applicable
 	Expected []string // what the parser expected at this position
 	Found    string   // what was actually found
 	Cause    error    // underlying error, if any (supports errors.Is / errors.As chains)
