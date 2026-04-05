@@ -88,7 +88,7 @@ func watchLoop(watcher *fsnotify.Watcher, path string) tea.Msg {
 			triggered = true
 
 		case <-debounce.C:
-			dates := LoadHighlightedDates(path)
+			dates, _ := LoadHighlightedDates(path)
 			return highlightChangedMsg{
 				dates:   dates,
 				watcher: watcher,

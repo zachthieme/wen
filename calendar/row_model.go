@@ -53,7 +53,7 @@ func WithRowHighlightedDates(dates map[time.Time]bool) RowModelOption {
 func WithRowHighlightSource(path string) RowModelOption {
 	return func(m *RowModel) {
 		m.highlightPath = expandTilde(path)
-		m.highlightedDates = LoadHighlightedDates(m.highlightPath)
+		m.highlightedDates, _ = LoadHighlightedDates(m.highlightPath)
 	}
 }
 

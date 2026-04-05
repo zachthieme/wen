@@ -2,6 +2,7 @@ package calendar
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -25,36 +26,40 @@ func expandTilde(path string) string {
 
 // LoadHighlightedDates loads highlighted dates from a JSON file.
 // The file should contain a JSON array of yyyy-mm-dd strings.
-// Returns nil if the file doesn't exist or is malformed (fail silently).
-func LoadHighlightedDates(path string) map[time.Time]bool {
+// Returns nil with no warnings for an empty path (not configured).
+// Returns nil with a warning if the file is missing or malformed.
+// Individual unparseable date entries produce per-entry warnings.
+func LoadHighlightedDates(path string) (map[time.Time]bool, []string) {
 	if path == "" {
-		return nil
+		return nil, nil
 	}
 
 	path = expandTilde(path)
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil
+		return nil, []string{fmt.Sprintf("highlight file not found: %s", path)}
 	}
 
 	var dates []string
 	if err := json.Unmarshal(data, &dates); err != nil {
-		return nil
+		return nil, []string{fmt.Sprintf("highlight file is not valid JSON: %s", path)}
 	}
 
+	var warnings []string
 	result := make(map[time.Time]bool, len(dates))
 	for _, s := range dates {
 		t, err := time.Parse("2006-01-02", s)
 		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("skipping invalid date %q in %s", s, path))
 			continue
 		}
 		result[t] = true
 	}
 	if len(result) == 0 {
-		return nil
+		return nil, warnings
 	}
-	return result
+	return result, warnings
 }
 
 // WithHighlightSource sets the path to a JSON file of dates to highlight.
@@ -65,7 +70,7 @@ func LoadHighlightedDates(path string) map[time.Time]bool {
 func WithHighlightSource(path string) ModelOption {
 	return func(m *Model) {
 		m.highlightPath = expandTilde(path)
-		m.highlightedDates = LoadHighlightedDates(m.highlightPath)
+		m.highlightedDates, _ = LoadHighlightedDates(m.highlightPath)
 	}
 }
 
