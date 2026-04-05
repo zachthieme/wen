@@ -53,10 +53,9 @@ func newAppContext(w io.Writer) appContext {
 }
 
 // subcommands lists all recognized subcommand names and flag-like tokens that
-// must not be consumed as --format values. Adding a new subcommand here is the
-// single source of truth — the switch in run() will fail to compile if a name
-// is listed here but not dispatched (and vice versa, the test
-// TestFormatFlagGuardsAllSubcommands catches the reverse).
+// must not be consumed as --format values. This map is the single source of
+// truth — TestFormatFlagGuardsAllSubcommands verifies that every entry here is
+// guarded against being swallowed by --format.
 var subcommands = map[string]bool{
 	"cal": true, "calendar": true,
 	"diff": true,
