@@ -903,3 +903,87 @@ func TestRowPrintBinary(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatFlagMissingValue(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "--format")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatal("expected non-zero exit code")
+	}
+	if !strings.Contains(string(out), "--format requires a value") {
+		t.Errorf("unexpected error: %s", out)
+	}
+}
+
+func TestDiffMissingArgs(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "diff")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatal("expected non-zero exit code for diff with no args")
+	}
+	got := string(out)
+	if !strings.Contains(got, "usage") && !strings.Contains(got, "requires") {
+		t.Errorf("unexpected error message: %s", got)
+	}
+}
+
+func TestDiffSingleArg(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "diff", "tomorrow")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatal("expected non-zero exit code for diff with single arg")
+	}
+	got := string(out)
+	if !strings.Contains(got, "two dates") && !strings.Contains(got, "usage") && !strings.Contains(got, "could not") {
+		t.Errorf("unexpected error message: %s", got)
+	}
+}
+
+func TestHighlightFileFlag(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	hlFile := filepath.Join(dir, "dates.json")
+	if err := os.WriteFile(hlFile, []byte(`["2026-04-01","2026-04-15"]`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(testBinary, "cal", "--print", "--highlight-file", hlFile)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("unexpected error: %s\n%s", err, out)
+	}
+	if len(out) == 0 {
+		t.Error("expected non-empty output")
+	}
+}
+
+func TestHelpOutputContent(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "--help")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := string(out)
+	if !strings.Contains(got, "Usage:") {
+		t.Errorf("help output missing 'Usage:': %s", got)
+	}
+	if !strings.Contains(got, "Subcommands:") {
+		t.Errorf("help output missing 'Subcommands:': %s", got)
+	}
+}
+
+func TestRelativeSubcommandAlias(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "rel", "tomorrow")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := strings.TrimSpace(string(out))
+	if got == "" {
+		t.Error("expected non-empty output from rel alias")
+	}
+}
