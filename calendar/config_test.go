@@ -3,6 +3,7 @@ package calendar
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -225,5 +226,45 @@ func TestLoadConfigUnwritableDir(t *testing.T) {
 	}
 	if len(warnings) != 1 {
 		t.Errorf("expected 1 warning for unwritable path, got %d: %v", len(warnings), warnings)
+	}
+}
+
+func TestLoadConfigUnknownKeyWarns(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	content := []byte("theme: default\nshwo_week_numbers: true\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, warnings := loadConfigFromPath(path)
+	if cfg.Theme != "default" {
+		t.Errorf("expected theme 'default', got %q", cfg.Theme)
+	}
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "shwo_week_numbers") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected warning about unknown key 'shwo_week_numbers', got %v", warnings)
+	}
+}
+
+func TestLoadConfigNoWarningForValidKeys(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	content := []byte("theme: dracula\nshow_week_numbers: left\nweek_numbering: us\nweek_start_day: 0\nfiscal_year_start: 1\njulian: false\nshow_fiscal_quarter: false\nshow_quarter_bar: false\nhighlight_source: /tmp/test.json\ncolors:\n  cursor: \"#ff0000\"\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, warnings := loadConfigFromPath(path)
+	for _, w := range warnings {
+		if strings.Contains(w, "unknown") {
+			t.Errorf("unexpected unknown-key warning: %s", w)
+		}
 	}
 }
