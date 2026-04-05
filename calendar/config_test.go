@@ -268,3 +268,71 @@ func TestLoadConfigNoWarningForValidKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestConfigPath_XDGSet(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "/tmp/test-xdg")
+	got, err := configPath()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := "/tmp/test-xdg/wen/config.yaml"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestConfigPath_XDGUnset(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "")
+	got, err := configPath()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	home, _ := os.UserHomeDir()
+	want := filepath.Join(home, ".config", "wen", "config.yaml")
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestLoadConfig_XDGOverride(t *testing.T) {
+	dir := t.TempDir()
+	wenDir := filepath.Join(dir, "wen")
+	if err := os.MkdirAll(wenDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	content := []byte("theme: dracula\nfiscal_year_start: 10\n")
+	if err := os.WriteFile(filepath.Join(wenDir, "config.yaml"), content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	cfg, warnings := LoadConfig()
+	if cfg.Theme != "dracula" {
+		t.Errorf("expected theme 'dracula', got %q", cfg.Theme)
+	}
+	if cfg.FiscalYearStart != 10 {
+		t.Errorf("expected FiscalYearStart 10, got %d", cfg.FiscalYearStart)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings, got %v", warnings)
+	}
+}
+
+func TestLoadConfig_MissingCreatesDefault(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfg, warnings := LoadConfig()
+	if cfg.Theme != "default" {
+		t.Errorf("expected default theme, got %q", cfg.Theme)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings, got %v", warnings)
+	}
+
+	// Verify default config file was created on disk.
+	created := filepath.Join(dir, "wen", "config.yaml")
+	if _, err := os.Stat(created); err != nil {
+		t.Errorf("expected default config file at %s, got error: %v", created, err)
+	}
+}
