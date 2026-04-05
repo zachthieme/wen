@@ -33,7 +33,51 @@ type baseModel struct {
 	dayFmt           dayFormat
 	termWidth        int
 	termHeight       int
+	months           int
 	warnings         []string
+}
+
+// Option configures calendar model properties.
+type Option func(*baseModel)
+
+// WithHighlightedDates sets dates to be visually highlighted.
+// Clears any highlight source path, disabling file watching.
+func WithHighlightedDates(dates map[time.Time]bool) Option {
+	return func(b *baseModel) {
+		b.highlightedDates = dates
+		b.highlightPath = ""
+	}
+}
+
+// WithJulian enables Julian day-of-year numbering.
+func WithJulian(on bool) Option {
+	return func(b *baseModel) {
+		b.julian = on
+	}
+}
+
+// WithPrintMode enables non-interactive print mode (suppresses cursor styling).
+func WithPrintMode(on bool) Option {
+	return func(b *baseModel) {
+		b.printMode = on
+	}
+}
+
+// WithMonths sets the number of months to display side by side (grid calendar).
+func WithMonths(n int) Option {
+	return func(b *baseModel) {
+		if n < 1 {
+			n = 1
+		}
+		b.months = n
+	}
+}
+
+// WithTermWidth sets the terminal width for print mode rendering.
+func WithTermWidth(w int) Option {
+	return func(b *baseModel) {
+		b.termWidth = w
+	}
 }
 
 // resolvedStyles holds pre-computed lipgloss styles for calendar rendering.

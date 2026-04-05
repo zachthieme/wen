@@ -40,7 +40,7 @@ func TestNewRowWithHighlightedDates(t *testing.T) {
 		dateKey(date(2026, time.March, 20)): true,
 		dateKey(date(2026, time.March, 25)): true,
 	}
-	m := NewRow(cursor, today, DefaultConfig(), WithRowHighlightedDates(highlights))
+	m := NewRow(cursor, today, DefaultConfig(), WithHighlightedDates(highlights))
 
 	if len(m.highlightedDates) != 2 {
 		t.Errorf("expected 2 highlighted dates, got %d", len(m.highlightedDates))
@@ -186,7 +186,7 @@ func TestRowVisibleWindowJulianNarrower(t *testing.T) {
 	normal := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig())
 	normal.termWidth = 80
 
-	julian := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig(), WithRowJulian(true))
+	julian := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig(), WithJulian(true))
 	julian.termWidth = 80
 
 	// Normal: maxDays = (80-2)/3 = 26
@@ -613,17 +613,17 @@ func TestRowToggleJulian(t *testing.T) {
 	}
 }
 
-func TestWithRowJulian(t *testing.T) {
+func TestRowWithJulian(t *testing.T) {
 	t.Parallel()
-	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithRowJulian(true))
+	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithJulian(true))
 	if !m.julian {
 		t.Error("expected julian to be true")
 	}
 }
 
-func TestWithRowPrintMode(t *testing.T) {
+func TestRowWithPrintMode(t *testing.T) {
 	t.Parallel()
-	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithRowPrintMode(true))
+	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithPrintMode(true))
 	if !m.printMode {
 		t.Error("expected printMode to be true")
 	}

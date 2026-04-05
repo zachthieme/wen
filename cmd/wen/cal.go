@@ -75,7 +75,7 @@ func runCalendar(ctx appContext, args []string) error {
 
 	highlightPath, julian, printMode := cf.resolve(ctx.cfg)
 
-	var modelOpts []calendar.ModelOption
+	var modelOpts []calendar.Option
 	if highlightPath != "" {
 		modelOpts = append(modelOpts, calendar.WithHighlightSource(highlightPath))
 	}

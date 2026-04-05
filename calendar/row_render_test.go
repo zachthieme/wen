@@ -178,7 +178,7 @@ func TestRenderStripDays(t *testing.T) {
 		highlights := map[time.Time]bool{
 			dateKey(date(2026, time.March, 20)): true,
 		}
-		m := NewRow(cursor, date(2026, time.March, 1), DefaultConfig(), WithRowHighlightedDates(highlights))
+		m := NewRow(cursor, date(2026, time.March, 1), DefaultConfig(), WithHighlightedDates(highlights))
 		start, end := stripWindow(2026, time.March, 0, time.Local)
 		got := m.renderStripDays(start, end)
 		// The output should contain day 20 (styled differently, but present)
@@ -206,7 +206,7 @@ func TestRenderStripDays(t *testing.T) {
 
 func TestRenderStripDayHeadersJulian(t *testing.T) {
 	t.Parallel()
-	m := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig(), WithRowJulian(true))
+	m := NewRow(date(2026, time.March, 15), date(2026, time.March, 15), DefaultConfig(), WithJulian(true))
 	start, end := stripWindow(2026, time.March, 0, time.Local)
 	got := m.renderStripDayHeaders(start, end)
 	if !strings.Contains(got, "Sun") {
@@ -220,7 +220,7 @@ func TestRenderStripDayHeadersJulian(t *testing.T) {
 func TestRenderStripDaysJulian(t *testing.T) {
 	t.Parallel()
 	cursor := date(2026, time.March, 15)
-	m := NewRow(cursor, date(2026, time.March, 15), DefaultConfig(), WithRowJulian(true))
+	m := NewRow(cursor, date(2026, time.March, 15), DefaultConfig(), WithJulian(true))
 	start, end := stripWindow(2026, time.March, 0, time.Local)
 	got := m.renderStripDays(start, end)
 	// March 1 2026 = yearday 60

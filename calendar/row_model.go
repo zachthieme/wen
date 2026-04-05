@@ -17,53 +17,8 @@ type RowModel struct {
 	keys rowKeyMap
 }
 
-// RowModelOption configures optional RowModel properties.
-type RowModelOption func(*RowModel)
-
-// WithRowHighlightedDates sets dates to be visually highlighted in the row calendar.
-// Clears any highlight source path, disabling file watching.
-func WithRowHighlightedDates(dates map[time.Time]bool) RowModelOption {
-	return func(m *RowModel) {
-		m.highlightedDates = dates
-		m.highlightPath = ""
-	}
-}
-
-// WithRowHighlightSource sets the path to a JSON file of dates to highlight.
-// It expands ~ to the user's home directory, performs the initial load, and
-// enables file watching when Init() runs.
-func WithRowHighlightSource(path string) RowModelOption {
-	return func(m *RowModel) {
-		m.highlightPath = expandTilde(path)
-		dates, warnings := LoadHighlightedDates(m.highlightPath)
-		m.highlightedDates = dates
-		m.warnings = append(m.warnings, warnings...)
-	}
-}
-
-// WithRowJulian enables Julian day-of-year numbering in the row calendar.
-func WithRowJulian(on bool) RowModelOption {
-	return func(m *RowModel) {
-		m.julian = on
-	}
-}
-
-// WithRowPrintMode enables non-interactive print mode (suppresses cursor styling).
-func WithRowPrintMode(on bool) RowModelOption {
-	return func(m *RowModel) {
-		m.printMode = on
-	}
-}
-
-// WithTermWidth returns a copy of the model with the terminal width set.
-// Used in print mode where no WindowSizeMsg is received.
-func (m RowModel) WithTermWidth(w int) RowModel {
-	m.termWidth = w
-	return m
-}
-
 // NewRow creates a RowModel with the given cursor position, today's date, and configuration.
-func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowModel {
+func NewRow(cursor, today time.Time, cfg Config, opts ...Option) RowModel {
 	colors := cfg.ResolvedColors()
 	m := RowModel{
 		baseModel: baseModel{
@@ -82,7 +37,7 @@ func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowMode
 	m.styles.cursorToday = m.styles.cursorToday.Underline(false)
 	m.styles.highlight = m.styles.highlight.Underline(false)
 	for _, opt := range opts {
-		opt(&m)
+		opt(&m.baseModel)
 	}
 	m.dayFmt = dayFormatFor(m.julian)
 	return m

@@ -14,48 +14,11 @@ import (
 type Model struct {
 	baseModel
 	weekNumPos WeekNumPos
-	months     int
 	keys       keyMap
 }
 
-// ModelOption configures optional Model properties.
-type ModelOption func(*Model)
-
-// WithHighlightedDates sets dates to be visually highlighted in the calendar.
-// Clears any highlight source path, disabling file watching.
-func WithHighlightedDates(dates map[time.Time]bool) ModelOption {
-	return func(m *Model) {
-		m.highlightedDates = dates
-		m.highlightPath = ""
-	}
-}
-
-// WithMonths sets the number of months to display side by side.
-func WithMonths(n int) ModelOption {
-	return func(m *Model) {
-		if n < 1 {
-			n = 1
-		}
-		m.months = n
-	}
-}
-
-// WithJulian enables Julian day-of-year numbering.
-func WithJulian(on bool) ModelOption {
-	return func(m *Model) {
-		m.julian = on
-	}
-}
-
-// WithPrintMode enables non-interactive print mode (suppresses cursor styling).
-func WithPrintMode(on bool) ModelOption {
-	return func(m *Model) {
-		m.printMode = on
-	}
-}
-
 // New creates a calendar Model with the given cursor position, today's date, and configuration.
-func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
+func New(cursor, today time.Time, cfg Config, opts ...Option) Model {
 	colors := cfg.ResolvedColors()
 	m := Model{
 		baseModel: baseModel{
@@ -64,13 +27,13 @@ func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 			config: cfg,
 			help:   newHelpModel(colors),
 			styles: buildStyles(colors),
+			months: 1,
 		},
 		weekNumPos: parseWeekNumPos(cfg.ShowWeekNumbers),
-		months:     1,
 		keys:       defaultKeyMap(),
 	}
 	for _, opt := range opts {
-		opt(&m)
+		opt(&m.baseModel)
 	}
 	m.dayFmt = dayFormatFor(m.julian)
 	return m

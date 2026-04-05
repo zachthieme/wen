@@ -31,15 +31,19 @@ func runRow(ctx appContext, args []string) error {
 
 	highlightPath, julian, printMode := cf.resolve(ctx.cfg)
 
-	var modelOpts []calendar.RowModelOption
+	var modelOpts []calendar.Option
 	if highlightPath != "" {
-		modelOpts = append(modelOpts, calendar.WithRowHighlightSource(highlightPath))
+		modelOpts = append(modelOpts, calendar.WithHighlightSource(highlightPath))
 	}
 	if julian {
-		modelOpts = append(modelOpts, calendar.WithRowJulian(true))
+		modelOpts = append(modelOpts, calendar.WithJulian(true))
 	}
 	if printMode {
-		modelOpts = append(modelOpts, calendar.WithRowPrintMode(true))
+		width := 80
+		if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+			width = w
+		}
+		modelOpts = append(modelOpts, calendar.WithPrintMode(true), calendar.WithTermWidth(width))
 	}
 
 	m := calendar.NewRow(cursor, ctx.now, ctx.cfg, modelOpts...)
@@ -48,11 +52,6 @@ func runRow(ctx appContext, args []string) error {
 	}
 
 	if printMode {
-		width := 80
-		if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
-			width = w
-		}
-		m = m.WithTermWidth(width)
 		fmt.Fprint(ctx.w, m.View())
 		return nil
 	}

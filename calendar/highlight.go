@@ -67,12 +67,12 @@ func LoadHighlightedDates(path string) (map[time.Time]bool, []string) {
 // enables file watching when Init() runs. If both WithHighlightSource and
 // WithHighlightedDates are used, the last one applied wins (WithHighlightedDates
 // clears the highlight path, disabling file watching).
-func WithHighlightSource(path string) ModelOption {
-	return func(m *Model) {
-		m.highlightPath = expandTilde(path)
-		dates, warnings := LoadHighlightedDates(m.highlightPath)
-		m.highlightedDates = dates
-		m.warnings = append(m.warnings, warnings...)
+func WithHighlightSource(path string) Option {
+	return func(b *baseModel) {
+		b.highlightPath = expandTilde(path)
+		dates, warnings := LoadHighlightedDates(b.highlightPath)
+		b.highlightedDates = dates
+		b.warnings = append(b.warnings, warnings...)
 	}
 }
 
