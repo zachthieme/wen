@@ -45,7 +45,7 @@ The parser is a standalone library. The calendar depends on the parser but not v
 
 ## Key Patterns
 
-- **Functional options**: `ModelOption`, `wen.Option` — use this pattern for new optional configuration.
+- **Functional options**: `calendar.Option`, `wen.Option` — use this pattern for new optional configuration.
 - **Fail silently for highlights**: `LoadHighlightedDates` returns nil on any error. The watcher continues on errors. Missing highlights are not fatal.
 - **Value receivers on Model**: Bubble Tea requires value receivers for `Init()` and `Update()`. Do not store mutable pointers on Model unless they survive copies (use pointer indirection like `activeWatcher`).
 - **Tilde expansion**: Always use `expandTilde()` before passing paths to fsnotify or other OS APIs that don't understand `~`.

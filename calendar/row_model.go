@@ -27,6 +27,7 @@ func NewRow(cursor, today time.Time, cfg Config, opts ...Option) RowModel {
 			config: cfg,
 			help:   newHelpModel(colors),
 			styles: buildStyles(colors),
+			months: 1,
 		},
 		keys: defaultRowKeyMap(),
 	}
