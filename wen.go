@@ -1,14 +1,3 @@
-// Package wen parses natural language date and time expressions into [time.Time] values.
-//
-// It supports relative expressions ("tomorrow", "next friday", "in 3 days"),
-// absolute dates ("march 15 2027"), ordinal patterns ("first monday of april"),
-// time-of-day ("at 3pm"), boundaries ("end of next quarter"), and multi-date
-// expressions ("every friday in april"). All parsing is relative to a reference
-// time, defaulting to [time.Now].
-//
-// The parser is zero-dependency beyond the Go standard library. Configure
-// behavior with functional [Option] values such as [WithFiscalYearStart] and
-// [WithPeriodSame].
 package wen
 
 import (
@@ -134,19 +123,19 @@ func ParseContext(ctx context.Context, input string, opts ...Option) (time.Time,
 	return ParseRelativeContext(ctx, input, time.Now(), opts...)
 }
 
-func buildParser(ctx context.Context, input string, ref time.Time, opts ...Option) (*parser, error) {
+func buildParser(ctx context.Context, input string, opts ...Option) (*parser, options, error) {
 	o := options{periodMode: PeriodStart}
 	for _, opt := range opts {
 		opt(&o)
 	}
 	if o.err != nil {
-		return nil, o.err
+		return nil, o, o.err
 	}
 	l := newLexer(input)
 	tokens := l.tokenize()
-	p := newParser(tokens, ref, o, input)
+	p := newParser(tokens, input)
 	p.ctx = ctx
-	return p, nil
+	return p, o, nil
 }
 
 // ParseRelative parses a natural language date/time expression relative to ref.
@@ -156,15 +145,15 @@ func ParseRelative(input string, ref time.Time, opts ...Option) (time.Time, erro
 
 // ParseRelativeContext is like ParseRelative but accepts a context for cancellation.
 func ParseRelativeContext(ctx context.Context, input string, ref time.Time, opts ...Option) (time.Time, error) {
-	p, err := buildParser(ctx, input, ref, opts...)
+	p, o, err := buildParser(ctx, input, opts...)
 	if err != nil {
 		return time.Time{}, err
 	}
-	result, err := p.parse()
+	expr, err := p.parse()
 	if err != nil {
 		return time.Time{}, err
 	}
-	return result, nil
+	return newResolver(ref, o, input).resolve(expr)
 }
 
 // ParseMulti parses expressions that may produce multiple dates (e.g., "every friday in april").
@@ -175,24 +164,26 @@ func ParseMulti(input string, ref time.Time, opts ...Option) ([]time.Time, error
 
 // ParseMultiContext is like ParseMulti but accepts a context for cancellation.
 func ParseMultiContext(ctx context.Context, input string, ref time.Time, opts ...Option) ([]time.Time, error) {
-	p, err := buildParser(ctx, input, ref, opts...)
+	p, o, err := buildParser(ctx, input, opts...)
 	if err != nil {
 		return nil, err
 	}
 
+	r := newResolver(ref, o, input)
+
 	// Try multi-date parse first
-	if results, ok := p.parseMultiDate(); ok {
+	if expr, ok := p.parseMultiDate(); ok {
 		p.skipNoise()
 		if p.peek().Kind == tokenEOF {
-			return results, nil
+			return r.resolveMulti(expr)
 		}
 	}
 
 	// Fall back to single-date parse
 	p.pos = 0
-	result, err := p.parse()
+	expr, err := p.parse()
 	if err != nil {
 		return nil, err
 	}
-	return []time.Time{result}, nil
+	return r.resolveMulti(expr)
 }

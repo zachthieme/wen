@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -13,7 +12,6 @@ import (
 	"github.com/zachthieme/wen/calendar"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"golang.org/x/term"
 )
 
 const (
@@ -58,13 +56,10 @@ func runCalendar(ctx appContext, args []string) error {
 	args = expandMonthShorthand(args)
 
 	fs := flag.NewFlagSet("cal", flag.ContinueOnError)
-	highlightFile := fs.String("highlight-file", "", "path to JSON file with dates to highlight")
+	var cf calendarFlags
+	cf.register(fs)
 	monthCount := fs.Int("months", 1, "number of months to display side by side")
 	fs.IntVar(monthCount, "m", 1, "shorthand for --months")
-	printFlag := fs.Bool("print", false, "print calendar and exit (non-interactive)")
-	fs.BoolVar(printFlag, "p", false, "shorthand for --print")
-	julianFlag := fs.Bool("julian", false, "show Julian day-of-year numbers")
-	fs.BoolVar(julianFlag, "j", false, "shorthand for --julian")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -77,21 +72,7 @@ func runCalendar(ctx appContext, args []string) error {
 		return err
 	}
 
-	cfg := ctx.cfg
-
-	// Print config warnings to stderr.
-	for _, w := range cfg.Normalize() {
-		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
-	}
-
-	// Resolve highlight source (priority: --highlight-file > config > default path).
-	highlightPath := calendar.ResolveHighlightSource(*highlightFile, cfg.HighlightSource)
-
-	// Resolve julian: CLI flag overrides config
-	julian := cfg.Julian || *julianFlag
-
-	// Determine print mode: explicit flag or non-TTY stdout
-	printMode := *printFlag || !term.IsTerminal(int(os.Stdout.Fd()))
+	highlightPath, julian, printMode := cf.resolve(ctx.cfg)
 
 	var modelOpts []calendar.ModelOption
 	if highlightPath != "" {
@@ -107,7 +88,7 @@ func runCalendar(ctx appContext, args []string) error {
 		modelOpts = append(modelOpts, calendar.WithPrintMode(true))
 	}
 
-	m := calendar.New(cursor, ctx.now, cfg, modelOpts...)
+	m := calendar.New(cursor, ctx.now, ctx.cfg, modelOpts...)
 
 	if printMode {
 		fmt.Fprint(ctx.w, m.View())

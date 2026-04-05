@@ -176,6 +176,20 @@ var themePresets = map[string]ThemeColors{
 	},
 }
 
+// knownConfigKeys lists all valid top-level config keys. Used to detect typos.
+var knownConfigKeys = map[string]bool{
+	"show_week_numbers":   true,
+	"week_numbering":      true,
+	"week_start_day":      true,
+	"fiscal_year_start":   true,
+	"show_fiscal_quarter": true,
+	"show_quarter_bar":    true,
+	"julian":              true,
+	"theme":               true,
+	"colors":              true,
+	"highlight_source":    true,
+}
+
 // LoadConfig reads the user's config from the XDG config path, creating a default file if none exists.
 func LoadConfig() (Config, []string) {
 	path, err := configPath()
@@ -200,7 +214,19 @@ func loadConfigFromPath(path string) (Config, []string) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return DefaultConfig(), []string{"invalid config file, using defaults"}
 	}
-	warnings := cfg.Normalize()
+
+	// Check for unknown top-level keys (typo detection).
+	var warnings []string
+	var raw map[string]interface{}
+	if err := yaml.Unmarshal(data, &raw); err == nil {
+		for key := range raw {
+			if !knownConfigKeys[key] {
+				warnings = append(warnings, fmt.Sprintf("unknown config key %q", key))
+			}
+		}
+	}
+
+	warnings = append(warnings, cfg.Normalize()...)
 	return cfg, warnings
 }
 
