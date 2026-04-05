@@ -1,6 +1,10 @@
 package wen_test
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -143,5 +147,64 @@ func TestPublicParseError(t *testing.T) {
 	}
 	if pe.Input != "not a date" {
 		t.Errorf("ParseError.Input = %q, want %q", pe.Input, "not a date")
+	}
+}
+
+func TestParseErrorUnwrap(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	_, err := wen.ParseRelativeContext(ctx, "tomorrow", ref)
+	if err == nil {
+		t.Fatal("expected error from cancelled context")
+	}
+	pe, ok := err.(*wen.ParseError)
+	if !ok {
+		t.Fatalf("expected *wen.ParseError, got %T", err)
+	}
+	if pe.Cause == nil {
+		t.Fatal("expected Cause to be set on context cancellation error")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("errors.Is(err, context.Canceled) = false, want true")
+	}
+}
+
+func TestWithFiscalYearStartValidationError(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		month int
+	}{
+		{"zero", 0},
+		{"negative", -1},
+		{"thirteen", 13},
+		{"hundred", 100},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := wen.ParseRelative("tomorrow", ref, wen.WithFiscalYearStart(tt.month))
+			if err == nil {
+				t.Fatalf("WithFiscalYearStart(%d) should return a validation error", tt.month)
+			}
+			if !strings.Contains(err.Error(), "invalid fiscal year start month") {
+				t.Errorf("error %q should mention invalid fiscal year start month", err.Error())
+			}
+		})
+	}
+}
+
+func TestWithFiscalYearStartValidValues(t *testing.T) {
+	t.Parallel()
+	for month := 1; month <= 12; month++ {
+		t.Run(fmt.Sprintf("month_%d", month), func(t *testing.T) {
+			t.Parallel()
+			_, err := wen.ParseRelative("tomorrow", ref, wen.WithFiscalYearStart(month))
+			if err != nil {
+				t.Fatalf("WithFiscalYearStart(%d) should not error: %v", month, err)
+			}
+		})
 	}
 }

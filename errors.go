@@ -11,6 +11,7 @@ type ParseError struct {
 	Position int      // byte offset where parsing failed
 	Expected []string // what the parser expected at this position
 	Found    string   // what was actually found
+	Cause    error    // underlying error, if any (supports errors.Is / errors.As chains)
 }
 
 func (e *ParseError) Error() string {
@@ -24,5 +25,13 @@ func (e *ParseError) Error() string {
 	if e.Input != "" {
 		msg = fmt.Sprintf("%s in %q", msg, e.Input)
 	}
+	if e.Cause != nil {
+		msg = fmt.Sprintf("%s: %v", msg, e.Cause)
+	}
 	return msg
+}
+
+// Unwrap returns the underlying cause, supporting [errors.Is] and [errors.As].
+func (e *ParseError) Unwrap() error {
+	return e.Cause
 }

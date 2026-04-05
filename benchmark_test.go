@@ -30,6 +30,7 @@ func BenchmarkParse(b *testing.B) {
 	}
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
+			b.ReportAllocs()
 			for b.Loop() {
 				_, _ = ParseRelative(bm.input, benchRef)
 			}
@@ -39,17 +40,71 @@ func BenchmarkParse(b *testing.B) {
 
 func BenchmarkParseMulti(b *testing.B) {
 	b.Run("every_friday_in_april", func(b *testing.B) {
+		b.ReportAllocs()
 		for b.Loop() {
 			_, _ = ParseMulti("every friday in april", benchRef)
+		}
+	})
+	b.Run("fallback_to_single", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			_, _ = ParseMulti("tomorrow", benchRef)
 		}
 	})
 }
 
 func BenchmarkLexer(b *testing.B) {
-	b.Run("complex_input", func(b *testing.B) {
+	benchmarks := []struct {
+		name  string
+		input string
+	}{
+		{"simple", "tomorrow"},
+		{"moderate", "next friday at 3pm"},
+		{"complex", "first monday of next month at 3pm"},
+		{"long_with_noise", "the beginning of the next quarter"},
+		{"numeric_heavy", "12:30pm"},
+		{"ordinal_suffix", "march 3rd 2027"},
+	}
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				l := newLexer(bm.input)
+				l.tokenize()
+			}
+		})
+	}
+}
+
+func BenchmarkCountWorkdays(b *testing.B) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)
+	b.Run("full_year", func(b *testing.B) {
+		b.ReportAllocs()
 		for b.Loop() {
-			l := newLexer("first monday of next month at 3pm")
-			l.tokenize()
+			CountWorkdays(start, end)
+		}
+	})
+	b.Run("single_week", func(b *testing.B) {
+		b.ReportAllocs()
+		weekEnd := start.AddDate(0, 0, 7)
+		for b.Loop() {
+			CountWorkdays(start, weekEnd)
+		}
+	})
+}
+
+func BenchmarkFiscalQuarter(b *testing.B) {
+	b.Run("calendar_year", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			FiscalQuarter(3, 2026, 1)
+		}
+	})
+	b.Run("oct_fiscal_year", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			FiscalQuarter(3, 2026, 10)
 		}
 	})
 }

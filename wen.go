@@ -1,7 +1,19 @@
+// Package wen parses natural language date and time expressions into [time.Time] values.
+//
+// It supports relative expressions ("tomorrow", "next friday", "in 3 days"),
+// absolute dates ("march 15 2027"), ordinal patterns ("first monday of april"),
+// time-of-day ("at 3pm"), boundaries ("end of next quarter"), and multi-date
+// expressions ("every friday in april"). All parsing is relative to a reference
+// time, defaulting to [time.Now].
+//
+// The parser is zero-dependency beyond the Go standard library. Configure
+// behavior with functional [Option] values such as [WithFiscalYearStart] and
+// [WithPeriodSame].
 package wen
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -30,6 +42,7 @@ type Option func(*options)
 type options struct {
 	periodMode      PeriodMode
 	fiscalYearStart int // 1-12, month the fiscal year begins (default 1 = January)
+	err             error
 }
 
 // WithPeriodStart makes period references resolve to the start of the period (default).
@@ -42,12 +55,14 @@ func WithPeriodSame() Option { return func(o *options) { o.periodMode = PeriodSa
 // This affects quarter calculations: e.g., WithFiscalYearStart(10) makes
 // Q1=Oct-Dec, Q2=Jan-Mar, Q3=Apr-Jun, Q4=Jul-Sep.
 // Default is 1 (January), which gives standard calendar quarters.
-// Values outside 1-12 are silently ignored (the default is retained).
+// Values outside 1-12 cause a validation error at parse time.
 func WithFiscalYearStart(month int) Option {
 	return func(o *options) {
-		if month >= 1 && month <= 12 {
-			o.fiscalYearStart = month
+		if month < 1 || month > 12 {
+			o.err = fmt.Errorf("invalid fiscal year start month %d: must be between 1 and 12", month)
+			return
 		}
+		o.fiscalYearStart = month
 	}
 }
 
@@ -61,8 +76,8 @@ func FiscalQuarter(month, year, startMonth int) (quarter, fiscalYear int) {
 	if startMonth < 1 || startMonth > monthsPerYear {
 		startMonth = 1
 	}
-	fm := (month - startMonth + monthsPerYear) % monthsPerYear
-	quarter = fm/monthsPerQuarter + 1
+	fiscalMonth := (month - startMonth + monthsPerYear) % monthsPerYear
+	quarter = fiscalMonth/monthsPerQuarter + 1
 	switch {
 	case startMonth == 1:
 		fiscalYear = year
@@ -92,10 +107,10 @@ func CountWorkdays(start, end time.Time) int {
 	fullWeeks := totalDays / 7
 	remaining := totalDays % 7
 	workdays := fullWeeks * 5
-	startDow := int(start.Weekday())
+	startDay := int(start.Weekday())
 	for i := range remaining {
-		dow := (startDow + i) % 7
-		if dow != int(time.Saturday) && dow != int(time.Sunday) {
+		dayOfWeek := (startDay + i) % 7
+		if dayOfWeek != int(time.Saturday) && dayOfWeek != int(time.Sunday) {
 			workdays++
 		}
 	}
@@ -119,16 +134,19 @@ func ParseContext(ctx context.Context, input string, opts ...Option) (time.Time,
 	return ParseRelativeContext(ctx, input, time.Now(), opts...)
 }
 
-func buildParser(ctx context.Context, input string, ref time.Time, opts ...Option) *parser {
+func buildParser(ctx context.Context, input string, ref time.Time, opts ...Option) (*parser, error) {
 	o := options{periodMode: PeriodStart}
 	for _, opt := range opts {
 		opt(&o)
+	}
+	if o.err != nil {
+		return nil, o.err
 	}
 	l := newLexer(input)
 	tokens := l.tokenize()
 	p := newParser(tokens, ref, o, input)
 	p.ctx = ctx
-	return p
+	return p, nil
 }
 
 // ParseRelative parses a natural language date/time expression relative to ref.
@@ -138,7 +156,10 @@ func ParseRelative(input string, ref time.Time, opts ...Option) (time.Time, erro
 
 // ParseRelativeContext is like ParseRelative but accepts a context for cancellation.
 func ParseRelativeContext(ctx context.Context, input string, ref time.Time, opts ...Option) (time.Time, error) {
-	p := buildParser(ctx, input, ref, opts...)
+	p, err := buildParser(ctx, input, ref, opts...)
+	if err != nil {
+		return time.Time{}, err
+	}
 	result, err := p.parse()
 	if err != nil {
 		return time.Time{}, err
@@ -154,7 +175,10 @@ func ParseMulti(input string, ref time.Time, opts ...Option) ([]time.Time, error
 
 // ParseMultiContext is like ParseMulti but accepts a context for cancellation.
 func ParseMultiContext(ctx context.Context, input string, ref time.Time, opts ...Option) ([]time.Time, error) {
-	p := buildParser(ctx, input, ref, opts...)
+	p, err := buildParser(ctx, input, ref, opts...)
+	if err != nil {
+		return nil, err
+	}
 
 	// Try multi-date parse first
 	if results, ok := p.parseMultiDate(); ok {
