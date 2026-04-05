@@ -1352,3 +1352,29 @@ func TestSemanticErrorOmitsPosition(t *testing.T) {
 		t.Errorf("semantic error message should not mention position: %s", pe.Error())
 	}
 }
+
+func TestParseMultiFallbackError(t *testing.T) {
+	t.Parallel()
+	// "every pizza" fails multi-date grammar then falls back to single-date.
+	// This test guards the contract: after fallback, bestErr must reflect the
+	// single-date parse, not a stale error from the multi-date attempt.
+	// Currently parseMultiDate never calls recordError, so this is a
+	// forward-looking guard — if multi-date parsing is extended to record
+	// errors, the p.bestErr = nil reset in ParseMultiContext becomes load-bearing.
+	_, err := ParseMulti("every pizza", ref)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	var pe *ParseError
+	if !errors.As(err, &pe) {
+		t.Fatalf("expected *ParseError, got %T", err)
+	}
+	// The error should come from the single-date parse, not the multi-date attempt.
+	// "every" is tokenEvery, which parseDateExpr doesn't handle — so the error should
+	// mention "date expression", not "weekday" from the multi-date path.
+	for _, exp := range pe.Expected {
+		if exp == "weekday" {
+			t.Errorf("error references multi-date grammar (Expected contains %q); should reflect single-date parse", exp)
+		}
+	}
+}

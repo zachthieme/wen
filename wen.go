@@ -198,8 +198,11 @@ func ParseMultiContext(ctx context.Context, input string, ref time.Time, opts ..
 		}
 	}
 
-	// Fall back to single-date parse
+	// Fall back to single-date parse — reset error state so the
+	// single-date parse produces its own error, not a stale one
+	// from the multi-date attempt.
 	p.pos = 0
+	p.bestErr = nil
 	expr, err := p.parse()
 	if err != nil {
 		return nil, err
