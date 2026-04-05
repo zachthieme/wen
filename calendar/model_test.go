@@ -161,8 +161,8 @@ func TestVisualSelectEnter(t *testing.T) {
 	// Press Enter to confirm
 	updated, _ := m.Update(specialMsg(tea.KeyEnter))
 	m = updated.(Model)
-	if !m.InRange() {
-		t.Error("expected InRange to be true")
+	if !m.HasRange() {
+		t.Error("expected HasRange to be true")
 	}
 	if m.RangeStart() != date(2026, time.March, 17) {
 		t.Errorf("RangeStart got %s, want 2026-03-17", m.RangeStart().Format(wen.DateLayout))
@@ -186,8 +186,8 @@ func TestVisualSelectCancel(t *testing.T) {
 	if m.IsQuit() {
 		t.Error("expected IsQuit to be false after first Esc (cancel range)")
 	}
-	if m.InRange() {
-		t.Error("expected InRange to be false after Esc cancel")
+	if m.HasRange() {
+		t.Error("expected HasRange to be false after Esc cancel")
 	}
 	if cmd != nil {
 		t.Error("expected no quit command after first Esc")
@@ -219,8 +219,8 @@ func TestVisualSelectReanchor(t *testing.T) {
 	// Press Enter to confirm
 	updated, _ := m.Update(specialMsg(tea.KeyEnter))
 	m = updated.(Model)
-	if !m.InRange() {
-		t.Error("expected InRange to be true")
+	if !m.HasRange() {
+		t.Error("expected HasRange to be true")
 	}
 	if m.RangeStart() != date(2026, time.March, 19) {
 		t.Errorf("RangeStart got %s, want 2026-03-19", m.RangeStart().Format(wen.DateLayout))
@@ -243,8 +243,8 @@ func TestRangeReverseOrder(t *testing.T) {
 	// Press Enter to confirm
 	updated, _ := m.Update(specialMsg(tea.KeyEnter))
 	m = updated.(Model)
-	if !m.InRange() {
-		t.Error("expected InRange to be true")
+	if !m.HasRange() {
+		t.Error("expected HasRange to be true")
 	}
 	if m.RangeStart() != date(2026, time.March, 15) {
 		t.Errorf("RangeStart got %s, want 2026-03-15", m.RangeStart().Format(wen.DateLayout))
@@ -264,8 +264,8 @@ func TestEnterWithoutRange(t *testing.T) {
 	if !m.Selected() {
 		t.Error("expected Selected to be true")
 	}
-	if m.InRange() {
-		t.Error("expected InRange to be false")
+	if m.HasRange() {
+		t.Error("expected HasRange to be false")
 	}
 }
 
@@ -281,12 +281,12 @@ func TestSameDayRange(t *testing.T) {
 	if !m.Selected() {
 		t.Error("expected Selected to be true")
 	}
-	if m.InRange() {
-		t.Error("expected InRange to be false for same day")
+	if m.HasRange() {
+		t.Error("expected HasRange to be false for same day")
 	}
 }
 
-func TestCtrlCInRangeMode(t *testing.T) {
+func TestCtrlCHasRangeMode(t *testing.T) {
 	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())

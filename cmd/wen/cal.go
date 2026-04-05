@@ -110,7 +110,7 @@ func runCalendar(ctx appContext, args []string) error {
 	if !ok {
 		return fmt.Errorf("unexpected internal state")
 	}
-	if cal.InRange() {
+	if cal.HasRange() {
 		fmt.Fprintln(ctx.w, cal.RangeStart().Format(wen.DateLayout))
 		fmt.Fprintln(ctx.w, cal.RangeEnd().Format(wen.DateLayout))
 	} else if cal.Selected() {

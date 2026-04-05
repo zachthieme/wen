@@ -105,14 +105,14 @@ func (b baseModel) Selected() bool { return b.selected }
 // Cursor returns the currently selected date.
 func (b baseModel) Cursor() time.Time { return b.cursor }
 
-// InRange reports whether the user confirmed a multi-day range selection.
-func (b baseModel) InRange() bool {
+// HasRange reports whether the user confirmed a multi-day range selection.
+func (b baseModel) HasRange() bool {
 	return b.selected && b.rangeAnchor != nil && !b.rangeAnchor.Equal(b.cursor)
 }
 
 // RangeStart returns the earlier date of the confirmed range, or zero if no range.
 func (b baseModel) RangeStart() time.Time {
-	if !b.InRange() {
+	if !b.HasRange() {
 		return time.Time{}
 	}
 	if b.rangeAnchor.Before(b.cursor) {
@@ -123,7 +123,7 @@ func (b baseModel) RangeStart() time.Time {
 
 // RangeEnd returns the later date of the confirmed range, or zero if no range.
 func (b baseModel) RangeEnd() time.Time {
-	if !b.InRange() {
+	if !b.HasRange() {
 		return time.Time{}
 	}
 	if b.rangeAnchor.After(b.cursor) {

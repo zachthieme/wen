@@ -67,7 +67,7 @@ func runRow(ctx appContext, args []string) error {
 	if !ok {
 		return fmt.Errorf("unexpected internal state")
 	}
-	if row.InRange() {
+	if row.HasRange() {
 		fmt.Fprintln(ctx.w, row.RangeStart().Format(wen.DateLayout))
 		fmt.Fprintln(ctx.w, row.RangeEnd().Format(wen.DateLayout))
 	} else if row.Selected() {

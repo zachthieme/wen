@@ -814,8 +814,8 @@ func TestIntegrationRangeSelectThenView(t *testing.T) {
 	// Confirm range
 	updated, _ = m.Update(specialMsg(tea.KeyEnter))
 	m = updated.(Model)
-	if !m.InRange() {
-		t.Error("expected InRange() after range select + Enter")
+	if !m.HasRange() {
+		t.Error("expected HasRange() after range select + Enter")
 	}
 	if m.RangeStart() != date(2026, time.March, 17) {
 		t.Errorf("RangeStart = %s, want 2026-03-17", m.RangeStart().Format("2006-01-02"))
