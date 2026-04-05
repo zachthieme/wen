@@ -1378,3 +1378,36 @@ func TestParseMultiFallbackError(t *testing.T) {
 		}
 	}
 }
+
+func TestTimeExprErrorMessages(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   string
+		wantSub string // substring that should appear in the error
+	}{
+		{"hour>23 in 24h", "at 25:00", "time"},
+		{"minute>59", "at 3:99", "time"},
+		{"meridiem hour>12", "at 13pm", "time"},
+		{"meridiem hour=0", "at 0pm", "time"},
+		{"meridiem colon hour>12", "at 13:00pm", "time"},
+		{"meridiem colon hour=0", "at 0:30am", "time"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseRelative(tt.input, ref)
+			if err == nil {
+				t.Fatalf("expected error for %q, got nil", tt.input)
+			}
+			var pe *ParseError
+			if !errors.As(err, &pe) {
+				t.Fatalf("expected *ParseError, got %T", err)
+			}
+			errStr := pe.Error()
+			if !strings.Contains(errStr, tt.wantSub) {
+				t.Errorf("error %q does not contain %q", errStr, tt.wantSub)
+			}
+		})
+	}
+}

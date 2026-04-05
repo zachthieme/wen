@@ -553,16 +553,34 @@ func (p *parser) parseTimeExpr() (hour int, minute int, ok bool) {
 				min := p.advance()
 				h, m := num.IntVal, min.IntVal
 				if m > 59 {
+					p.recordError(&ParseError{
+						Input:    p.input,
+						Position: num.Position,
+						Expected: []string{"valid time (minute 0-59)"},
+						Found:    fmt.Sprintf("%d:%02d", h, m),
+					})
 					p.restore(saved)
 					return 0, 0, false
 				}
 				if p.peek().Kind == tokenMeridiem {
 					if h < 1 || h > 12 {
+						p.recordError(&ParseError{
+							Input:    p.input,
+							Position: num.Position,
+							Expected: []string{"valid time (hour 1-12 with am/pm)"},
+							Found:    fmt.Sprintf("%d:%02d%s", h, m, p.peek().Value),
+						})
 						p.restore(saved)
 						return 0, 0, false
 					}
 					h = applyMeridiem(h, p.advance().Value)
 				} else if h > 23 {
+					p.recordError(&ParseError{
+						Input:    p.input,
+						Position: num.Position,
+						Expected: []string{"valid time (hour 0-23)"},
+						Found:    fmt.Sprintf("%d:%02d", h, m),
+					})
 					p.restore(saved)
 					return 0, 0, false
 				}
@@ -576,6 +594,12 @@ func (p *parser) parseTimeExpr() (hour int, minute int, ok bool) {
 		// number meridiem
 		if p.peek().Kind == tokenMeridiem {
 			if num.IntVal < 1 || num.IntVal > 12 {
+				p.recordError(&ParseError{
+					Input:    p.input,
+					Position: num.Position,
+					Expected: []string{"valid time (hour 1-12 with am/pm)"},
+					Found:    fmt.Sprintf("%d%s", num.IntVal, p.peek().Value),
+				})
 				p.restore(saved)
 				return 0, 0, false
 			}
