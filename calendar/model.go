@@ -141,7 +141,6 @@ func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 	return m
 }
 
-
 // midnightTickMsg is sent when the clock crosses midnight, triggering a
 // refresh of the "today" highlight.
 type midnightTickMsg struct{}
