@@ -1,5 +1,25 @@
 # Changelog
 
+### v1.9.0 — April 5, 2026
+
+**Architecture:**
+- Internal AST layer between parser and resolver: grammar recognition (parser.go) is now fully decoupled from date math (resolver.go) via typed `dateExpr` AST nodes. Public API unchanged.
+- Removed dead `ref`/`opts` fields from parser struct — parser no longer holds any date-math state.
+
+**New features:**
+- Config typo detection: unknown YAML config keys now produce a warning (e.g., `unknown config key "shwo_week_numbers"`), catching silent typos that were previously ignored.
+
+**Improvements:**
+- Auto-center calendar and strip views in terminal using `lipgloss.Place`.
+- Shared `calendarFlags` struct for `cal` and `row` subcommands, eliminating duplicated flag definitions and resolution logic.
+- Package-level `doc.go` for both `wen` and `calendar` packages (Go convention for pkg.go.dev).
+- `t.Parallel()` on all eligible tests across the codebase.
+
+**Testing:**
+- Algebraic property tests verifying parser invariants: today == TruncateDay(ref), zero offsets, forward/backward symmetry, monotonicity, tomorrow == in 1 day, week == 7 days, multi-date count/weekday correctness.
+
+---
+
 ### v1.8.0 — April 2, 2026
 
 **New features:**
