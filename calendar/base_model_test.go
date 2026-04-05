@@ -185,3 +185,35 @@ func TestWarningsAccessor(t *testing.T) {
 		t.Errorf("warning = %q, want %q", b.Warnings()[0].Message, "test warning")
 	}
 }
+
+func TestWindowSizeMsgClamps(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultConfig()
+	cursor := date(2026, time.March, 17)
+	today := date(2026, time.March, 17)
+	m := New(cursor, today, cfg)
+
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"zero width", 0, 24},
+		{"negative width", -1, 24},
+		{"zero height", 80, 0},
+		{"both zero", 0, 0},
+		{"normal", 120, 40},
+		{"small but valid", 40, 10},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			updated, _ := m.Update(tea.WindowSizeMsg{Width: tt.width, Height: tt.height})
+			model := updated.(Model)
+			// Verify View doesn't panic and produces output
+			output := model.View()
+			if len(output) == 0 {
+				t.Error("expected non-empty View output")
+			}
+		})
+	}
+}
