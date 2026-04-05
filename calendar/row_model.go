@@ -281,7 +281,7 @@ func (m RowModel) View() string {
 
 	output := b.String()
 	if m.termWidth > 0 && m.termHeight > 0 {
-		return lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, output)
+		return lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Left, lipgloss.Center, output)
 	}
 	return output
 }
