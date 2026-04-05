@@ -1,6 +1,8 @@
 package calendar
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -144,6 +146,28 @@ func TestInitCmdsWithHighlightPath(t *testing.T) {
 	cmds := b.initCmds()
 	if len(cmds) != 2 {
 		t.Errorf("expected 2 cmds (midnight tick + watcher), got %d", len(cmds))
+	}
+}
+
+func TestWatcherErrMsgStoresError(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultConfig()
+	cursor := date(2026, time.March, 17)
+	today := date(2026, time.March, 17)
+	m := New(cursor, today, cfg)
+	errMsg := watcherErrMsg{err: fmt.Errorf("test watcher error")}
+	updated, _ := m.Update(errMsg)
+	model := updated.(Model)
+	warnings := model.Warnings()
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w.Message, "test watcher error") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected watcher error to appear in warnings")
 	}
 }
 

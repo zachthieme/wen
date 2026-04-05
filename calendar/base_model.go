@@ -1,6 +1,7 @@
 package calendar
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/zachthieme/wen"
@@ -153,6 +154,10 @@ func (b *baseModel) handleMsg(msg tea.Msg) (tea.Cmd, bool) {
 		b.termHeight = msg.Height
 		return nil, true
 	case watcherErrMsg:
+		b.warnings = append(b.warnings, Warning{
+			Key:     "watcher",
+			Message: fmt.Sprintf("file watcher error: %v", msg.err),
+		})
 		return nil, true
 	case midnightTickMsg:
 		now := time.Now()
