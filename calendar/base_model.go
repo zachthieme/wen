@@ -34,7 +34,7 @@ type baseModel struct {
 	termWidth        int
 	termHeight       int
 	months           int
-	warnings         []string
+	warnings         []Warning
 }
 
 // Option configures calendar model properties.
@@ -94,7 +94,7 @@ type resolvedStyles struct {
 }
 
 // Warnings returns any warnings collected during initialization (e.g. highlight parse issues).
-func (b baseModel) Warnings() []string { return b.warnings }
+func (b baseModel) Warnings() []Warning { return b.warnings }
 
 // IsQuit reports whether the user quit without selecting.
 func (b baseModel) IsQuit() bool { return b.quit }

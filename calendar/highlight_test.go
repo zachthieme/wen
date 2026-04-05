@@ -44,8 +44,8 @@ func TestLoadHighlightedDates(t *testing.T) {
 		if len(warnings) != 1 {
 			t.Fatalf("expected 1 warning, got %d: %v", len(warnings), warnings)
 		}
-		if !strings.Contains(warnings[0], "not found") {
-			t.Errorf("expected 'not found' warning, got %q", warnings[0])
+		if !strings.Contains(warnings[0].Message, "not found") {
+			t.Errorf("expected 'not found' warning, got %q", warnings[0].Message)
 		}
 	})
 
@@ -62,8 +62,8 @@ func TestLoadHighlightedDates(t *testing.T) {
 		if len(warnings) != 1 {
 			t.Fatalf("expected 1 warning, got %d: %v", len(warnings), warnings)
 		}
-		if !strings.Contains(warnings[0], "not valid JSON") {
-			t.Errorf("expected 'not valid JSON' warning, got %q", warnings[0])
+		if !strings.Contains(warnings[0].Message, "not valid JSON") {
+			t.Errorf("expected 'not valid JSON' warning, got %q", warnings[0].Message)
 		}
 	})
 
@@ -91,8 +91,8 @@ func TestLoadHighlightedDates(t *testing.T) {
 		if len(warnings) != 1 {
 			t.Fatalf("expected 1 warning for invalid date, got %d: %v", len(warnings), warnings)
 		}
-		if !strings.Contains(warnings[0], "not-a-date") {
-			t.Errorf("expected warning to mention 'not-a-date', got %q", warnings[0])
+		if !strings.Contains(warnings[0].Message, "not-a-date") {
+			t.Errorf("expected warning to mention 'not-a-date', got %q", warnings[0].Message)
 		}
 	})
 }

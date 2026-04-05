@@ -243,7 +243,7 @@ func TestLoadConfigUnknownKeyWarns(t *testing.T) {
 	}
 	found := false
 	for _, w := range warnings {
-		if strings.Contains(w, "shwo_week_numbers") {
+		if strings.Contains(w.Message, "shwo_week_numbers") {
 			found = true
 			break
 		}
@@ -263,8 +263,8 @@ func TestLoadConfigNoWarningForValidKeys(t *testing.T) {
 	}
 	_, warnings := loadConfigFromPath(path)
 	for _, w := range warnings {
-		if strings.Contains(w, "unknown") {
-			t.Errorf("unexpected unknown-key warning: %s", w)
+		if strings.Contains(w.Message, "unknown") {
+			t.Errorf("unexpected unknown-key warning: %s", w.Message)
 		}
 	}
 }

@@ -29,7 +29,7 @@ func expandTilde(path string) string {
 // Returns nil with no warnings for an empty path (not configured).
 // Returns nil with a warning if the file is missing or malformed.
 // Individual unparseable date entries produce per-entry warnings.
-func LoadHighlightedDates(path string) (map[time.Time]bool, []string) {
+func LoadHighlightedDates(path string) (map[time.Time]bool, []Warning) {
 	if path == "" {
 		return nil, nil
 	}
@@ -38,20 +38,20 @@ func LoadHighlightedDates(path string) (map[time.Time]bool, []string) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, []string{fmt.Sprintf("highlight file not found: %s", path)}
+		return nil, []Warning{{Key: path, Message: fmt.Sprintf("highlight file not found: %s", path)}}
 	}
 
 	var dates []string
 	if err := json.Unmarshal(data, &dates); err != nil {
-		return nil, []string{fmt.Sprintf("highlight file is not valid JSON: %s", path)}
+		return nil, []Warning{{Key: path, Message: fmt.Sprintf("highlight file is not valid JSON: %s", path)}}
 	}
 
-	var warnings []string
+	var warnings []Warning
 	result := make(map[time.Time]bool, len(dates))
 	for _, s := range dates {
 		t, err := time.Parse("2006-01-02", s)
 		if err != nil {
-			warnings = append(warnings, fmt.Sprintf("skipping invalid date %q in %s", s, path))
+			warnings = append(warnings, Warning{Key: path, Message: fmt.Sprintf("skipping invalid date %q in %s", s, path)})
 			continue
 		}
 		result[t] = true

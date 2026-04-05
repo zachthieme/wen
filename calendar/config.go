@@ -82,10 +82,10 @@ func DefaultConfig() Config {
 
 // Normalize validates config values, resetting invalid ones to defaults, and returns any warnings.
 // ISO week numbering silently forces WeekStartDay to Monday as a constraint (not a validation error).
-func (c *Config) Normalize() []string {
-	var warnings []string
+func (c *Config) Normalize() []Warning {
+	var warnings []Warning
 	if c.WeekNumbering != WeekNumberingUS && c.WeekNumbering != WeekNumberingISO {
-		warnings = append(warnings, "invalid config value for \"week_numbering\", using default")
+		warnings = append(warnings, Warning{Key: "week_numbering", Message: "invalid config value for \"week_numbering\", using default"})
 		c.WeekNumbering = WeekNumberingUS
 	}
 	// Normalize show_week_numbers: true → "left" (standard cal -w style), false → ""
@@ -97,11 +97,11 @@ func (c *Config) Normalize() []string {
 	case weekNumStrLeft, weekNumStrRight:
 		// valid
 	default:
-		warnings = append(warnings, "invalid config value for \"show_week_numbers\", using default")
+		warnings = append(warnings, Warning{Key: "show_week_numbers", Message: "invalid config value for \"show_week_numbers\", using default"})
 		c.ShowWeekNumbers = weekNumStrOff
 	}
 	if c.WeekStartDay != 0 && c.WeekStartDay != 1 {
-		warnings = append(warnings, "invalid config value for \"week_start_day\", using default")
+		warnings = append(warnings, Warning{Key: "week_start_day", Message: "invalid config value for \"week_start_day\", using default"})
 		c.WeekStartDay = 0
 	}
 	if c.WeekNumbering == WeekNumberingISO {
@@ -109,12 +109,12 @@ func (c *Config) Normalize() []string {
 	}
 	if c.FiscalYearStart < 1 || c.FiscalYearStart > 12 {
 		if c.FiscalYearStart != 0 { // 0 = unset, treat as default
-			warnings = append(warnings, "invalid config value for \"fiscal_year_start\", using default (1=January)")
+			warnings = append(warnings, Warning{Key: "fiscal_year_start", Message: "invalid config value for \"fiscal_year_start\", using default (1=January)"})
 		}
 		c.FiscalYearStart = 1
 	}
 	if _, ok := themePresets[c.Theme]; !ok {
-		warnings = append(warnings, "invalid config value for \"theme\", using default")
+		warnings = append(warnings, Warning{Key: "theme", Message: "invalid config value for \"theme\", using default"})
 		c.Theme = "default"
 	}
 	return warnings
@@ -191,37 +191,37 @@ var knownConfigKeys = map[string]bool{
 }
 
 // LoadConfig reads the user's config from the XDG config path, creating a default file if none exists.
-func LoadConfig() (Config, []string) {
+func LoadConfig() (Config, []Warning) {
 	path, err := configPath()
 	if err != nil {
-		return DefaultConfig(), []string{err.Error()}
+		return DefaultConfig(), []Warning{{Key: "config", Message: err.Error()}}
 	}
 	return loadConfigFromPath(path)
 }
 
-func loadConfigFromPath(path string) (Config, []string) {
+func loadConfigFromPath(path string) (Config, []Warning) {
 	cfg := DefaultConfig()
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return cfg, []string{fmt.Sprintf("could not read config: %v", err)}
+			return cfg, []Warning{{Key: "config", Message: fmt.Sprintf("could not read config: %v", err)}}
 		}
 		if wErr := writeDefaultConfig(path); wErr != nil {
-			return cfg, []string{wErr.Error()}
+			return cfg, []Warning{{Key: "config", Message: wErr.Error()}}
 		}
 		return cfg, nil
 	}
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return DefaultConfig(), []string{"invalid config file, using defaults"}
+		return DefaultConfig(), []Warning{{Key: "config", Message: "invalid config file, using defaults"}}
 	}
 
 	// Check for unknown top-level keys (typo detection).
-	var warnings []string
+	var warnings []Warning
 	var raw map[string]interface{}
 	if err := yaml.Unmarshal(data, &raw); err == nil {
 		for key := range raw {
 			if !knownConfigKeys[key] {
-				warnings = append(warnings, fmt.Sprintf("unknown config key %q", key))
+				warnings = append(warnings, Warning{Key: key, Message: fmt.Sprintf("unknown config key %q", key)})
 			}
 		}
 	}

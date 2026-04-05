@@ -153,11 +153,11 @@ func TestWarningsAccessor(t *testing.T) {
 	if len(b.Warnings()) != 0 {
 		t.Errorf("expected no warnings, got %v", b.Warnings())
 	}
-	b.warnings = append(b.warnings, "test warning")
+	b.warnings = append(b.warnings, Warning{Key: "test", Message: "test warning"})
 	if len(b.Warnings()) != 1 {
 		t.Errorf("expected 1 warning, got %d", len(b.Warnings()))
 	}
-	if b.Warnings()[0] != "test warning" {
-		t.Errorf("warning = %q, want %q", b.Warnings()[0], "test warning")
+	if b.Warnings()[0].Message != "test warning" {
+		t.Errorf("warning = %q, want %q", b.Warnings()[0].Message, "test warning")
 	}
 }
