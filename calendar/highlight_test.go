@@ -8,9 +8,11 @@ import (
 )
 
 func TestLoadHighlightedDates(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	t.Run("valid file", func(t *testing.T) {
+		t.Parallel()
 		path := filepath.Join(dir, "dates.json")
 		if err := os.WriteFile(path, []byte(`["2026-03-25", "2026-04-01"]`), 0644); err != nil {
 			t.Fatal(err)
@@ -29,6 +31,7 @@ func TestLoadHighlightedDates(t *testing.T) {
 	})
 
 	t.Run("missing file", func(t *testing.T) {
+		t.Parallel()
 		dates := LoadHighlightedDates(filepath.Join(dir, "nonexistent.json"))
 		if dates != nil {
 			t.Error("expected nil for missing file")
@@ -36,6 +39,7 @@ func TestLoadHighlightedDates(t *testing.T) {
 	})
 
 	t.Run("malformed JSON", func(t *testing.T) {
+		t.Parallel()
 		path := filepath.Join(dir, "bad.json")
 		if err := os.WriteFile(path, []byte(`not json`), 0644); err != nil {
 			t.Fatal(err)
@@ -47,6 +51,7 @@ func TestLoadHighlightedDates(t *testing.T) {
 	})
 
 	t.Run("empty path", func(t *testing.T) {
+		t.Parallel()
 		dates := LoadHighlightedDates("")
 		if dates != nil {
 			t.Error("expected nil for empty path")
@@ -54,6 +59,7 @@ func TestLoadHighlightedDates(t *testing.T) {
 	})
 
 	t.Run("invalid dates skipped", func(t *testing.T) {
+		t.Parallel()
 		path := filepath.Join(dir, "mixed.json")
 		if err := os.WriteFile(path, []byte(`["2026-03-25", "not-a-date", "2026-04-01"]`), 0644); err != nil {
 			t.Fatal(err)
@@ -66,12 +72,14 @@ func TestLoadHighlightedDates(t *testing.T) {
 }
 
 func TestExpandTilde(t *testing.T) {
+	t.Parallel()
 	home, err := os.UserHomeDir()
 	if err != nil {
 		t.Skip("cannot determine home dir")
 	}
 
 	t.Run("expands tilde prefix", func(t *testing.T) {
+		t.Parallel()
 		got := expandTilde("~/foo/bar")
 		want := filepath.Join(home, "foo", "bar")
 		if got != want {
@@ -80,6 +88,7 @@ func TestExpandTilde(t *testing.T) {
 	})
 
 	t.Run("leaves absolute path unchanged", func(t *testing.T) {
+		t.Parallel()
 		got := expandTilde("/absolute/path")
 		if got != "/absolute/path" {
 			t.Errorf("got %q, want %q", got, "/absolute/path")
@@ -87,6 +96,7 @@ func TestExpandTilde(t *testing.T) {
 	})
 
 	t.Run("leaves empty string unchanged", func(t *testing.T) {
+		t.Parallel()
 		got := expandTilde("")
 		if got != "" {
 			t.Errorf("got %q, want %q", got, "")
@@ -95,7 +105,9 @@ func TestExpandTilde(t *testing.T) {
 }
 
 func TestResolveHighlightSource(t *testing.T) {
+	t.Parallel()
 	t.Run("flag takes priority", func(t *testing.T) {
+		t.Parallel()
 		got := ResolveHighlightSource("/flag/path", "/config/path")
 		if got != "/flag/path" {
 			t.Errorf("expected flag path, got %q", got)
@@ -103,6 +115,7 @@ func TestResolveHighlightSource(t *testing.T) {
 	})
 
 	t.Run("config fallback", func(t *testing.T) {
+		t.Parallel()
 		got := ResolveHighlightSource("", "/config/path")
 		if got != "/config/path" {
 			t.Errorf("expected config path, got %q", got)
@@ -111,6 +124,7 @@ func TestResolveHighlightSource(t *testing.T) {
 }
 
 func TestWithHighlightSource(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "dates.json")
 	if err := os.WriteFile(path, []byte(`["2026-03-25"]`), 0644); err != nil {
@@ -130,6 +144,7 @@ func TestWithHighlightSource(t *testing.T) {
 }
 
 func TestWithHighlightSourceMissing(t *testing.T) {
+	t.Parallel()
 	today := time.Date(2026, time.March, 17, 0, 0, 0, 0, time.Local)
 	m := New(today, today, DefaultConfig(), WithHighlightSource("/nonexistent/file.json"))
 
@@ -139,6 +154,7 @@ func TestWithHighlightSourceMissing(t *testing.T) {
 }
 
 func TestWithHighlightedDatesClearsHighlightPath(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "dates.json")
 	if err := os.WriteFile(path, []byte(`["2026-03-25"]`), 0644); err != nil {

@@ -29,6 +29,7 @@ func pressKey(m Model, key string) Model {
 }
 
 func TestNavigation(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 
 	tests := []struct {
@@ -73,6 +74,7 @@ func TestNavigation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			m := New(tt.start, today, DefaultConfig())
 			updated, _ := m.Update(tt.msg)
 			got := updated.(Model)
@@ -84,6 +86,7 @@ func TestNavigation(t *testing.T) {
 }
 
 func TestToggleWeekNumbers(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	if m.weekNumPos != WeekNumOff {
 		t.Errorf("expected weekNumPos off initially, got %d", m.weekNumPos)
@@ -103,6 +106,7 @@ func TestToggleWeekNumbers(t *testing.T) {
 }
 
 func TestToggleHelp(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	if m.showHelp {
 		t.Error("expected showHelp false initially")
@@ -114,6 +118,7 @@ func TestToggleHelp(t *testing.T) {
 }
 
 func TestQuitExits(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	updated, cmd := m.Update(runeMsg("q"))
 	m = updated.(Model)
@@ -126,6 +131,7 @@ func TestQuitExits(t *testing.T) {
 }
 
 func TestEscQuits(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	updated, cmd := m.Update(specialMsg(tea.KeyEscape))
 	m = updated.(Model)
@@ -138,6 +144,7 @@ func TestEscQuits(t *testing.T) {
 }
 
 func TestEnterSelects(t *testing.T) {
+	t.Parallel()
 	cursor := date(2026, time.April, 15)
 	m := New(cursor, date(2026, time.March, 17), DefaultConfig())
 	updated, cmd := m.Update(specialMsg(tea.KeyEnter))
@@ -157,6 +164,7 @@ func TestEnterSelects(t *testing.T) {
 }
 
 func TestVisualSelectEnter(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press v to anchor
@@ -180,6 +188,7 @@ func TestVisualSelectEnter(t *testing.T) {
 }
 
 func TestVisualSelectCancel(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press v to anchor
@@ -210,6 +219,7 @@ func TestVisualSelectCancel(t *testing.T) {
 }
 
 func TestVisualSelectReanchor(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press v to anchor
@@ -236,6 +246,7 @@ func TestVisualSelectReanchor(t *testing.T) {
 }
 
 func TestRangeReverseOrder(t *testing.T) {
+	t.Parallel()
 	start := date(2026, time.March, 20)
 	m := New(start, start, DefaultConfig())
 	// Press v to anchor at March 20
@@ -259,6 +270,7 @@ func TestRangeReverseOrder(t *testing.T) {
 }
 
 func TestEnterWithoutRange(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press Enter without v
@@ -273,6 +285,7 @@ func TestEnterWithoutRange(t *testing.T) {
 }
 
 func TestSameDayRange(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press v to anchor
@@ -289,6 +302,7 @@ func TestSameDayRange(t *testing.T) {
 }
 
 func TestCtrlCInRangeMode(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press v to anchor
@@ -307,6 +321,7 @@ func TestCtrlCInRangeMode(t *testing.T) {
 }
 
 func TestMidnightTickUpdatesToday(t *testing.T) {
+	t.Parallel()
 	// Start with today = March 17
 	oldToday := date(2026, time.March, 17)
 	m := New(oldToday, oldToday, DefaultConfig())
@@ -329,6 +344,7 @@ func TestMidnightTickUpdatesToday(t *testing.T) {
 }
 
 func TestInitReturnsMidnightTick(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	cmd := m.Init()
@@ -338,6 +354,7 @@ func TestInitReturnsMidnightTick(t *testing.T) {
 }
 
 func TestUpdateHighlightChangedMsg(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 
@@ -367,6 +384,7 @@ func TestUpdateHighlightChangedMsg(t *testing.T) {
 }
 
 func TestUpdateHighlightChangedMsgNilDates(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	initialDates := map[time.Time]bool{
 		time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC): true,
@@ -387,6 +405,7 @@ func TestUpdateHighlightChangedMsgNilDates(t *testing.T) {
 }
 
 func TestWithJulian(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithJulian(true))
 	if !m.julian {
 		t.Error("expected julian to be true")
@@ -394,6 +413,7 @@ func TestWithJulian(t *testing.T) {
 }
 
 func TestWithPrintMode(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig(), WithPrintMode(true))
 	if !m.printMode {
 		t.Error("expected printMode to be true")
@@ -401,6 +421,7 @@ func TestWithPrintMode(t *testing.T) {
 }
 
 func TestInitWithHighlightSource(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "dates.json")
 	if err := os.WriteFile(path, []byte(`["2026-03-25"]`), 0644); err != nil {
@@ -417,6 +438,7 @@ func TestInitWithHighlightSource(t *testing.T) {
 }
 
 func TestToggleJulian(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	if m.julian {
 		t.Error("expected julian false initially")
@@ -441,6 +463,7 @@ func TestToggleJulian(t *testing.T) {
 }
 
 func TestYearNavigationRebound(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// N = next year

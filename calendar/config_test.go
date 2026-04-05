@@ -9,6 +9,7 @@ import (
 )
 
 func TestDefaultConfig(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	if cfg.ShowWeekNumbers != "" {
 		t.Errorf("expected ShowWeekNumbers empty by default, got %q", cfg.ShowWeekNumbers)
@@ -25,6 +26,7 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestResolveThemeDefault(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	colors := cfg.ResolvedColors()
 	if colors.Title != "" {
@@ -33,6 +35,7 @@ func TestResolveThemeDefault(t *testing.T) {
 }
 
 func TestResolveThemeCatppuccin(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.Theme = "catppuccin-mocha"
 	colors := cfg.ResolvedColors()
@@ -42,6 +45,7 @@ func TestResolveThemeCatppuccin(t *testing.T) {
 }
 
 func TestCustomColorsOverrideTheme(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.Theme = "catppuccin-mocha"
 	cfg.Colors.Title = "#ff0000"
@@ -52,6 +56,7 @@ func TestCustomColorsOverrideTheme(t *testing.T) {
 }
 
 func TestISOForcesMonday(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.WeekNumbering = "iso"
 	cfg.WeekStartDay = 0
@@ -65,6 +70,7 @@ func TestISOForcesMonday(t *testing.T) {
 }
 
 func TestInvalidWeekStartDayDefaults(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.WeekStartDay = 5
 	warnings := cfg.Normalize()
@@ -77,6 +83,7 @@ func TestInvalidWeekStartDayDefaults(t *testing.T) {
 }
 
 func TestNormalizeWarnsInvalidWeekNumbering(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.WeekNumbering = "bogus"
 	warnings := cfg.Normalize()
@@ -89,6 +96,7 @@ func TestNormalizeWarnsInvalidWeekNumbering(t *testing.T) {
 }
 
 func TestNormalizeWarnsInvalidTheme(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.Theme = "nonexistent-theme"
 	warnings := cfg.Normalize()
@@ -101,6 +109,7 @@ func TestNormalizeWarnsInvalidTheme(t *testing.T) {
 }
 
 func TestLoadConfigFromYAML(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")
 	content := []byte("theme: dracula\nshow_week_numbers: true\n")
@@ -120,6 +129,7 @@ func TestLoadConfigFromYAML(t *testing.T) {
 }
 
 func TestLoadConfigInvalidYAML(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")
 	content := []byte("{{invalid yaml")
@@ -136,6 +146,7 @@ func TestLoadConfigInvalidYAML(t *testing.T) {
 }
 
 func TestNormalizeFiscalYearStart(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.FiscalYearStart = 10
 	warnings := cfg.Normalize()
@@ -158,6 +169,7 @@ func TestNormalizeFiscalYearStart(t *testing.T) {
 }
 
 func TestLoadConfigFiscalYearStart(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")
 	content := []byte("fiscal_year_start: 10\n")
@@ -174,6 +186,7 @@ func TestLoadConfigFiscalYearStart(t *testing.T) {
 }
 
 func TestLoadConfigMissingFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := dir + "/subdir/config.yaml"
 	cfg, warnings := loadConfigFromPath(path)
@@ -186,6 +199,7 @@ func TestLoadConfigMissingFile(t *testing.T) {
 }
 
 func TestJulianConfigField(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	if cfg.Julian {
 		t.Error("expected Julian to default to false")
@@ -202,6 +216,7 @@ func TestJulianConfigField(t *testing.T) {
 }
 
 func TestLoadConfigUnwritableDir(t *testing.T) {
+	t.Parallel()
 	// Use /proc as a directory we definitely cannot create subdirs in,
 	// and a path that will not already have a config file.
 	cfg, warnings := loadConfigFromPath("/proc/nonexistent-wen-test/config.yaml")

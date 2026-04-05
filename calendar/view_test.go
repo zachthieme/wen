@@ -9,6 +9,7 @@ import (
 )
 
 func TestRenderMarch2026(t *testing.T) {
+	t.Parallel()
 	// Use a different year for today so the year appears in the title
 	m := New(date(2026, time.March, 17), date(2025, time.March, 17), DefaultConfig())
 	output := m.View()
@@ -22,6 +23,7 @@ func TestRenderMarch2026(t *testing.T) {
 }
 
 func TestRenderFebruary2026(t *testing.T) {
+	t.Parallel()
 	// Use a different year for today so the year appears in the title
 	m := New(date(2026, time.February, 14), date(2025, time.March, 17), DefaultConfig())
 	output := m.View()
@@ -32,6 +34,7 @@ func TestRenderFebruary2026(t *testing.T) {
 }
 
 func TestRenderWithWeekNumbers(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.ShowWeekNumbers = "left"
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
@@ -43,6 +46,7 @@ func TestRenderWithWeekNumbers(t *testing.T) {
 }
 
 func TestRenderWithoutWeekNumbers(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	output := m.View()
 
@@ -52,6 +56,7 @@ func TestRenderWithoutWeekNumbers(t *testing.T) {
 }
 
 func TestRenderMondayStart(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.WeekStartDay = 1
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
@@ -63,6 +68,7 @@ func TestRenderMondayStart(t *testing.T) {
 }
 
 func TestRenderHelpBar(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	m.showHelp = true
 	output := m.View()
@@ -76,6 +82,7 @@ func TestRenderHelpBar(t *testing.T) {
 }
 
 func TestRenderNoHelpBarByDefault(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	output := m.View()
 
@@ -85,6 +92,7 @@ func TestRenderNoHelpBarByDefault(t *testing.T) {
 }
 
 func TestWeekNumberUS(t *testing.T) {
+	t.Parallel()
 	d := time.Date(2026, time.March, 1, 0, 0, 0, 0, time.Local)
 	wn := weekNumber(d, "us")
 	// March 1 is day 60 of 2026. Jan 1 is Thursday (weekday 4).
@@ -95,6 +103,7 @@ func TestWeekNumberUS(t *testing.T) {
 }
 
 func TestWeekNumberISO(t *testing.T) {
+	t.Parallel()
 	d := time.Date(2026, time.March, 1, 0, 0, 0, 0, time.Local)
 	wn := weekNumber(d, "iso")
 	_, expected := d.ISOWeek()
@@ -104,6 +113,7 @@ func TestWeekNumberISO(t *testing.T) {
 }
 
 func TestFiscalQuarter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		month      int
@@ -129,6 +139,7 @@ func TestFiscalQuarter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			q, fy := wen.FiscalQuarter(tt.month, tt.year, tt.fyStart)
 			if q != tt.wantQ || fy != tt.wantFY {
 				t.Errorf("FiscalQuarter(%d, %d, %d) = Q%d FY%d, want Q%d FY%d",
@@ -139,6 +150,7 @@ func TestFiscalQuarter(t *testing.T) {
 }
 
 func TestRenderFiscalQuarterTitle(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.FiscalYearStart = 10
 	cfg.ShowFiscalQuarter = true
@@ -150,6 +162,7 @@ func TestRenderFiscalQuarterTitle(t *testing.T) {
 }
 
 func TestRenderNoFiscalQuarterByDefault(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
 	output := m.View()
@@ -159,6 +172,7 @@ func TestRenderNoFiscalQuarterByDefault(t *testing.T) {
 }
 
 func TestRenderMultiMonth(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cursor := date(2026, time.March, 17)
 	// Use a different year for today so the year appears in titles
@@ -188,6 +202,7 @@ func TestRenderMultiMonth(t *testing.T) {
 }
 
 func TestRenderMultiMonthWithWeekNumbers(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.ShowWeekNumbers = "left"
 	cursor := date(2026, time.March, 17)
@@ -204,6 +219,7 @@ func TestRenderMultiMonthWithWeekNumbers(t *testing.T) {
 }
 
 func TestRenderMultiMonthSingle(t *testing.T) {
+	t.Parallel()
 	// WithMonths(1) should produce same output as default
 	cfg := DefaultConfig()
 	cursor := date(2026, time.March, 17)
@@ -216,6 +232,7 @@ func TestRenderMultiMonthSingle(t *testing.T) {
 }
 
 func TestRangeRenderingProducesOutput(t *testing.T) {
+	t.Parallel()
 	// Verify that View() doesn't panic or produce empty output in range mode.
 	// Note: lipgloss strips ANSI in non-TTY environments, so we can't compare
 	// styled vs unstyled output directly. Instead we verify the output is
@@ -239,6 +256,7 @@ func TestRangeRenderingProducesOutput(t *testing.T) {
 }
 
 func TestRangeRenderingMultiMonth(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cursor := date(2026, time.March, 28)
 	today := date(2025, time.March, 28)
@@ -257,6 +275,7 @@ func TestRangeRenderingMultiMonth(t *testing.T) {
 }
 
 func TestSmartTitleCurrentYear(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	output := m.View()
@@ -269,6 +288,7 @@ func TestSmartTitleCurrentYear(t *testing.T) {
 }
 
 func TestSmartTitleOtherYear(t *testing.T) {
+	t.Parallel()
 	cursor := date(2027, time.March, 17)
 	today := date(2026, time.March, 17)
 	m := New(cursor, today, DefaultConfig())
@@ -279,6 +299,7 @@ func TestSmartTitleOtherYear(t *testing.T) {
 }
 
 func TestSmartTitleWithFiscalQuarter(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.FiscalYearStart = 10
 	cfg.ShowFiscalQuarter = true
@@ -291,6 +312,7 @@ func TestSmartTitleWithFiscalQuarter(t *testing.T) {
 }
 
 func TestQuarterBarHiddenByDefault(t *testing.T) {
+	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	output := m.View()
@@ -300,6 +322,7 @@ func TestQuarterBarHiddenByDefault(t *testing.T) {
 }
 
 func TestQuarterBarRendering(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.ShowQuarterBar = true
 	today := date(2026, time.March, 17)
@@ -314,6 +337,7 @@ func TestQuarterBarRendering(t *testing.T) {
 }
 
 func TestQuarterBarFiscalQuarter(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.ShowQuarterBar = true
 	cfg.FiscalYearStart = 10
@@ -326,6 +350,7 @@ func TestQuarterBarFiscalQuarter(t *testing.T) {
 }
 
 func TestRenderJulianSingleMonth(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2025, time.March, 17), DefaultConfig(), WithJulian(true))
 	output := m.View()
 	// Should contain 3-char day headers
@@ -339,6 +364,7 @@ func TestRenderJulianSingleMonth(t *testing.T) {
 }
 
 func TestRenderJulianMultiMonth(t *testing.T) {
+	t.Parallel()
 	m := New(date(2026, time.March, 17), date(2025, time.March, 17), DefaultConfig(), WithJulian(true), WithMonths(3))
 	output := m.View()
 	if !strings.Contains(output, "Sun Mon") {
@@ -347,6 +373,7 @@ func TestRenderJulianMultiMonth(t *testing.T) {
 }
 
 func TestQuarterBarProgress(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.ShowQuarterBar = true
 	startOfQ := New(date(2026, time.January, 1), date(2026, time.January, 1), cfg)

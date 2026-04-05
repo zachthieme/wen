@@ -13,6 +13,7 @@ import (
 const watchTimeout = 30 * time.Second
 
 func TestWatchLoopDetectsFileChange(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("skipping filesystem watcher test in short mode")
 	}
@@ -68,6 +69,7 @@ func TestWatchLoopDetectsFileChange(t *testing.T) {
 }
 
 func TestWatchLoopFileDeleted(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("skipping filesystem watcher test in short mode")
 	}
@@ -111,6 +113,7 @@ func TestWatchLoopFileDeleted(t *testing.T) {
 }
 
 func TestStartFileWatcherMissingParentDir(t *testing.T) {
+	t.Parallel()
 	cmd := startFileWatcher("/nonexistent/parent/dir/dates.json")
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd")
@@ -123,6 +126,7 @@ func TestStartFileWatcherMissingParentDir(t *testing.T) {
 }
 
 func TestWaitForNextChange(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("skipping filesystem watcher test in short mode")
 	}

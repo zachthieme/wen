@@ -7,6 +7,7 @@ import (
 )
 
 func TestRenderTitle(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		cursor   time.Time
@@ -67,6 +68,7 @@ func TestRenderTitle(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			m := New(tt.cursor, tt.today, tt.cfg)
 			var b strings.Builder
 			m.renderTitle(&b, tt.month, tt.year)
@@ -82,6 +84,7 @@ func TestRenderTitle(t *testing.T) {
 }
 
 func TestRenderDayHeaders(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		startDay int
@@ -92,6 +95,7 @@ func TestRenderDayHeaders(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			cfg := DefaultConfig()
 			cfg.WeekStartDay = tt.startDay
 			m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
@@ -106,7 +110,9 @@ func TestRenderDayHeaders(t *testing.T) {
 }
 
 func TestRenderGrid(t *testing.T) {
+	t.Parallel()
 	t.Run("returns correct week numbers", func(t *testing.T) {
+		t.Parallel()
 		cfg := DefaultConfig()
 		m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
 		var b strings.Builder
@@ -121,6 +127,7 @@ func TestRenderGrid(t *testing.T) {
 	})
 
 	t.Run("grid contains all days", func(t *testing.T) {
+		t.Parallel()
 		cfg := DefaultConfig()
 		m := New(date(2026, time.February, 14), date(2026, time.February, 14), cfg)
 		var b strings.Builder
@@ -136,6 +143,7 @@ func TestRenderGrid(t *testing.T) {
 	})
 
 	t.Run("monday start shifts grid", func(t *testing.T) {
+		t.Parallel()
 		cfg := DefaultConfig()
 		cfg.WeekStartDay = 1
 		m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
@@ -156,6 +164,7 @@ func TestRenderGrid(t *testing.T) {
 }
 
 func TestDateKey(t *testing.T) {
+	t.Parallel()
 	// dateKey should normalize to UTC midnight
 	local := time.Date(2026, time.March, 17, 15, 30, 0, 0, time.Local)
 	key := dateKey(local)
@@ -168,6 +177,7 @@ func TestDateKey(t *testing.T) {
 }
 
 func TestIsInRange(t *testing.T) {
+	t.Parallel()
 	a := date(2026, time.March, 10)
 	b := date(2026, time.March, 20)
 
@@ -184,6 +194,7 @@ func TestIsInRange(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := isInRange(tt.d, a, b); got != tt.want {
 				t.Errorf("isInRange(%s, %s, %s) = %v, want %v",
 					tt.d.Format("2006-01-02"), a.Format("2006-01-02"), b.Format("2006-01-02"),
@@ -200,6 +211,7 @@ func TestIsInRange(t *testing.T) {
 }
 
 func TestQuarterStartDate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		cursor    time.Time
@@ -214,6 +226,7 @@ func TestQuarterStartDate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := quarterStartDate(tt.cursor, tt.fyStart)
 			if got.Month() != tt.wantMonth || got.Year() != tt.wantYear {
 				t.Errorf("quarterStartDate() = %s, want %s %d",
@@ -224,6 +237,7 @@ func TestQuarterStartDate(t *testing.T) {
 }
 
 func TestCountQuarterWorkdaysLeft(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		cursor time.Time
@@ -251,6 +265,7 @@ func TestCountQuarterWorkdaysLeft(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := countQuarterWorkdaysLeft(tt.cursor, tt.qEnd)
 			if got != tt.want {
 				t.Errorf("countQuarterWorkdaysLeft() = %d, want %d", got, tt.want)
@@ -260,7 +275,9 @@ func TestCountQuarterWorkdaysLeft(t *testing.T) {
 }
 
 func TestDayFormat(t *testing.T) {
+	t.Parallel()
 	t.Run("normal", func(t *testing.T) {
+		t.Parallel()
 		df := normalDayFormat()
 		if df.cellWidth != 2 {
 			t.Errorf("cellWidth = %d, want 2", df.cellWidth)
@@ -280,6 +297,7 @@ func TestDayFormat(t *testing.T) {
 		}
 	})
 	t.Run("julian", func(t *testing.T) {
+		t.Parallel()
 		df := julianDayFormat()
 		if df.cellWidth != 3 {
 			t.Errorf("cellWidth = %d, want 3", df.cellWidth)
@@ -300,12 +318,14 @@ func TestDayFormat(t *testing.T) {
 		}
 	})
 	t.Run("dayFormatFor false", func(t *testing.T) {
+		t.Parallel()
 		df := dayFormatFor(false)
 		if df.cellWidth != 2 {
 			t.Errorf("dayFormatFor(false) cellWidth = %d, want 2", df.cellWidth)
 		}
 	})
 	t.Run("dayFormatFor true", func(t *testing.T) {
+		t.Parallel()
 		df := dayFormatFor(true)
 		if df.cellWidth != 3 {
 			t.Errorf("dayFormatFor(true) cellWidth = %d, want 3", df.cellWidth)
@@ -314,7 +334,9 @@ func TestDayFormat(t *testing.T) {
 }
 
 func TestRenderGridJulian(t *testing.T) {
+	t.Parallel()
 	t.Run("january shows yearday values", func(t *testing.T) {
+		t.Parallel()
 		cfg := DefaultConfig()
 		m := New(date(2026, time.January, 15), date(2026, time.January, 15), cfg, WithJulian(true))
 		var b strings.Builder
@@ -329,6 +351,7 @@ func TestRenderGridJulian(t *testing.T) {
 	})
 
 	t.Run("march shows offset yearday values", func(t *testing.T) {
+		t.Parallel()
 		cfg := DefaultConfig()
 		m := New(date(2026, time.March, 15), date(2026, time.March, 15), cfg, WithJulian(true))
 		var b strings.Builder
@@ -344,6 +367,7 @@ func TestRenderGridJulian(t *testing.T) {
 	})
 
 	t.Run("december leap year shows 366", func(t *testing.T) {
+		t.Parallel()
 		cfg := DefaultConfig()
 		m := New(date(2024, time.December, 31), date(2024, time.December, 31), cfg, WithJulian(true))
 		var b strings.Builder
@@ -356,6 +380,7 @@ func TestRenderGridJulian(t *testing.T) {
 }
 
 func TestRenderGridPrintModeSuppressesCursor(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	// Create two models for March 17 — one normal, one print mode
 	normal := New(date(2026, time.March, 17), date(2025, time.March, 17), cfg)
@@ -374,6 +399,7 @@ func TestRenderGridPrintModeSuppressesCursor(t *testing.T) {
 }
 
 func TestRenderDayHeadersJulian(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg, WithJulian(true))
 	var b strings.Builder
@@ -385,7 +411,9 @@ func TestRenderDayHeadersJulian(t *testing.T) {
 }
 
 func TestRenderQuarterBar(t *testing.T) {
+	t.Parallel()
 	t.Run("hidden by default", func(t *testing.T) {
+		t.Parallel()
 		cfg := DefaultConfig()
 		m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
 		var b strings.Builder
@@ -396,6 +424,7 @@ func TestRenderQuarterBar(t *testing.T) {
 	})
 
 	t.Run("shows quarter and workdays", func(t *testing.T) {
+		t.Parallel()
 		cfg := DefaultConfig()
 		cfg.ShowQuarterBar = true
 		m := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
@@ -411,6 +440,7 @@ func TestRenderQuarterBar(t *testing.T) {
 	})
 
 	t.Run("fiscal quarter shown correctly", func(t *testing.T) {
+		t.Parallel()
 		cfg := DefaultConfig()
 		cfg.ShowQuarterBar = true
 		cfg.FiscalYearStart = 10
