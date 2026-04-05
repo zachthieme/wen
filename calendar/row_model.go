@@ -6,33 +6,15 @@ import (
 
 	"github.com/zachthieme/wen"
 
-	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/fsnotify/fsnotify"
 )
 
 // RowModel holds the state for the interactive strip calendar TUI.
 type RowModel struct {
-	cursor           time.Time
-	today            time.Time
-	quit             bool
-	selected         bool
-	rangeAnchor      *time.Time
-	highlightedDates map[time.Time]bool
-	highlightPath    string
-	activeWatcher    *fsnotify.Watcher // closed on quit to unblock watcher goroutine
-	config           Config
-	keys             rowKeyMap
-	help             help.Model
-	styles           resolvedStyles
-	showHelp         bool
-	julian           bool
-	printMode        bool
-	dayFmt           dayFormat
-	termWidth        int
-	termHeight       int
+	baseModel
+	keys rowKeyMap
 }
 
 // RowModelOption configures optional RowModel properties.
@@ -53,7 +35,9 @@ func WithRowHighlightedDates(dates map[time.Time]bool) RowModelOption {
 func WithRowHighlightSource(path string) RowModelOption {
 	return func(m *RowModel) {
 		m.highlightPath = expandTilde(path)
-		m.highlightedDates = LoadHighlightedDates(m.highlightPath)
+		dates, warnings := LoadHighlightedDates(m.highlightPath)
+		m.highlightedDates = dates
+		m.warnings = append(m.warnings, warnings...)
 	}
 }
 
@@ -82,12 +66,14 @@ func (m RowModel) WithTermWidth(w int) RowModel {
 func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowModel {
 	colors := cfg.ResolvedColors()
 	m := RowModel{
-		cursor: wen.TruncateDay(cursor),
-		today:  wen.TruncateDay(today),
-		config: cfg,
-		keys:   defaultRowKeyMap(),
-		help:   newHelpModel(colors),
-		styles: buildStyles(colors),
+		baseModel: baseModel{
+			cursor: wen.TruncateDay(cursor),
+			today:  wen.TruncateDay(today),
+			config: cfg,
+			help:   newHelpModel(colors),
+			styles: buildStyles(colors),
+		},
+		keys: defaultRowKeyMap(),
 	}
 	// Strip Underline from row styles. lipgloss renders Underline per-character
 	// (each char gets its own ANSI open/close), which causes terminals like mosh
@@ -102,103 +88,34 @@ func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowMode
 	return m
 }
 
-// IsQuit reports whether the user quit without selecting.
-func (m RowModel) IsQuit() bool { return m.quit }
-
-// Selected reports whether the user selected a date with Enter.
-func (m RowModel) Selected() bool { return m.selected }
-
-// Cursor returns the currently selected date.
-func (m RowModel) Cursor() time.Time { return m.cursor }
-
-// InRange reports whether the user confirmed a multi-day range selection.
-func (m RowModel) InRange() bool {
-	return m.selected && m.rangeAnchor != nil && !m.rangeAnchor.Equal(m.cursor)
-}
-
-// RangeStart returns the earlier date of the confirmed range, or zero if no range.
-func (m RowModel) RangeStart() time.Time {
-	if !m.InRange() {
-		return time.Time{}
-	}
-	if m.rangeAnchor.Before(m.cursor) {
-		return *m.rangeAnchor
-	}
-	return m.cursor
-}
-
-// RangeEnd returns the later date of the confirmed range, or zero if no range.
-func (m RowModel) RangeEnd() time.Time {
-	if !m.InRange() {
-		return time.Time{}
-	}
-	if m.rangeAnchor.After(m.cursor) {
-		return *m.rangeAnchor
-	}
-	return m.cursor
-}
-
 // Init schedules the midnight tick and, if a highlight source path is configured,
 // starts an fsnotify file watcher.
 func (m RowModel) Init() tea.Cmd {
-	var cmds []tea.Cmd
-	cmds = append(cmds, scheduleMidnightTick(m.today))
-	if m.highlightPath != "" {
-		cmds = append(cmds, startFileWatcher(m.highlightPath))
-	}
-	return tea.Batch(cmds...)
+	return tea.Batch(m.initCmds()...)
 }
 
 // Update handles input messages and updates model state.
 func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.help.Width = msg.Width
-		m.termWidth = msg.Width
-		m.termHeight = msg.Height
-		return m, nil
-	case watcherErrMsg:
-		// File watching failed silently — degrade gracefully.
-		return m, nil
-	case midnightTickMsg:
-		now := time.Now()
-		m.today = wen.TruncateDay(now)
-		return m, scheduleMidnightTick(now)
-	case highlightChangedMsg:
-		m.highlightedDates = msg.dates
-		m.activeWatcher = msg.watcher
-		return m, waitForNextChange(msg.watcher, msg.path)
-	case tea.KeyMsg:
+	if cmd, handled := m.handleMsg(msg); handled {
+		return m, cmd
+	}
+	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch {
 		case key.Matches(msg, m.keys.ForceQuit):
-			m.quit = true
-			if m.activeWatcher != nil {
-				_ = m.activeWatcher.Close()
-				m.activeWatcher = nil
-			}
-			return m, tea.Quit
+			cmd := m.doQuit()
+			return m, cmd
 		case key.Matches(msg, m.keys.VisualSelect):
-			anchor := m.cursor
-			m.rangeAnchor = &anchor
+			m.doVisualSelect()
 			return m, nil
 		case key.Matches(msg, m.keys.Select):
-			m.selected = true
-			if m.activeWatcher != nil {
-				_ = m.activeWatcher.Close()
-				m.activeWatcher = nil
-			}
-			return m, tea.Quit
+			cmd := m.doSelect()
+			return m, cmd
 		case key.Matches(msg, m.keys.Quit):
-			if m.rangeAnchor != nil {
-				m.rangeAnchor = nil
+			if m.cancelRange() {
 				return m, nil
 			}
-			m.quit = true
-			if m.activeWatcher != nil {
-				_ = m.activeWatcher.Close()
-				m.activeWatcher = nil
-			}
-			return m, tea.Quit
+			cmd := m.doQuit()
+			return m, cmd
 		case key.Matches(msg, m.keys.Left):
 			m.cursor = m.cursor.AddDate(0, 0, -1)
 		case key.Matches(msg, m.keys.Right):

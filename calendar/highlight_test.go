@@ -3,6 +3,7 @@ package calendar
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -18,7 +19,10 @@ func TestLoadHighlightedDates(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		dates := LoadHighlightedDates(path)
+		dates, warnings := LoadHighlightedDates(path)
+		if len(warnings) != 0 {
+			t.Errorf("expected no warnings, got %v", warnings)
+		}
 		if len(dates) != 2 {
 			t.Fatalf("expected 2 dates, got %d", len(dates))
 		}
@@ -32,9 +36,16 @@ func TestLoadHighlightedDates(t *testing.T) {
 
 	t.Run("missing file", func(t *testing.T) {
 		t.Parallel()
-		dates := LoadHighlightedDates(filepath.Join(dir, "nonexistent.json"))
+		missingPath := filepath.Join(dir, "nonexistent.json")
+		dates, warnings := LoadHighlightedDates(missingPath)
 		if dates != nil {
 			t.Error("expected nil for missing file")
+		}
+		if len(warnings) != 1 {
+			t.Fatalf("expected 1 warning, got %d: %v", len(warnings), warnings)
+		}
+		if !strings.Contains(warnings[0], "not found") {
+			t.Errorf("expected 'not found' warning, got %q", warnings[0])
 		}
 	})
 
@@ -44,29 +55,44 @@ func TestLoadHighlightedDates(t *testing.T) {
 		if err := os.WriteFile(path, []byte(`not json`), 0644); err != nil {
 			t.Fatal(err)
 		}
-		dates := LoadHighlightedDates(path)
+		dates, warnings := LoadHighlightedDates(path)
 		if dates != nil {
 			t.Error("expected nil for malformed JSON")
+		}
+		if len(warnings) != 1 {
+			t.Fatalf("expected 1 warning, got %d: %v", len(warnings), warnings)
+		}
+		if !strings.Contains(warnings[0], "not valid JSON") {
+			t.Errorf("expected 'not valid JSON' warning, got %q", warnings[0])
 		}
 	})
 
 	t.Run("empty path", func(t *testing.T) {
 		t.Parallel()
-		dates := LoadHighlightedDates("")
+		dates, warnings := LoadHighlightedDates("")
 		if dates != nil {
 			t.Error("expected nil for empty path")
 		}
+		if len(warnings) != 0 {
+			t.Errorf("expected no warnings for empty path, got %v", warnings)
+		}
 	})
 
-	t.Run("invalid dates skipped", func(t *testing.T) {
+	t.Run("invalid dates produce per-entry warnings", func(t *testing.T) {
 		t.Parallel()
 		path := filepath.Join(dir, "mixed.json")
 		if err := os.WriteFile(path, []byte(`["2026-03-25", "not-a-date", "2026-04-01"]`), 0644); err != nil {
 			t.Fatal(err)
 		}
-		dates := LoadHighlightedDates(path)
+		dates, warnings := LoadHighlightedDates(path)
 		if len(dates) != 2 {
 			t.Fatalf("expected 2 valid dates, got %d", len(dates))
+		}
+		if len(warnings) != 1 {
+			t.Fatalf("expected 1 warning for invalid date, got %d: %v", len(warnings), warnings)
+		}
+		if !strings.Contains(warnings[0], "not-a-date") {
+			t.Errorf("expected warning to mention 'not-a-date', got %q", warnings[0])
 		}
 	})
 }
@@ -141,6 +167,9 @@ func TestWithHighlightSource(t *testing.T) {
 	if !m.highlightedDates[key] {
 		t.Error("expected 2026-03-25 to be highlighted")
 	}
+	if len(m.Warnings()) != 0 {
+		t.Errorf("expected no warnings, got %v", m.Warnings())
+	}
 }
 
 func TestWithHighlightSourceMissing(t *testing.T) {
@@ -150,6 +179,9 @@ func TestWithHighlightSourceMissing(t *testing.T) {
 
 	if m.highlightedDates != nil {
 		t.Error("expected nil highlightedDates for missing file")
+	}
+	if len(m.Warnings()) == 0 {
+		t.Error("expected warning for missing highlight file")
 	}
 }
 

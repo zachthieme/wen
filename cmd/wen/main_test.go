@@ -497,6 +497,21 @@ func TestRunWithWriter(t *testing.T) {
 	}
 }
 
+func TestCalHighlightWarningOnStderr(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "cal", "--print", "--highlight-file", "/nonexistent/wen-test-file.json")
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	// stdout has the calendar output; we only care about stderr here.
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := stderr.String()
+	if !strings.Contains(got, "not found") {
+		t.Errorf("expected stderr warning about missing highlight file, got %q", got)
+	}
+}
+
 func TestRunErrors(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -85,6 +85,21 @@ type withTimeExpr struct {
 	Minute int
 }
 
+// Compile-time interface satisfaction checks.
+var (
+	_ dateExpr = (*relativeDayExpr)(nil)
+	_ dateExpr = (*modWeekdayExpr)(nil)
+	_ dateExpr = (*relativeOffsetExpr)(nil)
+	_ dateExpr = (*countedWeekdayExpr)(nil)
+	_ dateExpr = (*ordinalWeekdayExpr)(nil)
+	_ dateExpr = (*lastWeekdayInMonthExpr)(nil)
+	_ dateExpr = (*absoluteDateExpr)(nil)
+	_ dateExpr = (*periodRefExpr)(nil)
+	_ dateExpr = (*boundaryExpr)(nil)
+	_ dateExpr = (*multiDateExpr)(nil)
+	_ dateExpr = (*withTimeExpr)(nil)
+)
+
 func (*relativeDayExpr) dateExpr()        {}
 func (*modWeekdayExpr) dateExpr()         {}
 func (*relativeOffsetExpr) dateExpr()     {}
