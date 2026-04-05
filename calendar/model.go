@@ -33,6 +33,8 @@ type Model struct {
 	keys             keyMap
 	help             help.Model
 	styles           resolvedStyles
+	termWidth        int
+	termHeight       int
 }
 
 type resolvedStyles struct {
@@ -168,6 +170,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
+		m.termWidth = msg.Width
+		m.termHeight = msg.Height
 		return m, nil
 	case watcherErrMsg:
 		// File watching failed silently — degrade gracefully.

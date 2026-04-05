@@ -91,7 +91,11 @@ func (m Model) renderSingleMonth() string {
 		b.WriteString("\n")
 	}
 
-	return b.String()
+	output := b.String()
+	if m.termWidth > 0 && m.termHeight > 0 {
+		return lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, output)
+	}
+	return output
 }
 
 func (m Model) renderMultiMonth() string {
@@ -165,5 +169,9 @@ func (m Model) renderMultiMonth() string {
 		result.WriteString("\n")
 	}
 
-	return result.String()
+	output := result.String()
+	if m.termWidth > 0 && m.termHeight > 0 {
+		return lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, output)
+	}
+	return output
 }
