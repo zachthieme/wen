@@ -104,16 +104,14 @@ func DaysIn(year int, month time.Month, loc *time.Location) int {
 // shiftMonth shifts a month by delta and adjusts the year on
 // overflow (>12) or underflow (<1).
 func shiftMonth(month time.Month, year, delta int) (time.Month, int) {
-	m := int(month) + delta
-	for m > 12 {
-		m -= 12
-		year++
-	}
-	for m < 1 {
+	m := int(month) - 1 + delta // 0-indexed
+	year += m / 12
+	m %= 12
+	if m < 0 {
 		m += 12
 		year--
 	}
-	return time.Month(m), year
+	return time.Month(m + 1), year
 }
 
 // modifierDelta converts "next"/"last"/"this" to +1/-1/0.

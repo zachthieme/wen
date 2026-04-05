@@ -105,6 +105,9 @@ func TestRelativeOffset(t *testing.T) {
 		{"in five days", date(2026, 3, 23)},
 		{"in ten days", date(2026, 3, 28)},
 		{"one month ago", date(2026, 2, 18)},
+		// Large offsets — verifies shiftMonth handles big deltas correctly
+		{"in 120 months", date(2036, 3, 18)},
+		{"120 months ago", date(2016, 3, 18)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
