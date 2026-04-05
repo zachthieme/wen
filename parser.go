@@ -42,15 +42,13 @@ const maxDayOfMonth = 31
 type parser struct {
 	tokens  []token
 	pos     int
-	ref     time.Time
-	opts    options
 	input   string
 	bestErr *ParseError
 	ctx     context.Context
 }
 
-func newParser(tokens []token, ref time.Time, opts options, input string) *parser {
-	return &parser{tokens: tokens, ref: ref, opts: opts, input: input}
+func newParser(tokens []token, input string) *parser {
+	return &parser{tokens: tokens, input: input}
 }
 
 func (p *parser) peek() token {
