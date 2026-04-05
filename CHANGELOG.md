@@ -3,7 +3,7 @@
 ### v1.9.0 — April 5, 2026
 
 **Architecture:**
-- Internal AST layer between parser and resolver: grammar recognition (parser.go) is now fully decoupled from date math (resolver.go) via typed `dateExpr` AST nodes. Public API unchanged.
+- Internal AST layer between parser and resolver: grammar recognition (parser.go) is now fully decoupled from date math (resolver.go) via typed AST nodes (now exported as [Expr]). Public API unchanged.
 - Removed dead `ref`/`opts` fields from parser struct — parser no longer holds any date-math state.
 
 **New features:**

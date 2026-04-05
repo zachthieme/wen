@@ -64,6 +64,7 @@ func WithPrintMode(on bool) Option {
 }
 
 // WithMonths sets the number of months to display side by side (grid calendar).
+// This option only affects [Model]; [RowModel] always displays a single strip.
 func WithMonths(n int) Option {
 	return func(b *baseModel) {
 		if n < 1 {

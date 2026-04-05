@@ -208,3 +208,72 @@ func TestWithFiscalYearStartValidValues(t *testing.T) {
 		})
 	}
 }
+
+func TestParseToExpr(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		input    string
+		wantType string
+	}{
+		{"tomorrow", "*wen.RelativeDayExpr"},
+		{"next friday", "*wen.ModWeekdayExpr"},
+		{"in 3 days", "*wen.RelativeOffsetExpr"},
+		{"in 2 fridays", "*wen.CountedWeekdayExpr"},
+		{"first monday of april", "*wen.OrdinalWeekdayExpr"},
+		{"last friday in november", "*wen.LastWeekdayInMonthExpr"},
+		{"march 25 2026", "*wen.AbsoluteDateExpr"},
+		{"next week", "*wen.PeriodRefExpr"},
+		{"end of quarter", "*wen.BoundaryExpr"},
+		{"tomorrow at 3pm", "*wen.WithTimeExpr"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
+			expr, err := wen.ParseToExpr(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got := fmt.Sprintf("%T", expr)
+			if got != tt.wantType {
+				t.Errorf("got %s, want %s", got, tt.wantType)
+			}
+		})
+	}
+}
+
+func TestParseToExprInvalid(t *testing.T) {
+	t.Parallel()
+	_, err := wen.ParseToExpr("not a date")
+	if err == nil {
+		t.Fatal("expected error for invalid input")
+	}
+	var pe *wen.ParseError
+	if !errors.As(err, &pe) {
+		t.Fatalf("expected *wen.ParseError, got %T", err)
+	}
+}
+
+func TestParseToExprContextCancellation(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := wen.ParseToExprContext(ctx, "tomorrow")
+	if err == nil {
+		t.Fatal("expected error from cancelled context")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestParseToExprOptionPropagation(t *testing.T) {
+	t.Parallel()
+	// Invalid fiscal year start should propagate as error
+	_, err := wen.ParseToExpr("tomorrow", wen.WithFiscalYearStart(13))
+	if err == nil {
+		t.Fatal("expected validation error from invalid option")
+	}
+	if !strings.Contains(err.Error(), "invalid fiscal year start month") {
+		t.Errorf("error should mention invalid fiscal year start: %v", err)
+	}
+}
