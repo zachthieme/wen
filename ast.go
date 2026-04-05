@@ -2,40 +2,45 @@ package wen
 
 import "time"
 
-// dateExpr is the internal AST node interface. Each concrete type represents
-// a distinct production in the date grammar. The parser produces these nodes;
-// the resolver converts them to time.Time values.
-type dateExpr interface {
-	dateExpr() // marker method
+// Expr is a parsed date expression node. Concrete implementations are
+// [RelativeDayExpr], [ModWeekdayExpr], [RelativeOffsetExpr],
+// [CountedWeekdayExpr], [OrdinalWeekdayExpr], [LastWeekdayInMonthExpr],
+// [AbsoluteDateExpr], [PeriodRefExpr], [BoundaryExpr], [MultiDateExpr],
+// and [WithTimeExpr].
+//
+// The interface is sealed: only types defined in this package satisfy it.
+// Use a type switch to inspect the concrete expression type.
+type Expr interface {
+	expr() // unexported marker — prevents external implementations
 }
 
-// relativeDayExpr represents "today", "tomorrow", or "yesterday".
-type relativeDayExpr struct {
+// RelativeDayExpr represents "today", "tomorrow", or "yesterday".
+type RelativeDayExpr struct {
 	Day string // "today", "tomorrow", "yesterday"
 }
 
-// modWeekdayExpr represents "[modifier] weekday" (e.g., "next friday").
-type modWeekdayExpr struct {
+// ModWeekdayExpr represents "[modifier] weekday" (e.g., "next friday").
+type ModWeekdayExpr struct {
 	Modifier string       // "this", "next", "last", ""
 	Weekday  time.Weekday
 }
 
-// relativeOffsetExpr represents "N unit ago/from now" or "in N unit".
-type relativeOffsetExpr struct {
+// RelativeOffsetExpr represents "N unit ago/from now" or "in N unit".
+type RelativeOffsetExpr struct {
 	N         int
 	Unit      string // "day", "week", "month", "year", "hour", "minute"
 	Direction int    // +1 forward, -1 backward
 }
 
-// countedWeekdayExpr represents "in N weekdays" (e.g., "in 2 fridays").
-type countedWeekdayExpr struct {
+// CountedWeekdayExpr represents "in N weekdays" (e.g., "in 2 fridays").
+type CountedWeekdayExpr struct {
 	Count   int
 	Weekday time.Weekday
 }
 
-// ordinalWeekdayExpr represents "Nth weekday in/of month [year]"
+// OrdinalWeekdayExpr represents "Nth weekday in/of month [year]"
 // or "Nth weekday of next/last month".
-type ordinalWeekdayExpr struct {
+type OrdinalWeekdayExpr struct {
 	N             int
 	Weekday       time.Weekday
 	Month         time.Month // 0 when MonthModifier is set
@@ -43,71 +48,71 @@ type ordinalWeekdayExpr struct {
 	MonthModifier string     // "this", "next", "last" — set when Month is 0
 }
 
-// lastWeekdayInMonthExpr represents "last weekday in month [year]".
-type lastWeekdayInMonthExpr struct {
+// LastWeekdayInMonthExpr represents "last weekday in month [year]".
+type LastWeekdayInMonthExpr struct {
 	Weekday time.Weekday
 	Month   time.Month
 	Year    int // 0 = infer from ref
 }
 
-// absoluteDateExpr represents "month day [year]" or "month year".
-type absoluteDateExpr struct {
+// AbsoluteDateExpr represents "month day [year]" or "month year".
+type AbsoluteDateExpr struct {
 	Month time.Month
 	Day   int
 	Year  int // 0 = infer from ref
 }
 
-// periodRefExpr represents "this/next/last week/month".
-type periodRefExpr struct {
+// PeriodRefExpr represents "this/next/last week/month".
+type PeriodRefExpr struct {
 	Modifier string // "this", "next", "last"
 	Unit     string // "week", "month"
 }
 
-// boundaryExpr represents "beginning/end of [modifier] unit".
-type boundaryExpr struct {
+// BoundaryExpr represents "beginning/end of [modifier] unit".
+type BoundaryExpr struct {
 	Boundary string // "beginning", "end"
 	Modifier string // "this", "next", "last"
 	Unit     string // "week", "month", "quarter", "year"
 }
 
-// multiDateExpr represents "every weekday in month [year]".
-type multiDateExpr struct {
+// MultiDateExpr represents "every weekday in month [year]".
+type MultiDateExpr struct {
 	Weekday time.Weekday
 	Month   time.Month
 	Year    int // 0 = infer from ref
 }
 
-// withTimeExpr wraps a date expression with a time-of-day.
+// WithTimeExpr wraps a date expression with a time-of-day.
 // When Date is nil, the time applies to "today" (standalone time expression).
-type withTimeExpr struct {
-	Date   dateExpr // nil for standalone time expressions
+type WithTimeExpr struct {
+	Date   Expr // nil for standalone time expressions
 	Hour   int
 	Minute int
 }
 
 // Compile-time interface satisfaction checks.
 var (
-	_ dateExpr = (*relativeDayExpr)(nil)
-	_ dateExpr = (*modWeekdayExpr)(nil)
-	_ dateExpr = (*relativeOffsetExpr)(nil)
-	_ dateExpr = (*countedWeekdayExpr)(nil)
-	_ dateExpr = (*ordinalWeekdayExpr)(nil)
-	_ dateExpr = (*lastWeekdayInMonthExpr)(nil)
-	_ dateExpr = (*absoluteDateExpr)(nil)
-	_ dateExpr = (*periodRefExpr)(nil)
-	_ dateExpr = (*boundaryExpr)(nil)
-	_ dateExpr = (*multiDateExpr)(nil)
-	_ dateExpr = (*withTimeExpr)(nil)
+	_ Expr = (*RelativeDayExpr)(nil)
+	_ Expr = (*ModWeekdayExpr)(nil)
+	_ Expr = (*RelativeOffsetExpr)(nil)
+	_ Expr = (*CountedWeekdayExpr)(nil)
+	_ Expr = (*OrdinalWeekdayExpr)(nil)
+	_ Expr = (*LastWeekdayInMonthExpr)(nil)
+	_ Expr = (*AbsoluteDateExpr)(nil)
+	_ Expr = (*PeriodRefExpr)(nil)
+	_ Expr = (*BoundaryExpr)(nil)
+	_ Expr = (*MultiDateExpr)(nil)
+	_ Expr = (*WithTimeExpr)(nil)
 )
 
-func (*relativeDayExpr) dateExpr()        {}
-func (*modWeekdayExpr) dateExpr()         {}
-func (*relativeOffsetExpr) dateExpr()     {}
-func (*countedWeekdayExpr) dateExpr()     {}
-func (*ordinalWeekdayExpr) dateExpr()     {}
-func (*lastWeekdayInMonthExpr) dateExpr() {}
-func (*absoluteDateExpr) dateExpr()       {}
-func (*periodRefExpr) dateExpr()          {}
-func (*boundaryExpr) dateExpr()           {}
-func (*multiDateExpr) dateExpr()          {}
-func (*withTimeExpr) dateExpr()           {}
+func (*RelativeDayExpr) expr()        {}
+func (*ModWeekdayExpr) expr()         {}
+func (*RelativeOffsetExpr) expr()     {}
+func (*CountedWeekdayExpr) expr()     {}
+func (*OrdinalWeekdayExpr) expr()     {}
+func (*LastWeekdayInMonthExpr) expr() {}
+func (*AbsoluteDateExpr) expr()       {}
+func (*PeriodRefExpr) expr()          {}
+func (*BoundaryExpr) expr()           {}
+func (*MultiDateExpr) expr()          {}
+func (*WithTimeExpr) expr()           {}

@@ -113,6 +113,22 @@ func LookupMonth(name string) (time.Month, bool) {
 	return m, ok
 }
 
+// ParseToExpr parses a natural language date expression into an AST node
+// without resolving it. This is useful for tooling that needs to inspect
+// the parsed structure (syntax highlighting, autocomplete, linting).
+func ParseToExpr(input string, opts ...Option) (Expr, error) {
+	return ParseToExprContext(context.Background(), input, opts...)
+}
+
+// ParseToExprContext is like [ParseToExpr] but accepts a context for cancellation.
+func ParseToExprContext(ctx context.Context, input string, opts ...Option) (Expr, error) {
+	p, _, err := buildParser(ctx, input, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return p.parse()
+}
+
 // Parse parses a natural language date/time expression relative to time.Now().
 func Parse(input string, opts ...Option) (time.Time, error) {
 	return ParseRelative(input, time.Now(), opts...)

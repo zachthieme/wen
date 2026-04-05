@@ -4,20 +4,20 @@ import "testing"
 
 func TestDateExprInterface(t *testing.T) {
 	t.Parallel()
-	nodes := []dateExpr{
-		&relativeDayExpr{},
-		&modWeekdayExpr{},
-		&relativeOffsetExpr{},
-		&countedWeekdayExpr{},
-		&ordinalWeekdayExpr{},
-		&lastWeekdayInMonthExpr{},
-		&absoluteDateExpr{},
-		&periodRefExpr{},
-		&boundaryExpr{},
-		&multiDateExpr{},
-		&withTimeExpr{},
+	nodes := []Expr{
+		&RelativeDayExpr{},
+		&ModWeekdayExpr{},
+		&RelativeOffsetExpr{},
+		&CountedWeekdayExpr{},
+		&OrdinalWeekdayExpr{},
+		&LastWeekdayInMonthExpr{},
+		&AbsoluteDateExpr{},
+		&PeriodRefExpr{},
+		&BoundaryExpr{},
+		&MultiDateExpr{},
+		&WithTimeExpr{},
 	}
 	for _, n := range nodes {
-		n.dateExpr()
+		n.expr()
 	}
 }

@@ -132,7 +132,7 @@ func modifierDelta(modifier string) int {
 	}
 }
 
-func (p *parser) parse() (dateExpr, error) {
+func (p *parser) parse() (Expr, error) {
 	if p.ctx != nil {
 		if err := p.ctx.Err(); err != nil {
 			return nil, &ParseError{
@@ -151,7 +151,7 @@ func (p *parser) parse() (dateExpr, error) {
 		saved := p.save()
 		p.skipNoise()
 		if hour, minute, matched := p.parseTimeExpr(); matched {
-			expr = &withTimeExpr{Date: expr, Hour: hour, Minute: minute}
+			expr = &WithTimeExpr{Date: expr, Hour: hour, Minute: minute}
 		} else {
 			p.restore(saved)
 		}
@@ -163,7 +163,7 @@ func (p *parser) parse() (dateExpr, error) {
 		if !matched {
 			return nil, p.finalError()
 		}
-		expr = &withTimeExpr{Date: nil, Hour: hour, Minute: minute}
+		expr = &WithTimeExpr{Date: nil, Hour: hour, Minute: minute}
 	}
 
 	p.skipNoise()
@@ -175,7 +175,7 @@ func (p *parser) parse() (dateExpr, error) {
 
 // parseDateExpr dispatches to the appropriate date production based on the
 // current token kind (relative day, weekday, modifier, number, ordinal, month, or boundary).
-func (p *parser) parseDateExpr() (dateExpr, bool) {
+func (p *parser) parseDateExpr() (Expr, bool) {
 	if p.ctx != nil {
 		if err := p.ctx.Err(); err != nil {
 			return nil, false
@@ -189,7 +189,7 @@ func (p *parser) parseDateExpr() (dateExpr, bool) {
 		return p.parseRelativeDay()
 	case tokenWeekday:
 		p.advance() // consume weekday token
-		return &modWeekdayExpr{Modifier: "this", Weekday: tok.Weekday}, true
+		return &ModWeekdayExpr{Modifier: "this", Weekday: tok.Weekday}, true
 	case tokenModifier:
 		return p.parseModifierExpr()
 	case tokenPreposition:
@@ -210,13 +210,13 @@ func (p *parser) parseDateExpr() (dateExpr, bool) {
 	return nil, false
 }
 
-func (p *parser) parseRelativeDay() (dateExpr, bool) {
+func (p *parser) parseRelativeDay() (Expr, bool) {
 	tok := p.advance()
-	return &relativeDayExpr{Day: tok.Value}, true
+	return &RelativeDayExpr{Day: tok.Value}, true
 }
 
 // parseModifierExpr handles "this/next/last <weekday|week|month>" patterns.
-func (p *parser) parseModifierExpr() (dateExpr, bool) {
+func (p *parser) parseModifierExpr() (Expr, bool) {
 	saved := p.save()
 	modifier := p.advance()
 	p.skipNoise()
@@ -230,11 +230,11 @@ func (p *parser) parseModifierExpr() (dateExpr, bool) {
 			}
 		}
 		p.advance() // consume weekday token
-		return &modWeekdayExpr{Modifier: modifier.Value, Weekday: tok.Weekday}, true
+		return &ModWeekdayExpr{Modifier: modifier.Value, Weekday: tok.Weekday}, true
 	}
 	if tok.Kind == tokenUnit && (tok.Value == "week" || tok.Value == "month") {
 		p.advance() // consume unit
-		return &periodRefExpr{Modifier: modifier.Value, Unit: tok.Value}, true
+		return &PeriodRefExpr{Modifier: modifier.Value, Unit: tok.Value}, true
 	}
 
 	p.recordError(p.makeError(
@@ -248,7 +248,7 @@ func (p *parser) parseModifierExpr() (dateExpr, bool) {
 // tryLastWeekdayInMonth attempts to parse "last <weekday> in/of <month> [year]".
 // The weekday token has been peeked but not consumed. Returns false and restores
 // position if the pattern does not match.
-func (p *parser) tryLastWeekdayInMonth(weekdayTok token) (dateExpr, bool) {
+func (p *parser) tryLastWeekdayInMonth(weekdayTok token) (Expr, bool) {
 	saved := p.save()
 	p.advance() // consume weekday
 	p.skipNoise()
@@ -273,11 +273,11 @@ func (p *parser) tryLastWeekdayInMonth(weekdayTok token) (dateExpr, bool) {
 	if p.peek().Kind == tokenNumber && p.peek().IntVal > maxDayOfMonth {
 		year = p.advance().IntVal
 	}
-	return &lastWeekdayInMonthExpr{Weekday: weekdayTok.Weekday, Month: monthTok.Month, Year: year}, true
+	return &LastWeekdayInMonthExpr{Weekday: weekdayTok.Weekday, Month: monthTok.Month, Year: year}, true
 }
 
 // parseInExpr handles "in <number> <weekday|unit>" patterns (e.g., "in 3 days", "in 2 fridays").
-func (p *parser) parseInExpr() (dateExpr, bool) {
+func (p *parser) parseInExpr() (Expr, bool) {
 	saved := p.save()
 	p.advance() // consume "in"
 	p.skipNoise()
@@ -295,10 +295,10 @@ func (p *parser) parseInExpr() (dateExpr, bool) {
 	switch next.Kind {
 	case tokenWeekday:
 		p.advance() // consume weekday
-		return &countedWeekdayExpr{Count: num.IntVal, Weekday: next.Weekday}, true
+		return &CountedWeekdayExpr{Count: num.IntVal, Weekday: next.Weekday}, true
 	case tokenUnit:
 		p.advance()
-		return &relativeOffsetExpr{N: num.IntVal, Unit: next.Value, Direction: 1}, true
+		return &RelativeOffsetExpr{N: num.IntVal, Unit: next.Value, Direction: 1}, true
 	}
 
 	p.recordError(p.makeError("weekday", "unit"))
@@ -307,7 +307,7 @@ func (p *parser) parseInExpr() (dateExpr, bool) {
 }
 
 // parseNumberLeadExpr handles "<number> <unit> ago/from now" patterns (e.g., "3 days ago").
-func (p *parser) parseNumberLeadExpr() (dateExpr, bool) {
+func (p *parser) parseNumberLeadExpr() (Expr, bool) {
 	saved := p.save()
 	num := p.advance()
 	p.skipNoise()
@@ -324,14 +324,14 @@ func (p *parser) parseNumberLeadExpr() (dateExpr, bool) {
 	tok := p.peek()
 	if tok.Kind == tokenPreposition && tok.Value == "ago" {
 		p.advance()
-		return &relativeOffsetExpr{N: num.IntVal, Unit: unit.Value, Direction: -1}, true
+		return &RelativeOffsetExpr{N: num.IntVal, Unit: unit.Value, Direction: -1}, true
 	}
 	if tok.Kind == tokenPreposition && tok.Value == "from" {
 		p.advance()
 		p.skipNoise()
 		if p.peek().Kind == tokenPreposition && p.peek().Value == "now" {
 			p.advance()
-			return &relativeOffsetExpr{N: num.IntVal, Unit: unit.Value, Direction: 1}, true
+			return &RelativeOffsetExpr{N: num.IntVal, Unit: unit.Value, Direction: 1}, true
 		}
 		err := p.makeError("now")
 		p.restore(saved)
@@ -347,7 +347,7 @@ func (p *parser) parseNumberLeadExpr() (dateExpr, bool) {
 
 // parseOrdinalWeekdayInMonth handles "Nth weekday in/of month [year]" patterns
 // (e.g., "first monday of april", "third wednesday of next month").
-func (p *parser) parseOrdinalWeekdayInMonth() (dateExpr, bool) {
+func (p *parser) parseOrdinalWeekdayInMonth() (Expr, bool) {
 	saved := p.save()
 	ordinal := p.advance() // consume ordinal
 	p.skipNoise()
@@ -374,7 +374,7 @@ func (p *parser) parseOrdinalWeekdayInMonth() (dateExpr, bool) {
 		p.skipNoise()
 		if p.peek().Kind == tokenUnit && p.peek().Value == "month" {
 			p.advance()
-			return &ordinalWeekdayExpr{
+			return &OrdinalWeekdayExpr{
 				N:             ordinal.IntVal,
 				Weekday:       weekday.Weekday,
 				MonthModifier: mod.Value,
@@ -398,7 +398,7 @@ func (p *parser) parseOrdinalWeekdayInMonth() (dateExpr, bool) {
 		year = p.advance().IntVal
 	}
 
-	return &ordinalWeekdayExpr{
+	return &OrdinalWeekdayExpr{
 		N:       ordinal.IntVal,
 		Weekday: weekday.Weekday,
 		Month:   month.Month,
@@ -407,7 +407,7 @@ func (p *parser) parseOrdinalWeekdayInMonth() (dateExpr, bool) {
 }
 
 // parseAbsoluteDate handles "<month> <day> [year]" and "<month> <year>" patterns.
-func (p *parser) parseAbsoluteDate() (dateExpr, bool) {
+func (p *parser) parseAbsoluteDate() (Expr, bool) {
 	saved := p.save()
 	monthTok := p.advance() // consume month
 	p.skipNoise()
@@ -444,11 +444,11 @@ func (p *parser) parseAbsoluteDate() (dateExpr, bool) {
 		}
 	}
 
-	return &absoluteDateExpr{Month: monthTok.Month, Day: day, Year: year}, true
+	return &AbsoluteDateExpr{Month: monthTok.Month, Day: day, Year: year}, true
 }
 
 // parseBoundaryExpr handles "beginning/end of [modifier] week/month/quarter/year".
-func (p *parser) parseBoundaryExpr() (dateExpr, bool) {
+func (p *parser) parseBoundaryExpr() (Expr, bool) {
 	saved := p.save()
 	boundary := p.advance() // "beginning" or "end"
 	p.skipNoise()
@@ -478,12 +478,12 @@ func (p *parser) parseBoundaryExpr() (dateExpr, bool) {
 	}
 	unit := p.advance().Value
 
-	return &boundaryExpr{Boundary: boundary.Value, Modifier: modifier, Unit: unit}, true
+	return &BoundaryExpr{Boundary: boundary.Value, Modifier: modifier, Unit: unit}, true
 }
 
 // parseMultiDate handles "every <weekday> [in/of] <month> [year]" and returns
-// a multiDateExpr AST node.
-func (p *parser) parseMultiDate() (dateExpr, bool) {
+// a [MultiDateExpr] AST node.
+func (p *parser) parseMultiDate() (Expr, bool) {
 	p.skipNoise()
 	if p.peek().Kind != tokenEvery {
 		return nil, false
@@ -518,7 +518,7 @@ func (p *parser) parseMultiDate() (dateExpr, bool) {
 		year = p.advance().IntVal
 	}
 
-	return &multiDateExpr{Weekday: weekdayTok.Weekday, Month: monthTok.Month, Year: year}, true
+	return &MultiDateExpr{Weekday: weekdayTok.Weekday, Month: monthTok.Month, Year: year}, true
 }
 
 // parseTimeExpr parses an optional time-of-day expression (e.g., "at 3pm",

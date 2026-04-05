@@ -10,7 +10,7 @@ import (
 // that converts AST nodes (produced by the parser) into concrete time.Time values.
 // The grammar recognition (parse* methods) lives in parser.go.
 
-// resolver converts dateExpr AST nodes into time.Time values.
+// resolver converts Expr AST nodes into time.Time values.
 type resolver struct {
 	ref   time.Time
 	opts  options
@@ -22,29 +22,29 @@ func newResolver(ref time.Time, opts options, input string) *resolver {
 	return &resolver{ref: ref, opts: opts, input: input}
 }
 
-// resolve dispatches a dateExpr to the appropriate resolution method and
+// resolve dispatches an Expr to the appropriate resolution method and
 // returns the resulting time.Time.
-func (r *resolver) resolve(expr dateExpr) (time.Time, error) {
+func (r *resolver) resolve(expr Expr) (time.Time, error) {
 	switch e := expr.(type) {
-	case *relativeDayExpr:
+	case *RelativeDayExpr:
 		return r.resolveRelativeDay(e)
-	case *modWeekdayExpr:
+	case *ModWeekdayExpr:
 		return r.resolveModWeekday(e)
-	case *relativeOffsetExpr:
+	case *RelativeOffsetExpr:
 		return r.resolveRelativeOffset(e)
-	case *countedWeekdayExpr:
+	case *CountedWeekdayExpr:
 		return r.resolveCountedWeekday(e)
-	case *ordinalWeekdayExpr:
+	case *OrdinalWeekdayExpr:
 		return r.resolveOrdinalWeekdayInMonth(e)
-	case *lastWeekdayInMonthExpr:
+	case *LastWeekdayInMonthExpr:
 		return r.resolveLastWeekdayInMonth(e)
-	case *absoluteDateExpr:
+	case *AbsoluteDateExpr:
 		return r.resolveAbsoluteDate(e)
-	case *periodRefExpr:
+	case *PeriodRefExpr:
 		return r.resolvePeriodRef(e)
-	case *boundaryExpr:
+	case *BoundaryExpr:
 		return r.resolveBoundary(e)
-	case *withTimeExpr:
+	case *WithTimeExpr:
 		return r.resolveWithTime(e)
 	default:
 		return time.Time{}, &ParseError{
@@ -57,8 +57,8 @@ func (r *resolver) resolve(expr dateExpr) (time.Time, error) {
 }
 
 // resolveMulti handles expressions that may produce multiple dates.
-// For multiDateExpr it returns all occurrences; otherwise it wraps a single result.
-func (r *resolver) resolveMulti(expr dateExpr) ([]time.Time, error) {
+// For [MultiDateExpr] it returns all occurrences; otherwise it wraps a single result.
+func (r *resolver) resolveMulti(expr Expr) ([]time.Time, error) {
 	if r.ctx != nil {
 		if err := r.ctx.Err(); err != nil {
 			return nil, &ParseError{
@@ -69,7 +69,7 @@ func (r *resolver) resolveMulti(expr dateExpr) ([]time.Time, error) {
 			}
 		}
 	}
-	if e, ok := expr.(*multiDateExpr); ok {
+	if e, ok := expr.(*MultiDateExpr); ok {
 		return r.resolveMultiDate(e)
 	}
 	t, err := r.resolve(expr)
@@ -79,7 +79,7 @@ func (r *resolver) resolveMulti(expr dateExpr) ([]time.Time, error) {
 	return []time.Time{t}, nil
 }
 
-func (r *resolver) resolveRelativeDay(e *relativeDayExpr) (time.Time, error) {
+func (r *resolver) resolveRelativeDay(e *RelativeDayExpr) (time.Time, error) {
 	base := TruncateDay(r.ref)
 	switch e.Day {
 	case "today":
@@ -99,7 +99,7 @@ func (r *resolver) resolveRelativeDay(e *relativeDayExpr) (time.Time, error) {
 
 // resolveModWeekday resolves a weekday with an optional modifier
 // ("this", "next", "last") to the corresponding date relative to ref.
-func (r *resolver) resolveModWeekday(e *modWeekdayExpr) (time.Time, error) {
+func (r *resolver) resolveModWeekday(e *ModWeekdayExpr) (time.Time, error) {
 	var weekOffset int
 	switch e.Modifier {
 	case "this", "":
@@ -127,7 +127,7 @@ func weekdayInWeek(ref time.Time, target time.Weekday, weekOffset int) time.Time
 
 // resolveRelativeOffset applies an offset of n units (day, week, month, year, hour, minute)
 // in the given direction (+1 forward, -1 backward) relative to ref.
-func (r *resolver) resolveRelativeOffset(e *relativeOffsetExpr) (time.Time, error) {
+func (r *resolver) resolveRelativeOffset(e *RelativeOffsetExpr) (time.Time, error) {
 	amount := e.N * e.Direction
 	switch e.Unit {
 	case "day":
@@ -153,7 +153,7 @@ func (r *resolver) resolveRelativeOffset(e *relativeOffsetExpr) (time.Time, erro
 
 // resolveCountedWeekday finds the Nth occurrence of a weekday after ref
 // (e.g., "in 2 fridays" = the 2nd Friday after today).
-func (r *resolver) resolveCountedWeekday(e *countedWeekdayExpr) (time.Time, error) {
+func (r *resolver) resolveCountedWeekday(e *CountedWeekdayExpr) (time.Time, error) {
 	if e.Count <= 0 {
 		return time.Time{}, &ParseError{
 			Input:    r.input,
@@ -175,7 +175,7 @@ func (r *resolver) resolveCountedWeekday(e *countedWeekdayExpr) (time.Time, erro
 
 // resolveOrdinalWeekdayInMonth finds the Nth occurrence of a weekday in the given
 // month and year. Returns an error if the month has fewer than N occurrences.
-func (r *resolver) resolveOrdinalWeekdayInMonth(e *ordinalWeekdayExpr) (time.Time, error) {
+func (r *resolver) resolveOrdinalWeekdayInMonth(e *OrdinalWeekdayExpr) (time.Time, error) {
 	month := e.Month
 	year := e.Year
 
@@ -224,7 +224,7 @@ func (r *resolver) resolveOrdinalWeekdayInMonth(e *ordinalWeekdayExpr) (time.Tim
 
 // resolveLastWeekdayInMonth finds the last occurrence of a weekday in the given
 // month and year by scanning backward from the month's last day.
-func (r *resolver) resolveLastWeekdayInMonth(e *lastWeekdayInMonthExpr) (time.Time, error) {
+func (r *resolver) resolveLastWeekdayInMonth(e *LastWeekdayInMonthExpr) (time.Time, error) {
 	year := e.Year
 	if year == 0 {
 		year = r.ref.Year()
@@ -245,7 +245,7 @@ func (r *resolver) resolveLastWeekdayInMonth(e *lastWeekdayInMonthExpr) (time.Ti
 
 // resolveAbsoluteDate resolves "month day [year]" or "month year" patterns,
 // inferring year and validating the day.
-func (r *resolver) resolveAbsoluteDate(e *absoluteDateExpr) (time.Time, error) {
+func (r *resolver) resolveAbsoluteDate(e *AbsoluteDateExpr) (time.Time, error) {
 	year := e.Year
 	if year == 0 {
 		year = r.ref.Year()
@@ -269,7 +269,7 @@ func (r *resolver) resolveAbsoluteDate(e *absoluteDateExpr) (time.Time, error) {
 
 // resolvePeriodRef resolves "this/next/last week/month" using the configured
 // PeriodMode (start-of-period vs same-day offset).
-func (r *resolver) resolvePeriodRef(e *periodRefExpr) (time.Time, error) {
+func (r *resolver) resolvePeriodRef(e *PeriodRefExpr) (time.Time, error) {
 	ref := TruncateDay(r.ref)
 
 	switch e.Unit {
@@ -312,7 +312,7 @@ func (r *resolver) resolvePeriodRef(e *periodRefExpr) (time.Time, error) {
 
 // resolveBoundary computes the beginning or end of a week, month, quarter, or
 // year, adjusted by the modifier. Quarter boundaries respect fiscal year settings.
-func (r *resolver) resolveBoundary(e *boundaryExpr) (time.Time, error) {
+func (r *resolver) resolveBoundary(e *BoundaryExpr) (time.Time, error) {
 	ref := TruncateDay(r.ref)
 	loc := ref.Location()
 
@@ -405,7 +405,7 @@ func (r *resolver) resolveBoundary(e *boundaryExpr) (time.Time, error) {
 }
 
 // resolveMultiDate enumerates all occurrences of a weekday in the given month.
-func (r *resolver) resolveMultiDate(e *multiDateExpr) ([]time.Time, error) {
+func (r *resolver) resolveMultiDate(e *MultiDateExpr) ([]time.Time, error) {
 	year := e.Year
 	if year == 0 {
 		year = r.ref.Year()
@@ -430,7 +430,7 @@ func (r *resolver) resolveMultiDate(e *multiDateExpr) ([]time.Time, error) {
 
 // resolveWithTime resolves the inner date expression (or uses today if nil)
 // and applies the time-of-day.
-func (r *resolver) resolveWithTime(e *withTimeExpr) (time.Time, error) {
+func (r *resolver) resolveWithTime(e *WithTimeExpr) (time.Time, error) {
 	var base time.Time
 	if e.Date == nil {
 		base = TruncateDay(r.ref)
