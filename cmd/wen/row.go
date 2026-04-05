@@ -15,11 +15,8 @@ import (
 
 func runRow(ctx appContext, args []string) error {
 	fs := flag.NewFlagSet("row", flag.ContinueOnError)
-	highlightFile := fs.String("highlight-file", "", "path to JSON file with dates to highlight")
-	printFlag := fs.Bool("print", false, "print strip calendar and exit (non-interactive)")
-	fs.BoolVar(printFlag, "p", false, "shorthand for --print")
-	julianFlag := fs.Bool("julian", false, "show Julian day-of-year numbers")
-	fs.BoolVar(julianFlag, "j", false, "shorthand for --julian")
+	var cf calendarFlags
+	cf.register(fs)
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -32,20 +29,7 @@ func runRow(ctx appContext, args []string) error {
 		return err
 	}
 
-	cfg := ctx.cfg
-
-	// Print config warnings to stderr.
-	for _, w := range cfg.Normalize() {
-		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
-	}
-
-	highlightPath := calendar.ResolveHighlightSource(*highlightFile, cfg.HighlightSource)
-
-	// Resolve julian: CLI flag overrides config
-	julian := cfg.Julian || *julianFlag
-
-	// Determine print mode: explicit flag or non-TTY stdout
-	printMode := *printFlag || !term.IsTerminal(int(os.Stdout.Fd()))
+	highlightPath, julian, printMode := cf.resolve(ctx.cfg)
 
 	var modelOpts []calendar.RowModelOption
 	if highlightPath != "" {
@@ -58,7 +42,7 @@ func runRow(ctx appContext, args []string) error {
 		modelOpts = append(modelOpts, calendar.WithRowPrintMode(true))
 	}
 
-	m := calendar.NewRow(cursor, ctx.now, cfg, modelOpts...)
+	m := calendar.NewRow(cursor, ctx.now, ctx.cfg, modelOpts...)
 
 	if printMode {
 		width := 80
