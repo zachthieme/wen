@@ -17,9 +17,14 @@ type ParseError struct {
 func (e *ParseError) Error() string {
 	exp := strings.Join(e.Expected, " or ")
 	var msg string
-	if e.Found == "" {
+	switch {
+	case e.Position < 0 && e.Found == "":
+		msg = fmt.Sprintf("unexpected end of input, expected %s", exp)
+	case e.Position < 0:
+		msg = fmt.Sprintf("unexpected %q, expected %s", e.Found, exp)
+	case e.Found == "":
 		msg = fmt.Sprintf("unexpected end of input at position %d, expected %s", e.Position, exp)
-	} else {
+	default:
 		msg = fmt.Sprintf("unexpected %q at position %d, expected %s", e.Found, e.Position, exp)
 	}
 	if e.Input != "" {

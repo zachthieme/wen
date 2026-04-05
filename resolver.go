@@ -49,7 +49,7 @@ func (r *resolver) resolve(expr dateExpr) (time.Time, error) {
 	default:
 		return time.Time{}, &ParseError{
 			Input:    r.input,
-			Position: 0,
+			Position: -1,
 			Expected: []string{"date expression"},
 			Found:    fmt.Sprintf("%T", expr),
 		}
@@ -63,7 +63,7 @@ func (r *resolver) resolveMulti(expr dateExpr) ([]time.Time, error) {
 		if err := r.ctx.Err(); err != nil {
 			return nil, &ParseError{
 				Input:    r.input,
-				Position: 0,
+				Position: -1,
 				Expected: []string{"date expression"},
 				Cause:    err,
 			}
@@ -91,7 +91,7 @@ func (r *resolver) resolveRelativeDay(e *relativeDayExpr) (time.Time, error) {
 	}
 	return time.Time{}, &ParseError{
 		Input:    r.input,
-		Position: 0,
+		Position: -1,
 		Expected: []string{"today", "tomorrow", "yesterday"},
 		Found:    e.Day,
 	}
@@ -145,7 +145,7 @@ func (r *resolver) resolveRelativeOffset(e *relativeOffsetExpr) (time.Time, erro
 	}
 	return time.Time{}, &ParseError{
 		Input:    r.input,
-		Position: 0,
+		Position: -1,
 		Expected: []string{"day", "week", "month", "year", "hour", "minute"},
 		Found:    e.Unit,
 	}
@@ -157,7 +157,7 @@ func (r *resolver) resolveCountedWeekday(e *countedWeekdayExpr) (time.Time, erro
 	if e.Count <= 0 {
 		return time.Time{}, &ParseError{
 			Input:    r.input,
-			Position: 0,
+			Position: -1,
 			Expected: []string{"positive number"},
 			Found:    fmt.Sprintf("%d", e.Count),
 		}
@@ -214,7 +214,7 @@ func (r *resolver) resolveOrdinalWeekdayInMonth(e *ordinalWeekdayExpr) (time.Tim
 		}
 		return time.Time{}, &ParseError{
 			Input:    r.input,
-			Position: 0,
+			Position: -1,
 			Expected: []string{fmt.Sprintf("%d or fewer", maxOccurrences)},
 			Found:    fmt.Sprintf("%d", e.N),
 		}
@@ -258,7 +258,7 @@ func (r *resolver) resolveAbsoluteDate(e *absoluteDateExpr) (time.Time, error) {
 	if e.Day < 1 || e.Day > maxDay {
 		return time.Time{}, &ParseError{
 			Input:    r.input,
-			Position: 0,
+			Position: -1,
 			Expected: []string{fmt.Sprintf("day between 1 and %d", maxDay)},
 			Found:    fmt.Sprintf("%d", e.Day),
 		}
@@ -304,7 +304,7 @@ func (r *resolver) resolvePeriodRef(e *periodRefExpr) (time.Time, error) {
 	}
 	return time.Time{}, &ParseError{
 		Input:    r.input,
-		Position: 0,
+		Position: -1,
 		Expected: []string{"week", "month"},
 		Found:    e.Unit,
 	}
@@ -398,7 +398,7 @@ func (r *resolver) resolveBoundary(e *boundaryExpr) (time.Time, error) {
 	}
 	return time.Time{}, &ParseError{
 		Input:    r.input,
-		Position: 0,
+		Position: -1,
 		Expected: []string{"week", "month", "quarter", "year"},
 		Found:    e.Unit,
 	}

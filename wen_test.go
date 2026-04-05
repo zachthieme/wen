@@ -1329,3 +1329,22 @@ func TestTokenKindStringExhaustive(t *testing.T) {
 			int(tokenEOF)+1, len(allKinds))
 	}
 }
+
+func TestSemanticErrorOmitsPosition(t *testing.T) {
+	t.Parallel()
+	// "february 30" is syntactically valid but semantically invalid
+	_, err := ParseRelative("february 30", ref)
+	if err == nil {
+		t.Fatal("expected error for feb 30")
+	}
+	pe, ok := err.(*ParseError)
+	if !ok {
+		t.Fatalf("expected *ParseError, got %T", err)
+	}
+	if pe.Position >= 0 {
+		t.Errorf("semantic error should have Position < 0, got %d", pe.Position)
+	}
+	if strings.Contains(pe.Error(), "position") {
+		t.Errorf("semantic error message should not mention position: %s", pe.Error())
+	}
+}
