@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -89,6 +90,9 @@ func runCalendar(ctx appContext, args []string) error {
 	}
 
 	m := calendar.New(cursor, ctx.now, ctx.cfg, modelOpts...)
+	for _, w := range m.Warnings() {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
+	}
 
 	if printMode {
 		fmt.Fprint(ctx.w, m.View())

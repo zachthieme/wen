@@ -43,6 +43,9 @@ func runRow(ctx appContext, args []string) error {
 	}
 
 	m := calendar.NewRow(cursor, ctx.now, ctx.cfg, modelOpts...)
+	for _, w := range m.Warnings() {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
+	}
 
 	if printMode {
 		width := 80
