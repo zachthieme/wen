@@ -167,6 +167,9 @@ func TestWithHighlightSource(t *testing.T) {
 	if !m.highlightedDates[key] {
 		t.Error("expected 2026-03-25 to be highlighted")
 	}
+	if len(m.Warnings()) != 0 {
+		t.Errorf("expected no warnings, got %v", m.Warnings())
+	}
 }
 
 func TestWithHighlightSourceMissing(t *testing.T) {
@@ -176,6 +179,9 @@ func TestWithHighlightSourceMissing(t *testing.T) {
 
 	if m.highlightedDates != nil {
 		t.Error("expected nil highlightedDates for missing file")
+	}
+	if len(m.Warnings()) == 0 {
+		t.Error("expected warning for missing highlight file")
 	}
 }
 

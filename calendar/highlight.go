@@ -70,7 +70,9 @@ func LoadHighlightedDates(path string) (map[time.Time]bool, []string) {
 func WithHighlightSource(path string) ModelOption {
 	return func(m *Model) {
 		m.highlightPath = expandTilde(path)
-		m.highlightedDates, _ = LoadHighlightedDates(m.highlightPath)
+		dates, warnings := LoadHighlightedDates(m.highlightPath)
+		m.highlightedDates = dates
+		m.warnings = append(m.warnings, warnings...)
 	}
 }
 
