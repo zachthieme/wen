@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+// NoPosition indicates a ParseError that is not tied to a specific byte offset
+// in the input (e.g., semantic errors like "february 30" or context cancellation).
+const NoPosition = -1
+
 // ParseError is a structured error returned when parsing fails.
 type ParseError struct {
 	Input    string   // the original input string

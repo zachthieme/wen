@@ -1379,6 +1379,22 @@ func TestParseMultiFallbackError(t *testing.T) {
 	}
 }
 
+func TestNoPositionConstant(t *testing.T) {
+	t.Parallel()
+	// Semantic errors (like invalid day count) use NoPosition
+	_, err := ParseRelative("february 30", ref)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var pe *ParseError
+	if !errors.As(err, &pe) {
+		t.Fatalf("expected *ParseError, got %T", err)
+	}
+	if pe.Position != NoPosition {
+		t.Errorf("Position = %d, want NoPosition (%d)", pe.Position, NoPosition)
+	}
+}
+
 func TestTimeExprErrorMessages(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
