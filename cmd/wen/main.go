@@ -52,14 +52,23 @@ func newAppContext(w io.Writer) appContext {
 	}
 }
 
+// subcommands lists all recognized subcommand names and flag-like tokens that
+// must not be consumed as --format values. Adding a new subcommand here is the
+// single source of truth — the switch in run() will fail to compile if a name
+// is listed here but not dispatched (and vice versa, the test
+// TestFormatFlagGuardsAllSubcommands catches the reverse).
+var subcommands = map[string]bool{
+	"cal": true, "calendar": true,
+	"diff": true,
+	"rel": true, "relative": true,
+	"row":  true,
+	"-h":   true, "--help": true,
+	"-v":   true, "--version": true,
+}
+
 // isSubcommand reports whether s is a recognized subcommand or flag.
 func isSubcommand(s string) bool {
-	switch s {
-	case "cal", "calendar", "diff", "rel", "relative", "row",
-		"-h", "--help", "-v", "--version":
-		return true
-	}
-	return false
+	return subcommands[s]
 }
 
 func run(w io.Writer, args []string) error {

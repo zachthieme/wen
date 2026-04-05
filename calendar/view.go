@@ -8,8 +8,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// monthGap is the spacing between side-by-side months.
-const monthGap = "   "
+const (
+	// monthGap is the spacing between side-by-side months.
+	monthGap = "   "
+	// weekNumColWidth is the character width of the week number column ("Wk" or " N" padded to 2 chars + 1 space).
+	weekNumColWidth = 3
+)
 
 // View produces the calendar view string for the model state.
 func (m Model) View() string {
@@ -25,7 +29,7 @@ func (m Model) wrapWithWeekNums(lines []string, weekNums []string) []string {
 	if m.weekNumPos == WeekNumOff {
 		return lines
 	}
-	wnWidth := 3 // "Wk" or " N" padded to 2 chars + 1 space
+	wnWidth := weekNumColWidth
 	result := make([]string, len(lines))
 	for i, line := range lines {
 		wn := ""
@@ -135,7 +139,7 @@ func (m Model) renderMultiMonth() string {
 	// Column width includes week numbers if enabled.
 	colWidth := m.dayFmt.gridWidth
 	if m.weekNumPos != WeekNumOff {
-		colWidth += 3 // " Wk" or "Wk " = 2 chars + 1 space
+		colWidth += weekNumColWidth
 	}
 
 	// Join side by side

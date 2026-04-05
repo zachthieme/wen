@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"strings"
 	"time"
@@ -9,24 +11,28 @@ import (
 )
 
 func runDiff(ctx appContext, args []string) error {
-	// Extract flags from anywhere in the arg list so that
-	// `wen diff today tomorrow --weeks` works the same as
-	// `wen diff --weeks today tomorrow`.
-	weeks := false
-	workdays := false
-	var remaining []string
+	fs := flag.NewFlagSet("diff", flag.ContinueOnError)
+	weeks := fs.Bool("weeks", false, "output in weeks instead of days")
+	workdays := fs.Bool("workdays", false, "output in workdays instead of days")
+
+	// Partition args so flags can appear anywhere: before, between, or
+	// after the date arguments (e.g., "wen diff today tomorrow --weeks").
+	var flags, positional []string
 	for _, a := range args {
-		switch a {
-		case "--weeks":
-			weeks = true
-		case "--workdays":
-			workdays = true
-		default:
-			remaining = append(remaining, a)
+		if strings.HasPrefix(a, "-") {
+			flags = append(flags, a)
+		} else {
+			positional = append(positional, a)
 		}
 	}
+	if err := fs.Parse(flags); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
+	}
 
-	if len(remaining) < 2 {
+	if len(positional) < 2 {
 		return fmt.Errorf("diff requires two date arguments\nusage: wen diff <date1> <date2>")
 	}
 
@@ -38,9 +44,9 @@ func runDiff(ctx appContext, args []string) error {
 	// split as ["3 days ago", "tomorrow"], never ["3", "days ago tomorrow"].
 	var date1, date2 time.Time
 	var found bool
-	for split := 1; split < len(remaining); split++ {
-		d1, err1 := parseDate(strings.Join(remaining[:split], " "), ctx.now, ctx.parseOpts...)
-		d2, err2 := parseDate(strings.Join(remaining[split:], " "), ctx.now, ctx.parseOpts...)
+	for split := 1; split < len(positional); split++ {
+		d1, err1 := parseDate(strings.Join(positional[:split], " "), ctx.now, ctx.parseOpts...)
+		d2, err2 := parseDate(strings.Join(positional[split:], " "), ctx.now, ctx.parseOpts...)
 		if err1 == nil && err2 == nil {
 			date1, date2 = d1, d2
 			found = true
@@ -48,7 +54,7 @@ func runDiff(ctx appContext, args []string) error {
 		}
 	}
 	if !found {
-		return fmt.Errorf("could not parse date arguments: %s", strings.Join(remaining, " "))
+		return fmt.Errorf("could not parse date arguments: %s", strings.Join(positional, " "))
 	}
 
 	// Normalize to UTC to avoid DST-related hour differences when computing calendar days.
@@ -56,7 +62,7 @@ func runDiff(ctx appContext, args []string) error {
 	d2 := time.Date(date2.Year(), date2.Month(), date2.Day(), 0, 0, 0, 0, time.UTC)
 
 	switch {
-	case weeks:
+	case *weeks:
 		totalDays := int(d2.Sub(d1).Hours() / 24)
 		if totalDays < 0 {
 			totalDays = -totalDays
@@ -68,7 +74,7 @@ func runDiff(ctx appContext, args []string) error {
 		} else {
 			fmt.Fprintf(ctx.w, "%d %s\n", w, plural(w, "week"))
 		}
-	case workdays:
+	case *workdays:
 		wd := wen.CountWorkdays(d1, d2)
 		fmt.Fprintf(ctx.w, "%d %s\n", wd, plural(wd, "workday"))
 	default:
@@ -87,4 +93,3 @@ func plural(n int, singular string) string {
 	}
 	return singular + "s"
 }
-
