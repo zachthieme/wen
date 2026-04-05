@@ -244,9 +244,9 @@ func TestRangeRenderingProducesOutput(t *testing.T) {
 	cursor := date(2026, time.March, 17)
 	today := date(2025, time.March, 17)
 	m := New(cursor, today, cfg)
-	m = pressKey(m, "v")
+	m = press(m, "v")
 	for range 3 {
-		m = pressKey(m, "l")
+		m = press(m, "l")
 	}
 	output := m.View()
 	if !strings.Contains(output, "March 2026") {
@@ -264,9 +264,9 @@ func TestRangeRenderingMultiMonth(t *testing.T) {
 	cursor := date(2026, time.March, 28)
 	today := date(2025, time.March, 28)
 	m := New(cursor, today, cfg, WithMonths(3))
-	m = pressKey(m, "v")
+	m = press(m, "v")
 	for range 5 {
-		m = pressKey(m, "l")
+		m = press(m, "l")
 	}
 	output := m.View()
 	if !strings.Contains(output, "March 2026") {

@@ -153,7 +153,9 @@ func ParseRelativeContext(ctx context.Context, input string, ref time.Time, opts
 	if err != nil {
 		return time.Time{}, err
 	}
-	return newResolver(ref, o, input).resolve(expr)
+	r := newResolver(ref, o, input)
+	r.ctx = ctx
+	return r.resolve(expr)
 }
 
 // ParseMulti parses expressions that may produce multiple dates (e.g., "every friday in april").
@@ -170,6 +172,7 @@ func ParseMultiContext(ctx context.Context, input string, ref time.Time, opts ..
 	}
 
 	r := newResolver(ref, o, input)
+	r.ctx = ctx
 
 	// Try multi-date parse first
 	if expr, ok := p.parseMultiDate(); ok {

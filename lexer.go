@@ -115,7 +115,14 @@ func (l *lexer) scanNumber() {
 		l.pos++
 	}
 	numStr := l.lower[start:l.pos]
-	val := atoi(numStr)
+	val, overflow := atoi(numStr)
+
+	// Overflow: digit string too large for int — emit as unknown token
+	// so the parser produces a clear error instead of silently using 0.
+	if overflow {
+		l.tokens = append(l.tokens, token{Kind: tokenUnknown, Value: numStr, Position: start})
+		return
+	}
 
 	// Check for ordinal suffix: 1st, 2nd, 3rd, 4th, ...
 	if l.pos+2 <= len(l.lower) {
@@ -230,13 +237,12 @@ func isOrdinalSuffix(s string) bool {
 	return s == "st" || s == "nd" || s == "rd" || s == "th"
 }
 
-// atoi converts a digit-only string to int. Returns 0 on overflow, which is
-// harmless since no valid date component is zero. Callers must guarantee s is
-// all digits (e.g., from scanNumber).
-func atoi(s string) int {
+// atoi converts a digit-only string to int. Returns (0, true) on overflow.
+// Callers must guarantee s is all digits (e.g., from scanNumber).
+func atoi(s string) (int, bool) {
 	val, err := strconv.Atoi(s)
 	if err != nil {
-		return 0 // overflow — digit string too large for int
+		return 0, true // overflow — digit string too large for int
 	}
-	return val
+	return val, false
 }

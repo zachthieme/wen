@@ -1,6 +1,7 @@
 package wen
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -14,6 +15,7 @@ type resolver struct {
 	ref   time.Time
 	opts  options
 	input string
+	ctx   context.Context
 }
 
 func newResolver(ref time.Time, opts options, input string) *resolver {
@@ -57,6 +59,16 @@ func (r *resolver) resolve(expr dateExpr) (time.Time, error) {
 // resolveMulti handles expressions that may produce multiple dates.
 // For multiDateExpr it returns all occurrences; otherwise it wraps a single result.
 func (r *resolver) resolveMulti(expr dateExpr) ([]time.Time, error) {
+	if r.ctx != nil {
+		if err := r.ctx.Err(); err != nil {
+			return nil, &ParseError{
+				Input:    r.input,
+				Position: 0,
+				Expected: []string{"date expression"},
+				Cause:    err,
+			}
+		}
+	}
 	if e, ok := expr.(*multiDateExpr); ok {
 		return r.resolveMultiDate(e)
 	}

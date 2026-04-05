@@ -236,6 +236,9 @@ func TestDiff(t *testing.T) {
 		{"workdays trailing flag", []string{"diff", "march 2 2026", "march 6 2026", "--workdays"}, "4 workdays"},
 		{"weeks between flags and dates", []string{"diff", "march 1 2026", "march 8 2026", "--weeks"}, "1 week"},
 		{"workdays between flags and dates", []string{"diff", "march 2 2026", "--workdays", "march 4 2026"}, "2 workdays"},
+		{"to separator", []string{"diff", "march 1 2026", "to", "march 11 2026"}, "10 days"},
+		{"until separator", []string{"diff", "march 1 2026", "until", "march 11 2026"}, "10 days"},
+		{"to with multiword exprs", []string{"diff", "march 1 2026", "to", "march 15 2026"}, "14 days"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -475,6 +478,8 @@ func TestRunWithWriter(t *testing.T) {
 		{"diff weeks", []string{"diff", "--weeks", "march 1 2026", "march 15 2026"}, "2 weeks"},
 		{"diff weeks remainder", []string{"diff", "--weeks", "march 1 2026", "march 10 2026"}, "1 week, 2 days"},
 		{"diff workdays", []string{"diff", "--workdays", "march 2 2026", "march 6 2026"}, "4 workdays"},
+		{"diff to separator", []string{"diff", "march 1 2026", "to", "march 11 2026"}, "10 days"},
+		{"diff until separator", []string{"diff", "march 1 2026", "until", "march 11 2026"}, "10 days"},
 		{"help flag", []string{"--help"}, "wen - a natural language date tool"},
 		{"short help flag", []string{"-h"}, "wen - a natural language date tool"},
 		{"version flag", []string{"--version"}, "wen dev"},

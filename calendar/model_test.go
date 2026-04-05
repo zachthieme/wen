@@ -11,22 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func date(y int, m time.Month, d int) time.Time {
-	return time.Date(y, m, d, 0, 0, 0, 0, time.Local)
-}
-
-func runeMsg(key string) tea.KeyMsg {
-	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)}
-}
-
-func specialMsg(key tea.KeyType) tea.KeyMsg {
-	return tea.KeyMsg{Type: key}
-}
-
-func pressKey(m Model, key string) Model {
-	updated, _ := m.Update(runeMsg(key))
-	return updated.(Model)
-}
+// Test helpers (date, runeMsg, specialMsg, press) are in testhelpers_test.go.
 
 func TestNavigation(t *testing.T) {
 	t.Parallel()
@@ -91,15 +76,15 @@ func TestToggleWeekNumbers(t *testing.T) {
 	if m.weekNumPos != WeekNumOff {
 		t.Errorf("expected weekNumPos off initially, got %d", m.weekNumPos)
 	}
-	m = pressKey(m, "w")
+	m = press(m, "w")
 	if m.weekNumPos != WeekNumLeft {
 		t.Errorf("expected weekNumPos left after first toggle, got %d", m.weekNumPos)
 	}
-	m = pressKey(m, "w")
+	m = press(m, "w")
 	if m.weekNumPos != WeekNumRight {
 		t.Errorf("expected weekNumPos right after second toggle, got %d", m.weekNumPos)
 	}
-	m = pressKey(m, "w")
+	m = press(m, "w")
 	if m.weekNumPos != WeekNumOff {
 		t.Errorf("expected weekNumPos off after third toggle, got %d", m.weekNumPos)
 	}
@@ -111,7 +96,7 @@ func TestToggleHelp(t *testing.T) {
 	if m.showHelp {
 		t.Error("expected showHelp false initially")
 	}
-	m = pressKey(m, "?")
+	m = press(m, "?")
 	if !m.showHelp {
 		t.Error("expected showHelp true after toggle")
 	}
@@ -168,10 +153,10 @@ func TestVisualSelectEnter(t *testing.T) {
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press v to anchor
-	m = pressKey(m, "v")
+	m = press(m, "v")
 	// Move 5 days right
 	for i := 0; i < 5; i++ {
-		m = pressKey(m, "l")
+		m = press(m, "l")
 	}
 	// Press Enter to confirm
 	updated, _ := m.Update(specialMsg(tea.KeyEnter))
@@ -192,9 +177,9 @@ func TestVisualSelectCancel(t *testing.T) {
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press v to anchor
-	m = pressKey(m, "v")
+	m = press(m, "v")
 	// Move right
-	m = pressKey(m, "l")
+	m = press(m, "l")
 	// Press Esc to cancel range (not quit)
 	updated, cmd := m.Update(specialMsg(tea.KeyEscape))
 	m = updated.(Model)
@@ -223,14 +208,14 @@ func TestVisualSelectReanchor(t *testing.T) {
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press v to anchor
-	m = pressKey(m, "v")
+	m = press(m, "v")
 	// Move 2 right
-	m = pressKey(m, "l")
-	m = pressKey(m, "l")
+	m = press(m, "l")
+	m = press(m, "l")
 	// Press v again to re-anchor at March 19
-	m = pressKey(m, "v")
+	m = press(m, "v")
 	// Move 1 right
-	m = pressKey(m, "l")
+	m = press(m, "l")
 	// Press Enter to confirm
 	updated, _ := m.Update(specialMsg(tea.KeyEnter))
 	m = updated.(Model)
@@ -250,10 +235,10 @@ func TestRangeReverseOrder(t *testing.T) {
 	start := date(2026, time.March, 20)
 	m := New(start, start, DefaultConfig())
 	// Press v to anchor at March 20
-	m = pressKey(m, "v")
+	m = press(m, "v")
 	// Move 5 left
 	for i := 0; i < 5; i++ {
-		m = pressKey(m, "h")
+		m = press(m, "h")
 	}
 	// Press Enter to confirm
 	updated, _ := m.Update(specialMsg(tea.KeyEnter))
@@ -289,7 +274,7 @@ func TestSameDayRange(t *testing.T) {
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press v to anchor
-	m = pressKey(m, "v")
+	m = press(m, "v")
 	// Immediately press Enter (same day)
 	updated, _ := m.Update(specialMsg(tea.KeyEnter))
 	m = updated.(Model)
@@ -306,9 +291,9 @@ func TestCtrlCInRangeMode(t *testing.T) {
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// Press v to anchor
-	m = pressKey(m, "v")
+	m = press(m, "v")
 	// Move right
-	m = pressKey(m, "l")
+	m = press(m, "l")
 	// Press ctrl+c to force quit
 	updated, cmd := m.Update(specialMsg(tea.KeyCtrlC))
 	m = updated.(Model)
@@ -446,14 +431,14 @@ func TestToggleJulian(t *testing.T) {
 	if m.dayFmt.gridWidth != 20 {
 		t.Errorf("expected gridWidth 20 initially, got %d", m.dayFmt.gridWidth)
 	}
-	m = pressKey(m, "J")
+	m = press(m, "J")
 	if !m.julian {
 		t.Error("expected julian true after toggle")
 	}
 	if m.dayFmt.gridWidth != 27 {
 		t.Errorf("expected gridWidth 27 after julian toggle, got %d", m.dayFmt.gridWidth)
 	}
-	m = pressKey(m, "J")
+	m = press(m, "J")
 	if m.julian {
 		t.Error("expected julian false after second toggle")
 	}
@@ -467,12 +452,12 @@ func TestYearNavigationRebound(t *testing.T) {
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	// N = next year
-	m = pressKey(m, "N")
+	m = press(m, "N")
 	if m.cursor != date(2027, time.March, 17) {
 		t.Errorf("N should navigate to next year, got %s", m.cursor.Format("2006-01-02"))
 	}
 	// P = prev year
-	m = pressKey(m, "P")
+	m = press(m, "P")
 	if m.cursor != date(2026, time.March, 17) {
 		t.Errorf("P should navigate to prev year, got %s", m.cursor.Format("2006-01-02"))
 	}

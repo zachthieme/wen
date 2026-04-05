@@ -117,14 +117,18 @@ func shiftMonth(month time.Month, year, delta int) (time.Month, int) {
 }
 
 // modifierDelta converts "next"/"last"/"this" to +1/-1/0.
+// Panics on unrecognized modifiers — callers must only pass values
+// produced by the lexer's tokenModifier classification.
 func modifierDelta(modifier string) int {
 	switch modifier {
 	case "next":
 		return 1
 	case "last":
 		return -1
-	default:
+	case "this", "":
 		return 0
+	default:
+		panic(fmt.Sprintf("wen: unexpected modifier %q in modifierDelta", modifier))
 	}
 }
 
@@ -172,6 +176,11 @@ func (p *parser) parse() (dateExpr, error) {
 // parseDateExpr dispatches to the appropriate date production based on the
 // current token kind (relative day, weekday, modifier, number, ordinal, month, or boundary).
 func (p *parser) parseDateExpr() (dateExpr, bool) {
+	if p.ctx != nil {
+		if err := p.ctx.Err(); err != nil {
+			return nil, false
+		}
+	}
 	p.skipNoise()
 	tok := p.peek()
 

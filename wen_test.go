@@ -293,6 +293,12 @@ func TestLexer(t *testing.T) {
 				{Kind: tokenMonth, Value: "november", Month: time.November, Position: 15},
 			},
 		},
+		{
+			input: "99999999999999999999",
+			tokens: []token{
+				{Kind: tokenUnknown, Value: "99999999999999999999", Position: 0},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -484,6 +490,7 @@ func TestErrors(t *testing.T) {
 		{"next", 4, ""},  // unexpected EOF
 		{"fifth monday in february", 0, ""},              // Feb 2026 has only 4 Mondays
 		{"pizza", 0, "pizza"},                             // gibberish
+		{"99999999999999999999", 0, "99999999999999999999"}, // numeric overflow
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {

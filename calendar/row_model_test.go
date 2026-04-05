@@ -10,10 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func pressRowKey(m RowModel, key string) RowModel {
-	updated, _ := m.Update(runeMsg(key))
-	return updated.(RowModel)
-}
+// Test helpers (date, runeMsg, specialMsg, press) are in testhelpers_test.go.
 
 func TestNewRow(t *testing.T) {
 	t.Parallel()
@@ -334,7 +331,7 @@ func TestRowVimMotions(t *testing.T) {
 			}
 			m := NewRow(tt.start, tt.start, cfg)
 			for _, k := range tt.keys {
-				m = pressRowKey(m, k)
+				m = press(m, k)
 			}
 			if m.cursor != tt.expected {
 				t.Errorf("got %s, want %s", m.cursor.Format(wen.DateLayout), tt.expected.Format(wen.DateLayout))
@@ -469,8 +466,8 @@ func TestRowCtrlCForceQuits(t *testing.T) {
 	t.Parallel()
 	m := NewRow(date(2026, time.March, 17), date(2026, time.March, 17), DefaultConfig())
 	// Enter range mode first to test force quit escapes everything
-	m = pressRowKey(m, "v")
-	m = pressRowKey(m, "l")
+	m = press(m, "v")
+	m = press(m, "l")
 	updated, cmd := m.Update(specialMsg(tea.KeyCtrlC))
 	m = updated.(RowModel)
 	if !m.IsQuit() {
@@ -507,11 +504,11 @@ func TestRowToggleHelp(t *testing.T) {
 	if m.showHelp {
 		t.Error("expected showHelp false initially")
 	}
-	m = pressRowKey(m, "?")
+	m = press(m, "?")
 	if !m.showHelp {
 		t.Error("expected showHelp true after toggle")
 	}
-	m = pressRowKey(m, "?")
+	m = press(m, "?")
 	if m.showHelp {
 		t.Error("expected showHelp false after second toggle")
 	}
@@ -522,10 +519,10 @@ func TestRowVisualSelectEnter(t *testing.T) {
 	today := date(2026, time.March, 17)
 	m := NewRow(today, today, DefaultConfig())
 	// Press v to anchor
-	m = pressRowKey(m, "v")
+	m = press(m, "v")
 	// Move 5 days right
 	for range 5 {
-		m = pressRowKey(m, "l")
+		m = press(m, "l")
 	}
 	// Press Enter to confirm
 	updated, _ := m.Update(specialMsg(tea.KeyEnter))
@@ -546,9 +543,9 @@ func TestRowVisualSelectCancel(t *testing.T) {
 	today := date(2026, time.March, 17)
 	m := NewRow(today, today, DefaultConfig())
 	// Press v to anchor
-	m = pressRowKey(m, "v")
+	m = press(m, "v")
 	// Move right
-	m = pressRowKey(m, "l")
+	m = press(m, "l")
 	// Press Esc to cancel range (not quit)
 	updated, cmd := m.Update(specialMsg(tea.KeyEscape))
 	m = updated.(RowModel)
@@ -577,7 +574,7 @@ func TestRowSameDayRange(t *testing.T) {
 	today := date(2026, time.March, 17)
 	m := NewRow(today, today, DefaultConfig())
 	// Press v to anchor
-	m = pressRowKey(m, "v")
+	m = press(m, "v")
 	// Immediately press Enter (same day)
 	updated, _ := m.Update(specialMsg(tea.KeyEnter))
 	m = updated.(RowModel)
@@ -637,10 +634,10 @@ func TestRowRangeReverseOrder(t *testing.T) {
 	start := date(2026, time.March, 20)
 	m := NewRow(start, start, DefaultConfig())
 	// Press v to anchor at March 20
-	m = pressRowKey(m, "v")
+	m = press(m, "v")
 	// Move 5 left
 	for range 5 {
-		m = pressRowKey(m, "h")
+		m = press(m, "h")
 	}
 	// Press Enter to confirm
 	updated, _ := m.Update(specialMsg(tea.KeyEnter))
