@@ -103,49 +103,6 @@ func TestWeekNumberISO(t *testing.T) {
 	}
 }
 
-func TestRenderWithLeftPadding(t *testing.T) {
-	cfg := DefaultConfig()
-	noPad := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
-	noPadOutput := noPad.View()
-
-	cfg.PaddingLeft = 3
-	withPad := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
-	padOutput := withPad.View()
-
-	// Padded output should be different from unpadded.
-	if padOutput == noPadOutput {
-		t.Error("expected padded output to differ from unpadded output")
-	}
-	// Each line with content should be at least 3 chars wider due to left padding.
-	noPadLines := strings.Split(noPadOutput, "\n")
-	padLines := strings.Split(padOutput, "\n")
-	for i, line := range padLines {
-		if strings.Contains(line, "March") {
-			if i < len(noPadLines) && len(line) <= len(noPadLines[i]) {
-				t.Errorf("expected padded title line to be wider, got len %d vs %d", len(line), len(noPadLines[i]))
-			}
-			break
-		}
-	}
-}
-
-func TestRenderWithTopPadding(t *testing.T) {
-	cfg := DefaultConfig()
-	noPad := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
-	noPadOutput := noPad.View()
-
-	cfg.PaddingTop = 2
-	withPad := New(date(2026, time.March, 17), date(2026, time.March, 17), cfg)
-	padOutput := withPad.View()
-
-	// Lip Gloss adds top padding as extra lines (with spaces, not bare newlines).
-	noPadLines := len(strings.Split(noPadOutput, "\n"))
-	padLines := len(strings.Split(padOutput, "\n"))
-	if padLines < noPadLines+2 {
-		t.Errorf("expected at least 2 more lines with top padding, got %d vs %d", padLines, noPadLines)
-	}
-}
-
 func TestFiscalQuarter(t *testing.T) {
 	tests := []struct {
 		name       string

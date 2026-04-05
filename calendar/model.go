@@ -33,6 +33,8 @@ type Model struct {
 	keys             keyMap
 	help             help.Model
 	styles           resolvedStyles
+	termWidth        int
+	termHeight       int
 }
 
 type resolvedStyles struct {
@@ -45,7 +47,6 @@ type resolvedStyles struct {
 	weekNum     lipgloss.Style
 	dayHeader   lipgloss.Style
 	helpBar     lipgloss.Style
-	padding     lipgloss.Style
 }
 
 // IsQuit reports whether the user quit without selecting.
@@ -133,16 +134,12 @@ func New(cursor, today time.Time, cfg Config, opts ...ModelOption) Model {
 		help:       newHelpModel(colors),
 	}
 	m.styles = buildStyles(colors)
-	m.styles.padding = lipgloss.NewStyle().Padding(
-		cfg.PaddingTop, cfg.PaddingRight, cfg.PaddingBottom, cfg.PaddingLeft,
-	)
 	for _, opt := range opts {
 		opt(&m)
 	}
 	m.dayFmt = dayFormatFor(m.julian)
 	return m
 }
-
 
 // midnightTickMsg is sent when the clock crosses midnight, triggering a
 // refresh of the "today" highlight.
@@ -172,6 +169,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
+		m.termWidth = msg.Width
+		m.termHeight = msg.Height
 		return m, nil
 	case watcherErrMsg:
 		// File watching failed silently — degrade gracefully.

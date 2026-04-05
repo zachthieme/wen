@@ -32,6 +32,7 @@ type RowModel struct {
 	printMode        bool
 	dayFmt           dayFormat
 	termWidth        int
+	termHeight       int
 }
 
 // RowModelOption configures optional RowModel properties.
@@ -88,9 +89,6 @@ func NewRow(cursor, today time.Time, cfg Config, opts ...RowModelOption) RowMode
 		help:   newHelpModel(colors),
 		styles: buildStyles(colors),
 	}
-	m.styles.padding = lipgloss.NewStyle().Padding(
-		cfg.PaddingTop, cfg.PaddingRight, cfg.PaddingBottom, cfg.PaddingLeft,
-	)
 	// Strip Underline from row styles. lipgloss renders Underline per-character
 	// (each char gets its own ANSI open/close), which causes terminals like mosh
 	// to miscalculate cursor positions and misalign the strip columns.
@@ -157,6 +155,7 @@ func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
 		m.termWidth = msg.Width
+		m.termHeight = msg.Height
 		return m, nil
 	case watcherErrMsg:
 		// File watching failed silently — degrade gracefully.
@@ -233,7 +232,7 @@ func (m RowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // visibleWindow trims the full strip window to fit within the terminal width,
 // centering on the cursor. If the full window fits, it is returned unchanged.
 func (m RowModel) visibleWindow(fullStart, fullEnd time.Time) (time.Time, time.Time) {
-	availWidth := m.termWidth - m.config.PaddingLeft - m.config.PaddingRight
+	availWidth := m.termWidth
 	if availWidth <= 0 {
 		return fullStart, fullEnd
 	}
@@ -280,7 +279,11 @@ func (m RowModel) View() string {
 		b.WriteString("\n")
 	}
 
-	return m.styles.padding.Render(b.String())
+	output := b.String()
+	if m.termWidth > 0 && m.termHeight > 0 {
+		return lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, output)
+	}
+	return output
 }
 
 type rowKeyMap struct {

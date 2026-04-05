@@ -92,7 +92,9 @@ func (m Model) renderSingleMonth() string {
 	}
 
 	output := b.String()
-	output = m.styles.padding.Render(output)
+	if m.termWidth > 0 && m.termHeight > 0 {
+		return lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, output)
+	}
 	return output
 }
 
@@ -168,6 +170,8 @@ func (m Model) renderMultiMonth() string {
 	}
 
 	output := result.String()
-	output = m.styles.padding.Render(output)
+	if m.termWidth > 0 && m.termHeight > 0 {
+		return lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, output)
+	}
 	return output
 }

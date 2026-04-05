@@ -150,10 +150,6 @@ The calendar highlights today and your cursor position. Navigation wraps across 
 
 | Flag | Description |
 |------|-------------|
-| `--padding-top N` | Top padding in lines |
-| `--padding-right N` | Right padding in characters |
-| `--padding-bottom N` | Bottom padding in lines |
-| `--padding-left N` | Left padding in characters |
 | `--months N` | Number of months to display side by side |
 | `-N` | Shorthand for `--months N` (e.g., `-3` for three months) |
 | `--highlight-file P` | Path to JSON file with dates to highlight |
@@ -203,12 +199,6 @@ theme: default
 
 # Highlighted dates source (JSON array of yyyy-mm-dd strings):
 # highlight_source: ~/.local/share/pike/due.json
-
-# Padding (0-20, can also be set via --padding-* CLI flags):
-# padding_top: 0
-# padding_right: 0
-# padding_bottom: 0
-# padding_left: 0
 ```
 
 ISO week numbering forces Monday as the week start day.
