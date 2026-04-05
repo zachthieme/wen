@@ -90,17 +90,6 @@ func (p *parser) finalError() *ParseError {
 	return p.makeError("date or time expression")
 }
 
-// TruncateDay returns t with the time-of-day components zeroed out,
-// preserving the location.
-func TruncateDay(t time.Time) time.Time {
-	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
-}
-
-// DaysIn returns the number of days in the given month and year.
-func DaysIn(year int, month time.Month, loc *time.Location) int {
-	return time.Date(year, month+1, 0, 0, 0, 0, 0, loc).Day()
-}
-
 // shiftMonth shifts a month by delta and adjusts the year on
 // overflow (>12) or underflow (<1).
 func shiftMonth(month time.Month, year, delta int) (time.Month, int) {

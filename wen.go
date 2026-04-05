@@ -113,6 +113,17 @@ func LookupMonth(name string) (time.Month, bool) {
 	return m, ok
 }
 
+// TruncateDay returns t with the time-of-day components zeroed out,
+// preserving the location.
+func TruncateDay(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+}
+
+// DaysIn returns the number of days in the given month and year.
+func DaysIn(year int, month time.Month, loc *time.Location) int {
+	return time.Date(year, month+1, 0, 0, 0, 0, 0, loc).Day()
+}
+
 // ParseToExpr parses a natural language date expression into an AST node
 // without resolving it. This is useful for tooling that needs to inspect
 // the parsed structure (syntax highlighting, autocomplete, linting).
