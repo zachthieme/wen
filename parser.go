@@ -90,6 +90,12 @@ func (p *parser) finalError() *ParseError {
 	return p.makeError("date or time expression")
 }
 
+func (p *parser) fail(saved int, expected ...string) (Expr, bool) {
+	p.recordError(p.makeError(expected...))
+	p.restore(saved)
+	return nil, false
+}
+
 // shiftMonth shifts a month by delta and adjusts the year on
 // overflow (>12) or underflow (<1).
 func shiftMonth(month time.Month, year, delta int) (time.Month, int) {
@@ -224,12 +230,10 @@ func (p *parser) parseModifierExpr() (Expr, bool) {
 		return &PeriodRefExpr{Modifier: modifier.Value, Unit: tok.Value}, true
 	}
 
-	p.recordError(p.makeError(
+	return p.fail(saved,
 		fmt.Sprintf("weekday after %q", modifier.Value),
 		fmt.Sprintf("week/month after %q", modifier.Value),
-	))
-	p.restore(saved)
-	return nil, false
+	)
 }
 
 // tryLastWeekdayInMonth attempts to parse "last <weekday> in/of <month> [year]".
@@ -270,10 +274,7 @@ func (p *parser) parseInExpr() (Expr, bool) {
 	p.skipNoise()
 
 	if p.peek().Kind != tokenNumber {
-		err := p.makeError("number")
-		p.restore(saved)
-		p.recordError(err)
-		return nil, false
+		return p.fail(saved, "number")
 	}
 	num := p.advance()
 	p.skipNoise()
@@ -288,9 +289,7 @@ func (p *parser) parseInExpr() (Expr, bool) {
 		return &RelativeOffsetExpr{N: num.IntVal, Unit: next.Value, Direction: 1}, true
 	}
 
-	p.recordError(p.makeError("weekday", "unit"))
-	p.restore(saved)
-	return nil, false
+	return p.fail(saved, "weekday", "unit")
 }
 
 // parseNumberLeadExpr handles "<number> <unit> ago/from now" patterns (e.g., "3 days ago").
@@ -300,10 +299,7 @@ func (p *parser) parseNumberLeadExpr() (Expr, bool) {
 	p.skipNoise()
 
 	if p.peek().Kind != tokenUnit {
-		err := p.makeError("unit")
-		p.restore(saved)
-		p.recordError(err)
-		return nil, false
+		return p.fail(saved, "unit")
 	}
 	unit := p.advance()
 	p.skipNoise()
@@ -320,16 +316,10 @@ func (p *parser) parseNumberLeadExpr() (Expr, bool) {
 			p.advance()
 			return &RelativeOffsetExpr{N: num.IntVal, Unit: unit.Value, Direction: 1}, true
 		}
-		err := p.makeError("now")
-		p.restore(saved)
-		p.recordError(err)
-		return nil, false
+		return p.fail(saved, "now")
 	}
 
-	err := p.makeError("ago", "from")
-	p.restore(saved)
-	p.recordError(err)
-	return nil, false
+	return p.fail(saved, "ago", "from")
 }
 
 // parseOrdinalWeekdayInMonth handles "Nth weekday in/of month [year]" patterns
@@ -340,10 +330,7 @@ func (p *parser) parseOrdinalWeekdayInMonth() (Expr, bool) {
 	p.skipNoise()
 
 	if p.peek().Kind != tokenWeekday {
-		err := p.makeError("weekday")
-		p.restore(saved)
-		p.recordError(err)
-		return nil, false
+		return p.fail(saved, "weekday")
 	}
 	weekday := p.advance()
 	p.skipNoise()
@@ -371,10 +358,7 @@ func (p *parser) parseOrdinalWeekdayInMonth() (Expr, bool) {
 	}
 
 	if p.peek().Kind != tokenMonth {
-		err := p.makeError("month")
-		p.restore(saved)
-		p.recordError(err)
-		return nil, false
+		return p.fail(saved, "month")
 	}
 	month := p.advance()
 
@@ -417,10 +401,7 @@ func (p *parser) parseAbsoluteDate() (Expr, bool) {
 	case tokenOrdinal:
 		day = p.advance().IntVal
 	default:
-		err := p.makeError("day number")
-		p.restore(saved)
-		p.recordError(err)
-		return nil, false
+		return p.fail(saved, "day number")
 	}
 
 	// Optional year after day: "march 15 2027"
@@ -441,10 +422,7 @@ func (p *parser) parseBoundaryExpr() (Expr, bool) {
 	p.skipNoise()
 
 	if p.peek().Kind != tokenPreposition || p.peek().Value != "of" {
-		err := p.makeError("of")
-		p.restore(saved)
-		p.recordError(err)
-		return nil, false
+		return p.fail(saved, "of")
 	}
 	p.advance() // consume "of"
 	p.skipNoise()
@@ -458,10 +436,7 @@ func (p *parser) parseBoundaryExpr() (Expr, bool) {
 
 	tok := p.peek()
 	if tok.Kind != tokenUnit || (tok.Value != "week" && tok.Value != "month" && tok.Value != "quarter" && tok.Value != "year") {
-		err := p.makeError("week", "month", "quarter", "year")
-		p.restore(saved)
-		p.recordError(err)
-		return nil, false
+		return p.fail(saved, "week", "month", "quarter", "year")
 	}
 	unit := p.advance().Value
 
@@ -523,7 +498,6 @@ func (p *parser) parseTimeExpr() (hour int, minute int, ok bool) {
 	}
 
 	tok := p.peek()
-
 	switch tok.Kind {
 	case tokenNamedTime:
 		p.advance()
@@ -534,78 +508,81 @@ func (p *parser) parseTimeExpr() (hour int, minute int, ok bool) {
 
 	case tokenNumber:
 		num := p.advance()
-
-		// number:number [meridiem]
-		if p.peek().Kind == tokenColon {
-			p.advance() // consume ":"
-			if p.peek().Kind == tokenNumber {
-				min := p.advance()
-				h, m := num.IntVal, min.IntVal
-				if m > 59 {
-					p.recordError(&ParseError{
-						Input:    p.input,
-						Position: num.Position,
-						Expected: []string{"valid time (minute 0-59)"},
-						Found:    fmt.Sprintf("%d:%02d", h, m),
-					})
-					p.restore(saved)
-					return 0, 0, false
-				}
-				if p.peek().Kind == tokenMeridiem {
-					if h < 1 || h > 12 {
-						p.recordError(&ParseError{
-							Input:    p.input,
-							Position: num.Position,
-							Expected: []string{"valid time (hour 1-12 with am/pm)"},
-							Found:    fmt.Sprintf("%d:%02d%s", h, m, p.peek().Value),
-						})
-						p.restore(saved)
-						return 0, 0, false
-					}
-					h = applyMeridiem(h, p.advance().Value)
-				} else if h > 23 {
-					p.recordError(&ParseError{
-						Input:    p.input,
-						Position: num.Position,
-						Expected: []string{"valid time (hour 0-23)"},
-						Found:    fmt.Sprintf("%d:%02d", h, m),
-					})
-					p.restore(saved)
-					return 0, 0, false
-				}
-				return h, m, true
-			}
-			// "3:" with no minutes — fail
-			p.restore(saved)
-			return 0, 0, false
-		}
-
-		// number meridiem
-		if p.peek().Kind == tokenMeridiem {
-			if num.IntVal < 1 || num.IntVal > 12 {
-				p.recordError(&ParseError{
-					Input:    p.input,
-					Position: num.Position,
-					Expected: []string{"valid time (hour 1-12 with am/pm)"},
-					Found:    fmt.Sprintf("%d%s", num.IntVal, p.peek().Value),
-				})
-				p.restore(saved)
-				return 0, 0, false
-			}
-			h := applyMeridiem(num.IntVal, p.advance().Value)
-			return h, 0, true
-		}
-
-		// Bare number after "at" — treat as 24-hour time (e.g., "at 3" = 03:00)
-		if hasAt && num.IntVal >= 0 && num.IntVal <= 23 {
+		switch {
+		case p.peek().Kind == tokenColon:
+			return p.parseColonTime(saved, num)
+		case p.peek().Kind == tokenMeridiem:
+			return p.parseMeridiemTime(saved, num)
+		case hasAt && num.IntVal >= 0 && num.IntVal <= 23:
 			return num.IntVal, 0, true
 		}
-
-		// Just a number — not a time expression
-		p.restore(saved)
-		return 0, 0, false
 	}
 
 	p.restore(saved)
 	return 0, 0, false
+}
+
+// parseColonTime handles "N:M [am/pm]" and "N:M" (24-hour) time formats.
+// The number token has been consumed; the colon has been peeked.
+func (p *parser) parseColonTime(saved int, num token) (int, int, bool) {
+	p.advance() // consume ":"
+	if p.peek().Kind != tokenNumber {
+		p.restore(saved)
+		return 0, 0, false
+	}
+	min := p.advance()
+	h, m := num.IntVal, min.IntVal
+
+	if m > 59 {
+		p.recordError(&ParseError{
+			Input:    p.input,
+			Position: num.Position,
+			Expected: []string{"valid time (minute 0-59)"},
+			Found:    fmt.Sprintf("%d:%02d", h, m),
+		})
+		p.restore(saved)
+		return 0, 0, false
+	}
+
+	if p.peek().Kind == tokenMeridiem {
+		if h < 1 || h > 12 {
+			p.recordError(&ParseError{
+				Input:    p.input,
+				Position: num.Position,
+				Expected: []string{"valid time (hour 1-12 with am/pm)"},
+				Found:    fmt.Sprintf("%d:%02d%s", h, m, p.peek().Value),
+			})
+			p.restore(saved)
+			return 0, 0, false
+		}
+		h = applyMeridiem(h, p.advance().Value)
+	} else if h > 23 {
+		p.recordError(&ParseError{
+			Input:    p.input,
+			Position: num.Position,
+			Expected: []string{"valid time (hour 0-23)"},
+			Found:    fmt.Sprintf("%d:%02d", h, m),
+		})
+		p.restore(saved)
+		return 0, 0, false
+	}
+
+	return h, m, true
+}
+
+// parseMeridiemTime handles "N am/pm" time format.
+// The number token has been consumed; the meridiem has been peeked.
+func (p *parser) parseMeridiemTime(saved int, num token) (int, int, bool) {
+	if num.IntVal < 1 || num.IntVal > 12 {
+		p.recordError(&ParseError{
+			Input:    p.input,
+			Position: num.Position,
+			Expected: []string{"valid time (hour 1-12 with am/pm)"},
+			Found:    fmt.Sprintf("%d%s", num.IntVal, p.peek().Value),
+		})
+		p.restore(saved)
+		return 0, 0, false
+	}
+	h := applyMeridiem(num.IntVal, p.advance().Value)
+	return h, 0, true
 }

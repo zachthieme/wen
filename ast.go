@@ -9,9 +9,13 @@ import "time"
 // and [WithTimeExpr].
 //
 // The interface is sealed: only types defined in this package satisfy it.
-// Use a type switch to inspect the concrete expression type.
+// Adding a new Expr type requires implementing resolveWith in resolver.go;
+// the compiler enforces this. Use a type switch to inspect the concrete
+// expression type.
 type Expr interface {
-	expr() // unexported marker — prevents external implementations
+	// unexported — seals the interface and enforces that every
+	// Expr type has a corresponding resolution path in the resolver.
+	resolveWith(r *resolver) (time.Time, error)
 }
 
 // RelativeDayExpr represents "today", "tomorrow", or "yesterday".
@@ -104,15 +108,3 @@ var (
 	_ Expr = (*MultiDateExpr)(nil)
 	_ Expr = (*WithTimeExpr)(nil)
 )
-
-func (*RelativeDayExpr) expr()        {}
-func (*ModWeekdayExpr) expr()         {}
-func (*RelativeOffsetExpr) expr()     {}
-func (*CountedWeekdayExpr) expr()     {}
-func (*OrdinalWeekdayExpr) expr()     {}
-func (*LastWeekdayInMonthExpr) expr() {}
-func (*AbsoluteDateExpr) expr()       {}
-func (*PeriodRefExpr) expr()          {}
-func (*BoundaryExpr) expr()           {}
-func (*MultiDateExpr) expr()          {}
-func (*WithTimeExpr) expr()           {}
