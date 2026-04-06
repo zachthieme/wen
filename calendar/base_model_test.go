@@ -203,7 +203,7 @@ func TestWindowSizeMsgClamps(t *testing.T) {
 		{"zero height", 80, 0},
 		{"both zero", 0, 0},
 		{"normal", 120, 40},
-		{"small but valid", 40, 10},
+		{"small but valid", 33, 10},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

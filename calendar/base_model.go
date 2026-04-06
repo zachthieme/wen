@@ -150,7 +150,7 @@ func (b *baseModel) handleMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		b.help.Width = msg.Width
-		b.termWidth = max(msg.Width, 40)
+		b.termWidth = max(msg.Width, 33)
 		b.termHeight = max(msg.Height, 10)
 		return nil, true
 	case watcherErrMsg:
