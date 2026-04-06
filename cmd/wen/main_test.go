@@ -26,6 +26,12 @@ func runTests(m *testing.M) int {
 	}
 	defer func() { _ = os.RemoveAll(dir) }()
 
+	// Isolate tests from the user's real config so results are deterministic.
+	if err := os.Setenv("XDG_CONFIG_HOME", dir); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to set XDG_CONFIG_HOME: %s\n", err)
+		return 1
+	}
+
 	testBinary = filepath.Join(dir, "wen")
 	cmd := exec.Command("go", "build", "-o", testBinary, "github.com/zachthieme/wen/cmd/wen")
 	if out, err := cmd.CombinedOutput(); err != nil {
