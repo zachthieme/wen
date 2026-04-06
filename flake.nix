@@ -11,13 +11,13 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        wenVersion = "1.10.0";
+        wenVersion = "1.10.1";
 
         hashes = {
-          x86_64-linux = "sha256-to3HxDjgYhOKBiE5zSfpZDk9zft80OZE7j3ESf+Hdc0=";
-          aarch64-linux = "sha256-+E08JAXxyXArvAO26t1BeZnxepozU2rNBPa+2LY8Vww=";
-          x86_64-darwin = "sha256-ZAn69EyIS39AWtf8oyuTVBxNoYGgnoclT9UtxsSpwEM=";
-          aarch64-darwin = "sha256-ErlYnA03HkeMeEKqkOF49cXPrIOZrQmUSsXdYdBAWy8=";
+          x86_64-linux = "sha256-jXRwBEEiR+nw+j2vYheII8E+XKg0ZsXYLYtJu1grXH0=";
+          aarch64-linux = "sha256-BGBDOsYqMe9aPzECtR+EhWZwDhR+ZUyZGn4b5M5cUAI=";
+          x86_64-darwin = "sha256-XEh1ZhET3Gwx1Oc1v1+9KR/QqSKqIrt3PgxxhASt/0c=";
+          aarch64-darwin = "sha256-7oxQTynewCCAoxks0oGHkeQjbjCx7+j9rTHOX5nTK+U=";
         };
 
         archMap = {
