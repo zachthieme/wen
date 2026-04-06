@@ -64,6 +64,15 @@ func (k tokenKind) String() string {
 }
 
 // token is a single lexed token with its classification, value, and position.
+//
+// Field validity by kind:
+//   - tokenNumber:   IntVal (numeric value)
+//   - tokenOrdinal:  IntVal (numeric value, e.g. 1 for "1st")
+//   - tokenWeekday:  Weekday
+//   - tokenMonth:    Month
+//   - All kinds:     Value (lowercased text), Position (byte offset in input)
+//
+// Fields not listed for a given kind are zero-valued and should not be read.
 type token struct {
 	Kind     tokenKind
 	Value    string       // original text (lowercased)
