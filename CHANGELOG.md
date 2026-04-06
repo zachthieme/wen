@@ -1,5 +1,18 @@
 # Changelog
 
+### v1.10.1 — April 6, 2026
+
+**Bug fixes:**
+- Lower minimum terminal width floor from 40 to 33 for narrower terminal support.
+
+**Testing:**
+- Isolate CLI tests from user config to prevent test pollution from local settings.
+
+**Infrastructure:**
+- Add `flake.lock` for reproducible Nix builds.
+
+---
+
 ### v1.10.0 — April 5, 2026
 
 **Testing:**
