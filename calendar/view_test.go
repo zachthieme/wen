@@ -593,6 +593,48 @@ func TestWrapWithWeekNumsOff(t *testing.T) {
 	}
 }
 
+func TestJoinColumnsHorizontal(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		columns  [][]string
+		colWidth int
+		gap      string
+		want     string
+	}{
+		{
+			name:     "two equal columns",
+			columns:  [][]string{{"AA", "BB"}, {"CC", "DD"}},
+			colWidth: 2,
+			gap:      " ",
+			want:     "AA CC\nBB DD\n",
+		},
+		{
+			name:     "uneven heights",
+			columns:  [][]string{{"AA", "BB", "CC"}, {"DD"}},
+			colWidth: 2,
+			gap:      " ",
+			want:     "AA DD\nBB   \nCC   \n",
+		},
+		{
+			name:     "single column",
+			columns:  [][]string{{"AA", "BB"}},
+			colWidth: 2,
+			gap:      "   ",
+			want:     "AA\nBB\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := joinColumnsHorizontal(tt.columns, tt.colWidth, tt.gap)
+			if got != tt.want {
+				t.Errorf("got:\n%s\nwant:\n%s", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestWrapWithWeekNumsLeft(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()

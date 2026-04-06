@@ -102,14 +102,47 @@ func (m Model) renderSingleMonth() string {
 	return output
 }
 
+// joinColumnsHorizontal joins multiple columns of lines side by side.
+// Each column is padded to colWidth using lipgloss.Width for ANSI-aware
+// measurement. Columns are separated by gap.
+func joinColumnsHorizontal(columns [][]string, colWidth int, gap string) string {
+	maxLines := 0
+	for _, col := range columns {
+		if len(col) > maxLines {
+			maxLines = len(col)
+		}
+	}
+
+	var result strings.Builder
+	for row := range maxLines {
+		for i, col := range columns {
+			if i > 0 {
+				result.WriteString(gap)
+			}
+			if row < len(col) {
+				line := col[row]
+				result.WriteString(line)
+				if i < len(columns)-1 {
+					visible := lipgloss.Width(line)
+					if visible < colWidth {
+						result.WriteString(strings.Repeat(" ", colWidth-visible))
+					}
+				}
+			} else {
+				result.WriteString(strings.Repeat(" ", colWidth))
+			}
+		}
+		result.WriteString("\n")
+	}
+	return result.String()
+}
+
 func (m Model) renderMultiMonth() string {
 	cursorYear, cursorMonth, cursorDay := m.cursor.Date()
 	loc := m.cursor.Location()
 
-	// Determine starting month offset: center the cursor month
 	startOffset := -(m.months / 2)
 
-	// Render each month into lines, applying week numbers per column.
 	monthLines := make([][]string, m.months)
 	for i := range m.months {
 		var core strings.Builder
@@ -128,42 +161,14 @@ func (m Model) renderMultiMonth() string {
 		monthLines[i] = m.wrapWithWeekNums(coreLines, wnLines)
 	}
 
-	// Find max lines across all months
-	maxLines := 0
-	for _, lines := range monthLines {
-		if len(lines) > maxLines {
-			maxLines = len(lines)
-		}
-	}
-
-	// Column width includes week numbers if enabled.
 	colWidth := m.dayFmt.gridWidth
 	if m.weekNumPos != WeekNumOff {
 		colWidth += weekNumColWidth
 	}
 
-	// Join side by side
 	var result strings.Builder
-	for row := range maxLines {
-		for i, lines := range monthLines {
-			if i > 0 {
-				result.WriteString(monthGap)
-			}
-			if row < len(lines) {
-				line := lines[row]
-				result.WriteString(line)
-				if i < len(monthLines)-1 {
-					visible := lipgloss.Width(line)
-					if visible < colWidth {
-						result.WriteString(strings.Repeat(" ", colWidth-visible))
-					}
-				}
-			} else if i < len(monthLines)-1 {
-				result.WriteString(strings.Repeat(" ", colWidth))
-			}
-		}
-		result.WriteString("\n")
-	}
+	result.WriteString(joinColumnsHorizontal(monthLines, colWidth, monthGap))
+
 	totalWidth := colWidth*m.months + len(monthGap)*(m.months-1)
 	m.renderQuarterBar(&result, totalWidth)
 
