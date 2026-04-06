@@ -115,6 +115,63 @@ func TestWeekNumberISO(t *testing.T) {
 	}
 }
 
+func TestWeekNumberISOYearBoundary(t *testing.T) {
+	t.Parallel()
+	// ISO 8601: Dec 29-31 can belong to week 1 of the next year,
+	// and Jan 1-3 can belong to the last week of the previous year.
+	tests := []struct {
+		name     string
+		date     time.Time
+		wantWeek int
+		wantYear int
+	}{
+		{
+			// 2026-12-31 is Thursday → ISO week 53 of 2026
+			name:     "dec 31 2026 is week 53",
+			date:     time.Date(2026, time.December, 31, 0, 0, 0, 0, time.Local),
+			wantWeek: 53,
+			wantYear: 2026,
+		},
+		{
+			// 2025-12-29 is Monday → ISO week 1 of 2026
+			name:     "dec 29 2025 is week 1 of next year",
+			date:     time.Date(2025, time.December, 29, 0, 0, 0, 0, time.Local),
+			wantWeek: 1,
+			wantYear: 2026,
+		},
+		{
+			// 2027-01-01 is Friday → ISO week 53 of 2026
+			name:     "jan 1 2027 is week 53 of prev year",
+			date:     time.Date(2027, time.January, 1, 0, 0, 0, 0, time.Local),
+			wantWeek: 53,
+			wantYear: 2026,
+		},
+		{
+			// 2027-01-04 is Monday → ISO week 1 of 2027
+			name:     "jan 4 2027 is week 1",
+			date:     time.Date(2027, time.January, 4, 0, 0, 0, 0, time.Local),
+			wantWeek: 1,
+			wantYear: 2027,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			gotWeek := weekNumber(tt.date, "iso")
+			if gotWeek != tt.wantWeek {
+				t.Errorf("weekNumber(%s, iso) = %d, want %d",
+					tt.date.Format("2006-01-02"), gotWeek, tt.wantWeek)
+			}
+			// Also verify our function matches Go's ISOWeek
+			gotYear, gotW := tt.date.ISOWeek()
+			if gotW != tt.wantWeek || gotYear != tt.wantYear {
+				t.Errorf("ISOWeek(%s) = (year=%d, week=%d), want (year=%d, week=%d)",
+					tt.date.Format("2006-01-02"), gotYear, gotW, tt.wantYear, tt.wantWeek)
+			}
+		})
+	}
+}
+
 func TestFiscalQuarter(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

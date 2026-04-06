@@ -1,4 +1,4 @@
-.PHONY: build test lint check cover bench install clean help
+.PHONY: build test lint check cover bench mutate install clean help
 
 build:
 	go build -o wen ./cmd/wen
@@ -22,6 +22,10 @@ bench:
 	@echo "---"
 	@echo "Compare with: benchstat old.txt bench.txt"
 
+mutate:
+	@command -v gremlins >/dev/null 2>&1 || { echo "Install: go install github.com/go-gremlins/gremlins/cmd/gremlins@latest"; exit 1; }
+	gremlins unleash --tags "" ./...
+
 install:
 	go install ./cmd/wen
 
@@ -36,6 +40,7 @@ help:
 	@echo "  check    Run tests and lint"
 	@echo "  cover    Run tests with coverage report"
 	@echo "  bench    Run benchmarks (benchstat-compatible output)"
+	@echo "  mutate   Run mutation testing with gremlins"
 	@echo "  install  Install wen to GOPATH/bin"
 	@echo "  clean    Remove built binary and reports"
 	@echo "  help     Show this help"

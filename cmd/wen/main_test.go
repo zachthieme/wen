@@ -485,6 +485,14 @@ func TestRunWithWriter(t *testing.T) {
 		{"version flag", []string{"--version"}, "wen dev"},
 		{"short version flag", []string{"-v"}, "wen dev"},
 		{"relative no args", []string{"rel"}, "today"},
+		{"cal print", []string{"cal", "--print"}, "Su Mo Tu"},
+		{"cal print named month", []string{"cal", "--print", "march"}, "March"},
+		{"cal print month year", []string{"cal", "--print", "december", "2027"}, "December 2027"},
+		{"cal print julian", []string{"cal", "--print", "--julian"}, "Sun Mon Tue"},
+		{"cal print multi month", []string{"cal", "--print", "-3"}, "Su Mo Tu"},
+		{"cal auto print", []string{"cal"}, "Su Mo Tu"},
+		{"row print", []string{"row", "--print"}, "Mo Tu"},
+		{"row auto print", []string{"row"}, "Mo Tu"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -533,6 +541,7 @@ func TestRunErrors(t *testing.T) {
 		{"diff one arg", []string{"diff", "today"}, "diff requires two"},
 		{"diff unparseable", []string{"diff", "pizza", "cake"}, "could not parse date"},
 		{"relative invalid", []string{"rel", "pizza"}, "could not parse date"},
+		{"cal invalid month", []string{"cal", "--print", "pizza"}, "could not parse date"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -985,5 +994,106 @@ func TestRelativeSubcommandAlias(t *testing.T) {
 	got := strings.TrimSpace(string(out))
 	if got == "" {
 		t.Error("expected non-empty output from rel alias")
+	}
+}
+
+func TestCalPrintCurrentMonth(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "cal", "--print")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := strings.TrimSpace(string(out))
+	if got == "" {
+		t.Errorf("expected non-empty output")
+	}
+	if !strings.Contains(got, "Su Mo Tu") {
+		t.Errorf("expected day headers in output, got:\n%s", got)
+	}
+}
+
+func TestCalPrintNamedMonth(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "cal", "--print", "march")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := strings.TrimSpace(string(out))
+	if !strings.Contains(got, "March") {
+		t.Errorf("expected output to contain 'March', got:\n%s", got)
+	}
+}
+
+func TestCalPrintMultiMonth(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "cal", "--print", "-3")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := strings.TrimSpace(string(out))
+	// With -3 centered on the current month, we expect at least two month names.
+	now := time.Now()
+	prevMonth := now.AddDate(0, -1, 0).Month().String()
+	nextMonth := now.AddDate(0, 1, 0).Month().String()
+	if !strings.Contains(got, prevMonth) {
+		t.Errorf("expected output to contain %q, got:\n%s", prevMonth, got)
+	}
+	if !strings.Contains(got, nextMonth) {
+		t.Errorf("expected output to contain %q, got:\n%s", nextMonth, got)
+	}
+}
+
+func TestCalPrintJulian(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "cal", "--print", "--julian")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := strings.TrimSpace(string(out))
+	if !strings.Contains(got, "Sun Mon Tue") {
+		t.Errorf("expected 3-char day headers in julian mode, got:\n%s", got)
+	}
+}
+
+func TestRowPrintCurrentMonth(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "row", "--print")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := strings.TrimSpace(string(out))
+	if got == "" {
+		t.Errorf("expected non-empty output")
+	}
+}
+
+func TestCalPrintMonthYear(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "cal", "--print", "december", "2027")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	got := strings.TrimSpace(string(out))
+	if !strings.Contains(got, "December 2027") {
+		t.Errorf("expected output to contain 'December 2027', got:\n%s", got)
+	}
+}
+
+func TestCalPrintInvalidMonth(t *testing.T) {
+	t.Parallel()
+	cmd := exec.Command(testBinary, "cal", "--print", "pizza")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatal("expected non-zero exit code for invalid month")
+	}
+	got := string(out)
+	if !strings.Contains(got, "could not parse date") {
+		t.Errorf("expected parse error message, got: %s", got)
 	}
 }

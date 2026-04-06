@@ -585,6 +585,36 @@ func TestEdgeCases(t *testing.T) {
 			ref:   time.Date(2028, 2, 15, 0, 0, 0, 0, time.UTC),
 			want:  time.Date(2028, 2, 29, 23, 59, 59, 0, time.UTC),
 		},
+		{
+			name:  "absolute date: march from december infers next year",
+			input: "march 25",
+			ref:   time.Date(2026, 12, 15, 0, 0, 0, 0, time.UTC),
+			want:  date(2027, 3, 25),
+		},
+		{
+			name:  "absolute date: december from january stays same year",
+			input: "december 25",
+			ref:   time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+			want:  date(2026, 12, 25),
+		},
+		{
+			name:  "absolute date: same month infers current year",
+			input: "december 31",
+			ref:   time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC),
+			want:  date(2026, 12, 31),
+		},
+		{
+			name:  "ordinal weekday: first monday of march from december",
+			input: "first monday of march",
+			ref:   time.Date(2026, 12, 15, 0, 0, 0, 0, time.UTC),
+			want:  date(2027, 3, 1), // March 1, 2027 is a Monday
+		},
+		{
+			name:  "last weekday in month: last friday in february from december",
+			input: "last friday in february",
+			ref:   time.Date(2026, 12, 15, 0, 0, 0, 0, time.UTC),
+			want:  date(2027, 2, 26),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -596,6 +626,30 @@ func TestEdgeCases(t *testing.T) {
 				t.Errorf("got %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestMultiDateYearInference(t *testing.T) {
+	t.Parallel()
+	// Parsing "every tuesday in january" from a December ref should infer next year.
+	decRef := time.Date(2026, 12, 15, 0, 0, 0, 0, time.UTC)
+	dates, err := ParseMulti("every tuesday in january", decRef)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(dates) == 0 {
+		t.Fatal("expected dates, got none")
+	}
+	for _, d := range dates {
+		if d.Year() != 2027 {
+			t.Errorf("expected year 2027, got %d for %v", d.Year(), d)
+		}
+		if d.Month() != time.January {
+			t.Errorf("expected January, got %v for %v", d.Month(), d)
+		}
+		if d.Weekday() != time.Tuesday {
+			t.Errorf("expected Tuesday, got %v for %v", d.Weekday(), d)
+		}
 	}
 }
 
