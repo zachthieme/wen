@@ -1,5 +1,35 @@
 # Changelog
 
+### v1.10.0 — April 5, 2026
+
+**Testing:**
+- Timezone edge case tests: 5 non-hour-aligned IANA zones (Kathmandu, Chatham, St. Johns, Kolkata, Tehran), DST spring-forward crossing, midnight boundary, and month clamping across timezones.
+- Year inference tests: absolute dates, ordinal weekdays, last-weekday-in-month, and multi-date expressions all verified to infer next year correctly when parsed from a December reference.
+- ISO week year-boundary tests: Dec 29-31 belonging to week 1 of next year and Jan 1-3 belonging to last week of previous year.
+- Golden file snapshot tests for calendar rendering (8 scenarios) with `-update` flag for regeneration.
+- Public API contract tests (17 behavioral guarantees) in `api_contract_test.go`.
+- CLI smoke tests for `cal --print` and `row --print` paths (both binary and in-process).
+
+**Infrastructure:**
+- Mutation testing via [gremlins](https://github.com/go-gremlins/gremlins): `make mutate` and CI job (informational, non-blocking).
+
+**Improvements:**
+- Reduced parser and resolver cyclomatic complexity via helper extraction.
+- Extracted `joinColumnsHorizontal` from multi-month render path.
+- Moved `TruncateDay` and `DaysIn` to `wen.go` as public API surface.
+- Added `NoPosition` constant for `ParseError` sentinel value.
+- Documented `Token` struct field validity per kind.
+
+**Bug fixes:**
+- Clamp terminal dimensions to minimum 40x10 to prevent rendering panics.
+- Store watcher errors as warnings instead of silently discarding.
+- Record diagnostic errors for invalid time expressions.
+- Reset `bestErr` in `ParseMulti` single-date fallback to prevent stale errors.
+- Replace `shiftMonth` loop with O(1) modular arithmetic.
+- Semantic errors no longer report misleading position 0.
+
+---
+
 ### v1.9.0 — April 5, 2026
 
 **Architecture:**
