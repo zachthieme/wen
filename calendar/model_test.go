@@ -305,14 +305,14 @@ func TestCtrlCHasRangeMode(t *testing.T) {
 	}
 }
 
-func TestMidnightTickUpdatesToday(t *testing.T) {
+func TestDateCheckUpdatesToday(t *testing.T) {
 	t.Parallel()
 	// Start with today = March 17
 	oldToday := date(2026, time.March, 17)
 	m := New(oldToday, oldToday, DefaultConfig())
 
-	// Simulate midnight tick
-	updated, cmd := m.Update(midnightTickMsg{})
+	// Simulate date check tick
+	updated, cmd := m.Update(dateCheckMsg{})
 	m = updated.(Model)
 
 	// today should be updated to the real current time
@@ -322,19 +322,19 @@ func TestMidnightTickUpdatesToday(t *testing.T) {
 		t.Errorf("today = %s, want %s", m.today.Format(wen.DateLayout), expected.Format(wen.DateLayout))
 	}
 
-	// Should return a non-nil cmd to schedule the next tick
+	// Should return a non-nil cmd to schedule the next check
 	if cmd == nil {
-		t.Error("expected non-nil cmd for next midnight tick")
+		t.Error("expected non-nil cmd for next date check")
 	}
 }
 
-func TestInitReturnsMidnightTick(t *testing.T) {
+func TestInitReturnsDateCheck(t *testing.T) {
 	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
 	cmd := m.Init()
 	if cmd == nil {
-		t.Error("expected Init() to return a non-nil cmd for midnight tick")
+		t.Error("expected Init() to return a non-nil cmd for date check")
 	}
 }
 

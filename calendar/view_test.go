@@ -856,7 +856,7 @@ func TestIntegrationWindowResizeThenNavigate(t *testing.T) {
 	}
 }
 
-func TestIntegrationMidnightTickCycle(t *testing.T) {
+func TestIntegrationDateCheckCycle(t *testing.T) {
 	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := New(today, today, DefaultConfig())
@@ -867,13 +867,13 @@ func TestIntegrationMidnightTickCycle(t *testing.T) {
 	// Render initial view
 	output1 := m.View()
 
-	// Simulate midnight tick
-	updated, cmd := m.Update(midnightTickMsg{})
+	// Simulate date check tick
+	updated, cmd := m.Update(dateCheckMsg{})
 	m = updated.(Model)
 
-	// Should reschedule the next tick
+	// Should reschedule the next check
 	if cmd == nil {
-		t.Error("midnight tick should return a cmd for next tick")
+		t.Error("date check should return a cmd for next check")
 	}
 
 	// View should still render
@@ -1082,18 +1082,18 @@ func TestIntegrationRowInitUpdateViewCycle(t *testing.T) {
 	}
 }
 
-func TestIntegrationRowMidnightTick(t *testing.T) {
+func TestIntegrationRowDateCheck(t *testing.T) {
 	t.Parallel()
 	today := date(2026, time.March, 17)
 	m := NewRow(today, today, DefaultConfig())
 
 	_ = m.Init()
 
-	// Midnight tick
-	updated, cmd := m.Update(midnightTickMsg{})
+	// Date check tick
+	updated, cmd := m.Update(dateCheckMsg{})
 	m = updated.(RowModel)
 	if cmd == nil {
-		t.Error("midnight tick should reschedule")
+		t.Error("date check should reschedule")
 	}
 
 	// Still functional

@@ -60,12 +60,12 @@ func TestRowInitReturnsMidnightTick(t *testing.T) {
 	}
 }
 
-func TestRowMidnightTickUpdatesToday(t *testing.T) {
+func TestRowDateCheckUpdatesToday(t *testing.T) {
 	t.Parallel()
 	oldToday := date(2026, time.March, 17)
 	m := NewRow(oldToday, oldToday, DefaultConfig())
 
-	updated, cmd := m.Update(midnightTickMsg{})
+	updated, cmd := m.Update(dateCheckMsg{})
 	m = updated.(RowModel)
 
 	now := time.Now()
@@ -74,7 +74,7 @@ func TestRowMidnightTickUpdatesToday(t *testing.T) {
 		t.Errorf("today = %s, want %s", m.today.Format(wen.DateLayout), expected.Format(wen.DateLayout))
 	}
 	if cmd == nil {
-		t.Error("expected non-nil cmd for next midnight tick")
+		t.Error("expected non-nil cmd for next date check")
 	}
 }
 

@@ -44,7 +44,7 @@ func NewRow(cursor, today time.Time, cfg Config, opts ...Option) RowModel {
 	return m
 }
 
-// Init schedules the midnight tick and, if a highlight source path is configured,
+// Init schedules the periodic date check and, if a highlight source path is configured,
 // starts an fsnotify file watcher.
 func (m RowModel) Init() tea.Cmd {
 	return tea.Batch(m.initCmds()...)

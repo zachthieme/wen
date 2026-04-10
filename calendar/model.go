@@ -39,19 +39,23 @@ func New(cursor, today time.Time, cfg Config, opts ...Option) Model {
 	return m
 }
 
-// midnightTickMsg is sent when the clock crosses midnight, triggering a
-// refresh of the "today" highlight.
-type midnightTickMsg struct{}
+// dateCheckInterval is the period between date-change checks. Go timers use
+// the monotonic clock, which pauses during system suspend. A short interval
+// ensures the "today" highlight recovers quickly after resume instead of
+// waiting for a single long-duration midnight timer to expire.
+const dateCheckInterval = time.Minute
 
-// scheduleMidnightTick returns a tea.Cmd that fires at the next midnight.
-func scheduleMidnightTick(now time.Time) tea.Cmd {
-	next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
-	return tea.Tick(time.Until(next), func(_ time.Time) tea.Msg {
-		return midnightTickMsg{}
+// dateCheckMsg is sent periodically so the model can refresh its "today" value.
+type dateCheckMsg struct{}
+
+// scheduleDateCheck returns a tea.Cmd that fires after dateCheckInterval.
+func scheduleDateCheck() tea.Cmd {
+	return tea.Tick(dateCheckInterval, func(_ time.Time) tea.Msg {
+		return dateCheckMsg{}
 	})
 }
 
-// Init schedules the midnight tick (to refresh the "today" highlight at midnight)
+// Init schedules the periodic date check (to refresh the "today" highlight)
 // and, if a highlight source path is configured, starts an fsnotify file watcher.
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(m.initCmds()...)

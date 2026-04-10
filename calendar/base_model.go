@@ -136,7 +136,7 @@ func (b baseModel) RangeEnd() time.Time {
 
 // initCmds returns the tea.Cmds that both Model and RowModel schedule from Init().
 func (b baseModel) initCmds() []tea.Cmd {
-	cmds := []tea.Cmd{scheduleMidnightTick(b.today)}
+	cmds := []tea.Cmd{scheduleDateCheck()}
 	if b.highlightPath != "" {
 		cmds = append(cmds, startFileWatcher(b.highlightPath))
 	}
@@ -159,10 +159,10 @@ func (b *baseModel) handleMsg(msg tea.Msg) (tea.Cmd, bool) {
 			Message: fmt.Sprintf("file watcher error: %v", msg.err),
 		})
 		return nil, true
-	case midnightTickMsg:
+	case dateCheckMsg:
 		now := time.Now()
 		b.today = wen.TruncateDay(now)
-		return scheduleMidnightTick(now), true
+		return scheduleDateCheck(), true
 	case highlightChangedMsg:
 		b.highlightedDates = msg.dates
 		b.activeWatcher = msg.watcher
