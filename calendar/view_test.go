@@ -871,9 +871,9 @@ func TestIntegrationDateCheckCycle(t *testing.T) {
 	updated, cmd := m.Update(dateCheckMsg{})
 	m = updated.(Model)
 
-	// Should reschedule the next check
-	if cmd == nil {
-		t.Error("date check should return a cmd for next check")
+	// tea.Every auto-repeats, so no cmd needed from the handler
+	if cmd != nil {
+		t.Error("expected nil cmd; tea.Every handles rescheduling")
 	}
 
 	// View should still render
@@ -1092,8 +1092,9 @@ func TestIntegrationRowDateCheck(t *testing.T) {
 	// Date check tick
 	updated, cmd := m.Update(dateCheckMsg{})
 	m = updated.(RowModel)
-	if cmd == nil {
-		t.Error("date check should reschedule")
+	// tea.Every auto-repeats, so no cmd needed from the handler
+	if cmd != nil {
+		t.Error("expected nil cmd; tea.Every handles rescheduling")
 	}
 
 	// Still functional

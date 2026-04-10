@@ -162,7 +162,7 @@ func (b *baseModel) handleMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case dateCheckMsg:
 		now := time.Now()
 		b.today = wen.TruncateDay(now)
-		return scheduleDateCheck(), true
+		return nil, true
 	case highlightChangedMsg:
 		b.highlightedDates = msg.dates
 		b.activeWatcher = msg.watcher
