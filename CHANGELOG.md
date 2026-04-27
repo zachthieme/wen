@@ -1,5 +1,13 @@
 # Changelog
 
+### v1.10.2 — April 26, 2026
+
+**Bug fixes:**
+- Skip `lipgloss.Place` centering when rendered output meets or exceeds the terminal width to prevent content from spilling into adjacent panes (e.g. tmux splits).
+- Drop the 33x10 minimum terminal dimension floor that forced upscaling on narrow panes.
+
+---
+
 ### v1.10.1 — April 6, 2026
 
 **Bug fixes:**
