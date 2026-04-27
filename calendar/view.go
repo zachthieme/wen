@@ -96,10 +96,20 @@ func (m Model) renderSingleMonth() string {
 	}
 
 	output := b.String()
-	if m.termWidth > 0 && m.termHeight > 0 {
-		return lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, output)
+	return placeIfFits(m.termWidth, m.termHeight, output)
+}
+
+// placeIfFits centers output within the given pane size, but skips Place when
+// the content already meets or exceeds the pane width — Place doesn't crop and
+// would otherwise spill rendered output into adjacent panes (e.g. tmux splits).
+func placeIfFits(termWidth, termHeight int, output string) string {
+	if termWidth <= 0 || termHeight <= 0 {
+		return output
 	}
-	return output
+	if lipgloss.Width(output) >= termWidth {
+		return output
+	}
+	return lipgloss.Place(termWidth, termHeight, lipgloss.Center, lipgloss.Center, output)
 }
 
 // joinColumnsHorizontal joins multiple columns of lines side by side.
@@ -179,8 +189,5 @@ func (m Model) renderMultiMonth() string {
 	}
 
 	output := result.String()
-	if m.termWidth > 0 && m.termHeight > 0 {
-		return lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, output)
-	}
-	return output
+	return placeIfFits(m.termWidth, m.termHeight, output)
 }
