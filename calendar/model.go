@@ -48,7 +48,9 @@ const dateCheckInterval = time.Minute
 // dateCheckMsg is sent periodically so the model can refresh its "today" value.
 type dateCheckMsg struct{}
 
-// scheduleDateCheck returns a tea.Cmd that fires every dateCheckInterval.
+// scheduleDateCheck returns a tea.Cmd that fires a single dateCheckMsg at the
+// next dateCheckInterval boundary. tea.Every is one-shot, so the message
+// handler must call this again to keep the checks recurring.
 func scheduleDateCheck() tea.Cmd {
 	return tea.Every(dateCheckInterval, func(_ time.Time) tea.Msg {
 		return dateCheckMsg{}

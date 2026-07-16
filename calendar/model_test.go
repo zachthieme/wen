@@ -322,9 +322,10 @@ func TestDateCheckUpdatesToday(t *testing.T) {
 		t.Errorf("today = %s, want %s", m.today.Format(wen.DateLayout), expected.Format(wen.DateLayout))
 	}
 
-	// tea.Every auto-repeats, so no cmd needed from the handler
-	if cmd != nil {
-		t.Error("expected nil cmd; tea.Every handles rescheduling")
+	// tea.Every fires only once, so the handler must re-issue the command
+	// to keep checking on subsequent days.
+	if cmd == nil {
+		t.Error("expected non-nil cmd to reschedule the next date check")
 	}
 }
 

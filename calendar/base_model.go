@@ -162,7 +162,9 @@ func (b *baseModel) handleMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case dateCheckMsg:
 		now := time.Now()
 		b.today = wen.TruncateDay(now)
-		return nil, true
+		// tea.Every fires only once, so re-issue the command to keep the
+		// "today" highlight advancing across day boundaries.
+		return scheduleDateCheck(), true
 	case highlightChangedMsg:
 		b.highlightedDates = msg.dates
 		b.activeWatcher = msg.watcher
