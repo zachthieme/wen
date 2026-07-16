@@ -1,5 +1,12 @@
 # Changelog
 
+### v1.10.3 — July 16, 2026
+
+**Bug fixes:**
+- Reschedule the periodic date check so the "today" highlight advances across day boundaries. Previously `tea.Every` fired only once, so leaving `wen` running past midnight left the current date frozen.
+
+---
+
 ### v1.10.2 — April 26, 2026
 
 **Bug fixes:**
